@@ -4,6 +4,7 @@ A private Claude Code plugin marketplace (`jpchauny-plugins`) with the skills th
 
 | Plugin | Skills | What for |
 |--------|--------|----------|
+| `team-workflow` | `/team-workflow:explore` | Think a problem through before it deserves a spec, a plan or code: numbered candidates, trade-offs, what is already decided, open questions. No implementation proposals, no next steps, nothing written until the user promotes. |
 | `team-workflow` | `/team-workflow:issue` | Every pending item or finding goes to a GitHub issue the moment it appears, with a self-contained hand-off prompt. |
 
 ## Use it in a project
@@ -24,6 +25,17 @@ Every pending item or finding not resolved in the current change goes to a GitHu
 issue at the moment it appears, with `/team-workflow:issue` (plugin `team-workflow`,
 marketplace `jpchauny/claude-plugins`). Never to a file, to memory or to the close of
 the session.
+```
+
+And, to make exploratory mode reliable:
+
+```markdown
+## Exploring
+
+When the user opens a problem to think about before specifying or building it,
+or says "exploremos", "modo exploratorio", "qué opciones hay", use
+`/team-workflow:explore`: candidates and trade-offs, no implementation
+proposals, nothing written until the user promotes.
 ```
 
 A project can add an `## Issue verification` section to its `CLAUDE.md`: the commands that tell whether an issue is resolved. The skill copies them into each hand-off.
