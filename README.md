@@ -1,6 +1,6 @@
 # claude-plugins
 
-A private Claude Code plugin marketplace (`jpchauny-plugins`) with the skills the team shares across projects.
+A Claude Code plugin marketplace (`jpchauny-plugins`) with the skills the team shares across projects.
 
 | Plugin | Skills | What for |
 |--------|--------|----------|
@@ -47,16 +47,9 @@ proposals, nothing written until the user promotes.
 
 A project can add an `## Issue verification` section to its `CLAUDE.md`: the commands that tell whether an issue is resolved. The skill copies them into each hand-off.
 
-## Each teammate, once per machine
+## Each teammate
 
-The repository is private: Claude Code fetches it with your own git credentials.
-
-```sh
-gh auth login          # an account with access to jpchauny/claude-plugins
-gh auth setup-git      # lets git (and so Claude Code) use it over HTTPS
-```
-
-Opening a project that declares the marketplace, accept the folder's trust dialog. If Claude Code reports that the plugin is enabled but not installed:
+The repository is public: nothing to configure. Opening a project that declares the marketplace, accept the folder's trust dialog. If Claude Code reports that the plugin is enabled but not installed:
 
 ```sh
 claude plugin install team-workflow@jpchauny-plugins --scope project
@@ -64,7 +57,7 @@ claude plugin install team-workflow@jpchauny-plugins --scope project
 
 ## Updates
 
-Change a skill here, push to `main`. Updates are not automatic for a private marketplace: each teammate runs
+Change a skill here, push to `main`. Updates are not automatic for a third-party marketplace: each teammate runs
 
 ```sh
 claude plugin marketplace update jpchauny-plugins
