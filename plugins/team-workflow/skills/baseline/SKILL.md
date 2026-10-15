@@ -6,8 +6,9 @@ description: Declare a new baseline of pending work - a new root issue for the t
 # baseline
 
 A baseline is a dated root issue, `Línea de base YYYY-MM-DD`, labelled
-`baseline`, in the project's home repository (named in the `## Issue tree`
-section of the project's `CLAUDE.md`). Its children are the top-level
+`baseline`. A new one goes in the repository of the current baseline (the
+`tree` script finds it from the session's repository); if there is none,
+in the session's repository. Its children are the top-level
 pending items; every bifurcation hangs further down, under the node where
 it was found. At any time there is one open baseline: the current tree.
 
@@ -16,15 +17,15 @@ proposed, and created after the user's yes.
 
 ## A new baseline
 
-1. **Find the current one:** the open `baseline` issue of the home
-   repository, if there is one.
+1. **Find the current one:** `issue_tree.py tree` prints it (or says
+   there is none).
 2. **Propose** the top-level items: the open children of the current
    baseline, plus any pending item the user names, each as one line with
    its state. Wait for the yes and its adjustments.
 3. **Create the root.** Make sure the `baseline` label exists
    (`gh label create baseline --color 1f6f63 --description "Root of the
    pending-work tree" 2>/dev/null || true`), then
-   `gh issue create -R <home> -t "Línea de base YYYY-MM-DD" -l baseline -F <body>`.
+   `gh issue create -R <that repository> -t "Línea de base YYYY-MM-DD" -l baseline -F <body>`.
    Body: one paragraph on what this baseline is, and the line
    `Page: <artifact URL>` copied from the previous baseline, if it had one.
 4. **Move or link** each approved item, keeping its subtree:

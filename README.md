@@ -9,7 +9,7 @@ A private Claude Code plugin marketplace (`jpchauny-plugins`) with the skills th
 
 ## How the team works with it
 
-- **Root:** an open issue labelled `baseline` (`Línea de base YYYY-MM-DD`) in the project's home repository. Its children are the top-level pending items; each bifurcation hangs under the node where it was found, across repositories.
+- **Root:** an open issue labelled `baseline` (`Línea de base YYYY-MM-DD`), found from any repository that has pending items under it; nothing is configured. Its children are the top-level pending items; each bifurcation hangs under the node where it was found, across repositories.
 - **Bifurcation:** Claude proposes it in one line; nothing enters the tree without the user's yes. Every issue carries a hand-off: the context to resume it in any session.
 - **State, from labels:** `question` ⏳ waits for the user, `blocked` ⛔, `breaks-ci` 🔴, otherwise ▶ Claude can advance. Optional subject: `tema:<name>`.
 - **Seeing it:** only on request (`/team-workflow:tree`): a summary, the tree in the chat, and a link to the same view as a page. Each person sees what their GitHub access allows.
@@ -28,11 +28,10 @@ claude plugin install team-workflow@jpchauny-plugins --scope project
 Then add to the project's `CLAUDE.md`:
 
 ```markdown
-## Issue tree
+## Issues
 
 Pending items and findings go to the issue tree with `/team-workflow:issue`
-(plugin `team-workflow`, marketplace `jpchauny/claude-plugins`). Baseline issues
-live in <owner>/<home repository>.
+(plugin `team-workflow`, marketplace `jpchauny/claude-plugins`).
 ```
 
 And, to make exploratory mode reliable:

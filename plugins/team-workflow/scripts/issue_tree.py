@@ -2,14 +2,17 @@
 
 Usage:
     python3 -I issue_tree.py link <parent issue URL> <child issue URL>
-    python3 -I issue_tree.py tree <owner/repo> [--tema <name>] [--html <file>]
+    python3 -I issue_tree.py tree [<owner/repo>] [--tema <name>] [--html <file>]
 
 `link` makes the child a sub-issue of the parent (across repositories too;
 a child that already has a parent moves).
 
-`tree` finds the open issue labelled `baseline` in <owner/repo> (the
-current baseline), walks its sub-issues down to 8 levels, and prints the
-summary and the tree. With --tema it keeps only the branches holding an
+`tree` finds the current baseline (an open issue labelled `baseline`)
+starting from <owner/repo>, by default the repository of the current
+directory: an open `baseline` issue of that repository, or else the one
+reached by climbing the parents of its open issues, in any repository.
+It walks the baseline's sub-issues down to 8 levels, across repositories,
+and prints the summary and the tree. With --tema it keeps only the branches holding an
 issue labelled `tema:<name>`. With --html it also writes the page. Only
 what the caller's GitHub account can see is read; issues of repositories
 it cannot see do not appear.
@@ -201,14 +204,45 @@ def render_html(root: dict, home: str) -> str:
 """
 
 
-def tree(home: str, tema: str | None, html_out: str | None) -> None:
-    owner, repo = home.split("/")
+def current_repo() -> str:
+    out = subprocess.run(["gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
+                         capture_output=True, text=True)
+    if out.returncode != 0:
+        sys.exit("not inside a GitHub repository; pass <owner/repo>")
+    return out.stdout.strip()
+
+
+def find_root(repo: str) -> str:
+    """The id of the open baseline reachable from <repo>."""
+    owner, name = repo.split("/")
     q = """query($o:String!,$r:String!){repository(owner:$o,name:$r){
-      issues(first:5,states:OPEN,labels:["baseline"],orderBy:{field:CREATED_AT,direction:DESC}){nodes{id}}}}"""
-    found = gh_graphql(q, o=owner, r=repo)["repository"]["issues"]["nodes"]
-    if not found:
-        sys.exit(f"no open issue labelled `baseline` in {home}")
-    root = build(fetch([found[0]["id"]])[0])
+      issues(first:100,states:OPEN,orderBy:{field:CREATED_AT,direction:DESC}){nodes{
+        id labels(first:20){nodes{name}}
+        parent{id state labels(first:20){nodes{name}}
+          parent{id state labels(first:20){nodes{name}}
+            parent{id state labels(first:20){nodes{name}}
+              parent{id state labels(first:20){nodes{name}}}}}}}}}}"""
+    issues = gh_graphql(q, o=owner, r=name)["repository"]["issues"]["nodes"]
+
+    def is_root(n):
+        return n and n.get("state", "OPEN") == "OPEN" and "baseline" in [l["name"] for l in n["labels"]["nodes"]]
+
+    for n in issues:                      # a baseline of this repository
+        if is_root(n):
+            return n["id"]
+    for n in issues:                      # or the one its issues climb to
+        p = n.get("parent")
+        while p:
+            if is_root(p):
+                return p["id"]
+            p = p.get("parent")
+    sys.exit(f"no open baseline reachable from {repo}: this repository has no pending items in any baseline")
+
+
+def tree(repo: str | None, tema: str | None, html_out: str | None) -> None:
+    repo = repo or current_repo()
+    root = build(fetch([find_root(repo)])[0])
+    home = root["ref"].split("#")[0]
     if tema:
         root = keep_tema(root, tema) or {**root, "children": []}
     print(render_text(root, home))
@@ -222,9 +256,11 @@ def main(argv: list[str]) -> int:
     if len(argv) >= 3 and argv[0] == "link":
         link(argv[1], argv[2])
         return 0
-    if len(argv) >= 2 and argv[0] == "tree":
-        opts = dict(zip(argv[2::2], argv[3::2]))
-        tree(argv[1], opts.get("--tema"), opts.get("--html"))
+    if argv and argv[0] == "tree":
+        rest = argv[1:]
+        repo = rest.pop(0) if rest and not rest[0].startswith("--") else None
+        opts = dict(zip(rest[0::2], rest[1::2]))
+        tree(repo, opts.get("--tema"), opts.get("--html"))
         return 0
     print(__doc__)
     return 2

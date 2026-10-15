@@ -10,26 +10,27 @@ a session and never unasked.
 
 ## Where the tree lives
 
-The root is the open issue labelled `baseline` in the project's **home
-repository**. The project's `CLAUDE.md` names it in a section
-`## Issue tree` (for example, "baseline issues live in
-Ivan-Pasco/clean-language-foundation"). If there is no such section, ask
-the user which repository holds it.
+The root is the current baseline: an open issue labelled `baseline`. The
+script finds it from the repository where the session runs, by climbing
+the parents of that repository's open issues, so it can live in another
+repository. Nothing is configured, and the user is never asked which
+repository to use. If the repository has no pending items in any
+baseline, say so.
 
 ## Steps
 
 1. Run the script of this plugin (`scripts/`, two directories above this
    skill's base directory):
    ```sh
-   python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/issue_tree.py" tree <owner/repo> \
+   python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/issue_tree.py" tree \
        [--tema <name>] --html "<scratchpad>/arbol-pendientes.html"
    ```
    `--tema` when the user asks for one subject only (`tema:<name>`
    labels).
 2. Show the user what it prints:
    - the summary line;
-   - the tree. When the user asked for one branch or subject, show only
-     that branch. The full tree only when they asked for everything;
+   - the whole tree of the baseline, across repositories (the default);
+     only one branch or subject when the user asks for it;
    - the legend line.
 3. Publish the page and give its link. The baseline issue's body ends with
    a line `Page: <artifact URL>`. If that line exists, publish the HTML
