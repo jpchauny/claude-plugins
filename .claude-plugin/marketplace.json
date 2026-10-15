@@ -1,0 +1,12 @@
+{
+  "name": "jpchauny-plugins",
+  "description": "Shared Claude Code skills for Jean Pierre Chauny's projects and team",
+  "owner": { "name": "Jean Pierre Chauny" },
+  "plugins": [
+    {
+      "name": "team-workflow",
+      "source": "./plugins/team-workflow",
+      "description": "How the team works: pending items and findings go to GitHub issues, each with a self-contained hand-off"
+    }
+  ]
+}

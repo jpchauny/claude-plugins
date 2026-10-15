@@ -1,0 +1,5 @@
+{
+  "name": "team-workflow",
+  "description": "How the team works: pending items and findings go to GitHub issues, each with a self-contained hand-off",
+  "author": { "name": "Jean Pierre Chauny" }
+}
