@@ -5,7 +5,16 @@ A private Claude Code plugin marketplace (`jpchauny-plugins`) with the skills th
 | Plugin | Skills | What for |
 |--------|--------|----------|
 | `team-workflow` | `/team-workflow:explore` | Think a problem through before it deserves a spec, a plan or code: numbered candidates, trade-offs, what is already decided, open questions. No implementation proposals, no next steps, nothing written until the user promotes. |
-| `team-workflow` | `/team-workflow:issue` | Every pending item or finding goes to a GitHub issue the moment it appears, with a self-contained hand-off prompt. |
+| `team-workflow` | `/team-workflow:issue`, `/team-workflow:tree`, `/team-workflow:baseline` | Pending work as a tree of GitHub issues: every bifurcation is proposed, created after the user's yes as a sub-issue of the node where it was found, and carries a hand-off prompt. |
+
+## How the team works with it
+
+- **Root:** an open issue labelled `baseline` (`Línea de base YYYY-MM-DD`) in the project's home repository. Its children are the top-level pending items; each bifurcation hangs under the node where it was found, across repositories.
+- **Bifurcation:** Claude proposes it in one line; nothing enters the tree without the user's yes. Every issue carries a hand-off: the context to resume it in any session.
+- **State, from labels:** `question` ⏳ waits for the user, `blocked` ⛔, `breaks-ci` 🔴, otherwise ▶ Claude can advance. Optional subject: `tema:<name>`.
+- **Seeing it:** only on request (`/team-workflow:tree`): a summary, the tree in the chat, and a link to the same view as a page. Each person sees what their GitHub access allows.
+- **New baseline:** only when the user declares it (`/team-workflow:baseline`): a new root, the open items move under it, the old root closes as a dated snapshot.
+- **Exploring is not implementing:** while exploring, Claude answers and proposes no implementation. While working, it shows where it is in one line (baseline › node › step).
 
 ## Use it in a project
 
@@ -19,12 +28,11 @@ claude plugin install team-workflow@jpchauny-plugins --scope project
 Then add to the project's `CLAUDE.md`:
 
 ```markdown
-## Issues
+## Issue tree
 
-Every pending item or finding not resolved in the current change goes to a GitHub
-issue at the moment it appears, with `/team-workflow:issue` (plugin `team-workflow`,
-marketplace `jpchauny/claude-plugins`). Never to a file, to memory or to the close of
-the session.
+Pending items and findings go to the issue tree with `/team-workflow:issue`
+(plugin `team-workflow`, marketplace `jpchauny/claude-plugins`). Baseline issues
+live in <owner>/<home repository>.
 ```
 
 And, to make exploratory mode reliable:

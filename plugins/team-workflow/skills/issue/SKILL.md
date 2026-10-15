@@ -1,112 +1,128 @@
 ---
 name: issue
-description: Open a GitHub issue for a pending item or a finding the moment it appears, with a self-contained hand-off prompt so anyone (person or agent) can resolve it later without this conversation. Use whenever work is left undone, something is found wrong, a decision is needed from the user, or the user says /team-workflow:issue, "abre una issue", "crea un issue", "anótalo como issue".
+description: Propose, and after the user's yes open, a GitHub issue for a pending item or a finding (a "bifurcation") the moment it appears, linked as a sub-issue of the node where it was found and carrying a hand-off prompt. Use whenever work is left undone, something is found wrong, or a decision of the user is needed, and when the user says /team-workflow:issue, "anótalo", "abre una issue", "crea un issue".
 ---
 
 # issue
 
-Every pending item or finding not resolved in the current change goes to a
-GitHub issue **at the moment it appears**: never to a file of the repo, to
-memory, or to the close of the session, where it is lost.
+Every pending item or finding that the current change does not resolve
+goes into the **tree of issues** at the moment it appears. It never goes to
+a file of the repo, to memory, or to the end of the session, where it gets
+lost.
 
-- A **pending item** is work left to do.
-- A **finding** is something found wrong: a defect, a contradiction, a gap.
+- A **pending item** is work left to do. A **finding** is something found
+  wrong: a defect, a contradiction, a gap.
+- The tree: an open issue labelled `baseline` is the root (see the
+  `baseline` skill). Its children are the top-level pending items. Every
+  later bifurcation is a sub-issue of the node where it was found, in any
+  repository.
+- **Nothing enters the tree without the user's yes.** Claude detects and
+  proposes; the user approves.
+- Issues are always created from Claude Code with `gh`, never from the
+  GitHub web. They are written in **English**, whatever language the
+  conversation uses.
 
-Everything happens with `git` and `gh` from the session; the user does not
-operate the GitHub web interface. Issues are written in **English**, even
-when the conversation is in another language.
+## 1. Propose, in one line
 
-## Steps
+When a bifurcation appears, propose it in one line and keep working on the
+current node meanwhile:
 
-1. **Repository.** The issue goes to the repository whose code or
-   document is wrong or unfinished, which is not always the one you are
-   working in. Name it explicitly: `gh ... -R <owner>/<repo>`.
+```text
+↳ ¿anoto? "<title>" · hija de: <parent> · <⏳ espera de ti | ▶ Claude puede | ⛔ bloqueado | 🔴 rompe CI>
+```
 
-2. **Duplicates first.**
+- Several bifurcations at once: one proposal listing them, numbered, so
+  the user answers once ("sí a 1 y 3").
+- The user answers yes, no, or with a change (title, parent, state). Only
+  a yes creates the issue.
+- A rejected proposal is not created, and is not proposed again.
+- When nothing in the tree fits and the subject will outlive the session,
+  propose it as a new top-level child of the baseline.
+
+## 2. Create, after the yes
+
+1. **Repository.** The one whose code or document is wrong or unfinished,
+   which is not always the one in use. Always pass `-R <owner>/<repo>`.
+2. **Duplicates.**
    `gh issue list -R <owner>/<repo> --state all --search "<key terms>"`.
-   If one already covers it, comment on it (`gh issue comment`) with what is
-   new, instead of opening another. Report its number.
-
-3. **Labels.** Use `finding` or `pending` (plus `question` when a decision
-   of the user is needed). If the repository lacks them, create them once:
+   If one covers it, comment there instead, and propose linking it.
+3. **Labels.** Create them once per repository when missing:
    ```sh
-   gh label create finding  -R <owner>/<repo> --color d73a4a --description "Something found wrong, to resolve" 2>/dev/null || true
-   gh label create pending  -R <owner>/<repo> --color fbca04 --description "Work left to do, not a fault"     2>/dev/null || true
-   gh label create question -R <owner>/<repo> --color d876e3 --description "Needs a decision"                 2>/dev/null || true
+   R=<owner>/<repo>
+   gh label create finding   -R $R --color d73a4a --description "Something found wrong, to resolve" 2>/dev/null
+   gh label create pending   -R $R --color fbca04 --description "Work left to do, not a fault" 2>/dev/null
+   gh label create question  -R $R --color d876e3 --description "Waits for a decision of the user" 2>/dev/null
+   gh label create blocked   -R $R --color 6a6f75 --description "Waits for another issue or for someone else" 2>/dev/null
+   gh label create breaks-ci -R $R --color b3261e --description "Keeps a CI check red" 2>/dev/null
    ```
-
-4. **Title.** The files or sections it touches, and the problem in one
-   sentence: `block-handlers.md §9: reserved name used as a variable`.
-
+   (An existing label makes `gh label create` fail; that is fine.)
+   Every issue gets `finding` or `pending`, plus the state labels that
+   apply (`question`, `blocked`, `breaks-ci`). An optional subject label,
+   `tema:<name>`, groups issues in the tree view (create it like the rest).
+4. **Title.** The files or the area it touches, and the problem in one
+   sentence.
 5. **Body.** Write it to a file in the scratchpad and pass it with
-   `--body-file` (never inline: quoting breaks code blocks). Sections, in
-   this order; leave out the ones that do not apply:
-
-   - **What happens.** Plainly, with `path:line` references and the
-     commit or version they refer to (`git rev-parse --short HEAD`).
-   - **Where the work stands.** If work was left half done: the branch,
-     the files touched, what is done and what is not.
-   - **Decision needed.** The options, the recommended one and why. When
-     the subject is code or a language, give two minimal examples, one
-     ✅ (what should hold) and one ❌ (what should not).
-   - **Proposed change.** When there is a concrete change, embed it as a
-     unified patch (`diff -u --label a/<path> --label b/<path> <old> <new>`)
-     in a ```` ```diff ```` block, and the recipe to check, compare and
-     apply it. Verify first that the patch applies (`git apply --check`):
+   `--body-file` (inline bodies break code blocks). Sections, leaving out
+   the ones that do not apply:
+   - **What happens.** Plainly, with `path:line` and the commit
+     (`git rev-parse --short HEAD`).
+   - **Where the work stands.** If it was left half done: the branch, the
+     files, what is done and what is not.
+   - **Decision needed.** The options, the recommended one and why. For
+     code or language matters, a ✅ and a ❌ minimal example.
+   - **Proposed change.** When there is a concrete one, a unified patch
+     (`diff -u --label a/<path> --label b/<path> <old> <new>`, checked with
+     `git apply --check`) in a ```` ```diff ```` block, with the recipe:
      ```sh
      git apply --check change.patch
-     patch -o /tmp/<file>.proposed <path> < change.patch     # compare without touching the file
+     patch -o /tmp/<file>.proposed <path> < change.patch   # compare without touching the file
      code --diff <path> /tmp/<file>.proposed
      git apply change.patch
      ```
-   - **Hand-off.** A prompt, in a ```` ```text ```` block, ready to paste
-     into a new session of an agent that knows nothing of this
-     conversation. See below.
+   - **Hand-off.** Always. See section 3.
    - Last line: `Found while <what was being done> (PR #N | commit <sha>)`.
+6. **Create and link.**
+   ```sh
+   gh issue create -R <owner>/<repo> -t "<title>" -l <labels> -F <body file>
+   python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/issue_tree.py" link <parent URL> <new issue URL>
+   ```
+   (The script is in `scripts/` of this plugin, two directories above this
+   skill's base directory.) Report in one line: number, title and parent.
 
-6. **Create** with
-   `gh issue create -R <owner>/<repo> -t "<title>" -l <label> -F <body file>`,
-   and report in the chat the number, the title and the URL.
+## 3. The hand-off
 
-7. **Closing.** The commit or PR that resolves it says `Closes #N`
-   (`Closes owner/repo#N` across repositories). A decision taken in the
-   conversation is recorded as a comment on the issue before closing it.
+The hand-off holds the context of the node. With it, Claude or a person
+can resume the issue in any session, without this conversation. Size
+follows the item:
 
-## The hand-off prompt
+- **Small item:** context in two lines, what is missing, and when it is
+  done.
+- **Item with a decision:** the full prompt below.
 
-Self-contained: everything needed to understand and resolve the issue
-without this conversation. Never "as discussed", "the file above", "see
-the chat". It holds, in this order:
-
-1. **Context.** The repositories involved (`owner/repo` and the local
-   path when there is a usual one), what each is for, and the facts the
-   reader needs: what the source of truth is, what is derived from it.
-2. **The problem.** What is wrong, with `path:line`.
-3. **The decision.** Taken (which, by whom) or still open (the options;
-   the agent asks the user and does not choose alone).
-4. **Steps.** What to change, where; the patch of the issue if there is
-   one, and what to do if it no longer applies.
-5. **Verification.** The commands that prove it is resolved and the
-   result to expect. Take them from the `## Issue verification` section
-   of the repository's `CLAUDE.md` when there is one.
-6. **Rules in force.** The ones of the repository's `CLAUDE.md` that apply
-   (language, approval before changing specifications, branches and
-   worktrees, no `git add -A`, no commit unless asked).
-7. **Done when.** The observable condition that closes the issue, and
-   `Closes #N` in the resolving commit or PR.
-
-Example skeleton:
+Wrap it in a ````` ````text ````` block (four backticks, so code fences
+inside do not close it). Never write "as discussed" or "see the chat".
 
 ```text
 You are resolving issue #<N> of <owner>/<repo>: <title>.
 
-Context: <repositories, local paths, what each is for, source of truth>.
+Context: <repositories (owner/repo and usual local path), what each is for,
+the source of truth, the facts the reader needs>.
 Problem: <what is wrong, path:line>.
 Decision: <taken: X, by the user on <date> | open: options A/B; ask the user before choosing>.
 Steps:
 1. <...>
-2. <apply the patch in the issue; if `git apply --check` fails, redo the same change by hand>.
-Verification: <commands> → <expected result>.
-Rules: <the repository's rules that apply>.
-Done when: <condition>. Reference "Closes #<N>" in the PR.
+Verification: <commands> → <expected result> (from the repository's CLAUDE.md
+"Issue verification" section when there is one).
+Rules: <the repository's CLAUDE.md rules that apply: language, approvals,
+branches and worktrees, no `git add -A`, commit only when asked>.
+Done when: <observable condition>. "Closes #<N>" in the resolving PR.
 ```
+
+**Keep it current.** When the user takes a decision, or the context
+changes, edit the hand-off (`gh issue edit -F`). A decision is also left
+as a comment. When a node moves from ⏳ to ▶, remove `question`.
+
+## 4. Closing
+
+The commit or PR that resolves an issue says `Closes #N`
+(`Closes owner/repo#N` across repositories).
