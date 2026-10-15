@@ -12,7 +12,7 @@ A Claude Code plugin marketplace (`jpchauny-plugins`) with the skills the team s
 - **Root:** an open issue labelled `baseline` (`Línea de base YYYY-MM-DD`), found from any repository that has pending items under it; nothing is configured. Its children are the top-level pending items; each bifurcation hangs under the node where it was found, across repositories.
 - **Bifurcation:** Claude proposes it in one line; nothing enters the tree without the user's yes. Every issue carries a hand-off: the context to resume it in any session.
 - **State, from labels:** `question` ⏳ waits for the user, `blocked` ⛔, `breaks-ci` 🔴, otherwise ▶ Claude can advance. Optional subject: `tema:<name>`.
-- **Seeing it:** only on request (`/team-workflow:tree`): a summary, the tree in the chat, and a link to the same view as a page. Each person sees what their GitHub access allows.
+- **Seeing it:** only on request (`/team-workflow:tree`): a summary and the tree in the chat. A page with the same view only when explicitly asked. Each person sees what their GitHub access allows.
 - **New baseline:** only when the user declares it (`/team-workflow:baseline`): a new root, the open items move under it, the old root closes as a dated snapshot.
 - **Exploring is not implementing:** while exploring, Claude answers and proposes no implementation. While working, it shows where it is in one line (baseline › node › step).
 
