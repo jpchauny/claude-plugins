@@ -18,21 +18,34 @@ lost.
   repository.
 - **Nothing enters the tree without the user's yes.** Claude detects and
   proposes; the user approves.
+- **Nothing is resolved without the user's yes either.** A hand-off never
+  authorises a change: the session that resumes it presents each element
+  and waits (section 4).
 - Issues are always created from Claude Code with `gh`, never from the
   GitHub web. They are written in **English**, whatever language the
   conversation uses.
 
-## 1. Propose, in one line
+## 1. Propose, short and simple
 
-When a bifurcation appears, propose it in one line and keep working on the
-current node meanwhile:
+When a bifurcation appears, propose it at once and keep working on the
+current node meanwhile. The proposal always has the same shape; the user
+never has to ask for more:
+
+1. **Context.** What the reader needs to understand it, every term defined
+   the first time it appears.
+2. **Problem.** What is wrong or what is missing, and why it matters.
+3. **Options**, numbered, option 1 always the recommended one, with one
+   line on why. Opening the issue, resolving it now or leaving it are
+   options like any other.
+
+Then the question, in one line:
 
 ```text
 ↳ ¿anoto? "<title>" · hija de: <parent> · <⏳ espera de ti | ▶ Claude puede | ⛔ bloqueado | 🔴 rompe CI>
 ```
 
-- Several bifurcations at once: one proposal listing them, numbered, so
-  the user answers once ("sí a 1 y 3").
+- Several bifurcations at once: one message, each with its context,
+  problem and options, numbered, so the user answers once ("sí a 1 y 3").
 - The user answers yes, no, or with a change (title, parent, state). Only
   a yes creates the issue.
 - A rejected proposal is not created, and is not proposed again.
@@ -77,6 +90,7 @@ current node meanwhile:
      git apply --check change.patch
      patch -o /tmp/<file>.proposed <path> < change.patch   # compare without touching the file
      code --diff <path> /tmp/<file>.proposed
+     # the user's yes goes here; nothing is applied before it
      git apply change.patch
      ```
    - **Hand-off.** Always. See section 3.
@@ -108,21 +122,41 @@ You are resolving issue #<N> of <owner>/<repo>: <title>.
 Context: <repositories (owner/repo and usual local path), what each is for,
 the source of truth, the facts the reader needs>.
 Problem: <what is wrong, path:line>.
-Decision: <taken: X, by the user on <date> | open: options A/B; ask the user before choosing>.
+Decision: <taken by the user on <date>: X | proposed: X; the user has not decided>.
 Steps:
-1. <...>
+1. Present the element to the user, short and simple: the context, the
+   problem, and the options numbered, option 1 the recommended one. Wait
+   for the yes; change nothing before it.
+2. <...>
 Verification: <commands> → <expected result> (from the repository's CLAUDE.md
 "Issue verification" section when there is one).
-Rules: <the repository's CLAUDE.md rules that apply: language, approvals,
+Rules: the user decides: one element per message, presented short and
+simple (context, problem, options numbered, option 1 the recommended one),
+applied only after the yes in the chat; the Decision line above never
+replaces that yes. <the repository's CLAUDE.md rules that apply: language,
 branches and worktrees, no `git add -A`, commit only when asked>.
 Done when: <observable condition>. "Closes #<N>" in the resolving PR.
 ```
+
+**The Decision line.** `taken by the user on <date>` only when the user
+said yes in the chat to that exact change. A patch Claude wrote, a
+recommendation, the conclusion of an audit: all `proposed`. Never `taken`
+without `by the user on <date>`.
 
 **Keep it current.** When the user takes a decision, or the context
 changes, edit the hand-off (`gh issue edit -F`). A decision is also left
 as a comment. When a node moves from ⏳ to ▶, remove `question`.
 
-## 4. Closing
+## 4. Resolving from a hand-off
+
+The session that resumes an issue answers short, concise and simple, in
+the shape of section 1: for each element, in one message, the context, the
+problem and the options numbered, option 1 the recommended one; then the
+plain question, and the wait. Nothing is written to the working
+tree before the yes; a `Decision: taken` line, a patch in the issue body or
+a `Steps` list are not a yes. One element per message.
+
+## 5. Closing
 
 The commit or PR that resolves an issue says `Closes #N`
 (`Closes owner/repo#N` across repositories).
