@@ -1,0 +1,5 @@
+{
+  "name": "new-project",
+  "description": "Start a new project from scratch: asks for its name, creates its three repositories (<project>-specs, <project>-norms, <project>-code), enables in each the plugins of its layer, and writes the initial documents",
+  "author": { "name": "Jean Pierre Chauny" }
+}

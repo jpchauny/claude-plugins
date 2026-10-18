@@ -1,6 +1,6 @@
 ---
 name: baseline
-description: Declare a new baseline of pending work - a new root issue for the tree, with the still-open top-level items moved under it and the previous baseline closed as a dated snapshot. Use only when the user declares a baseline ("nueva línea de base", "esto es la línea de base") or says /team-workflow:baseline.
+description: Declare a new baseline of pending work - a new root issue for the tree, with the still-open top-level items moved under it and the previous baseline closed as a dated snapshot. Use only when the user declares a baseline ("nueva línea de base", "esto es la línea de base") or says /shared:baseline.
 ---
 
 # baseline

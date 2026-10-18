@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Explain a topic in short, simple steps, assuming no prior knowledge, defining every new term as it appears, and waiting for the user's "got it" before giving the next step. Use when the user asks for a didactic explanation, says /team-workflow:explain, "explícame paso a paso", "explica simple", "explain step by step", "explain it simply", "paso a paso".
+description: Explain a topic in short, simple steps, assuming no prior knowledge, defining every new term as it appears, and waiting for the user's "got it" before giving the next step. Use when the user asks for a didactic explanation, says /shared:explain, "explícame paso a paso", "explica simple", "explain step by step", "explain it simply", "paso a paso".
 argument-hint: "[topic to explain]"
 ---
 

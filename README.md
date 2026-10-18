@@ -1,87 +1,85 @@
 # claude-plugins
 
-A Claude Code plugin marketplace (`jpchauny-plugins`) with the skills the team shares across projects.
+A Claude Code plugin marketplace (`jpchauny-plugins`) for working in three
+layers: specifications written by people, norms generated from them, code
+built from the norms by agents.
 
-| Plugin | Skills | What for |
-|--------|--------|----------|
-| `team-workflow` | `/team-workflow:explore` | Think a problem through before it deserves a spec, a plan or code: numbered candidates, trade-offs, what is already decided, open questions. No implementation proposals, no next steps, nothing written until the user promotes. |
-| `team-workflow` | `/team-workflow:issue`, `/team-workflow:tree`, `/team-workflow:baseline` | Pending work as a tree of GitHub issues: every bifurcation is proposed, created after the user's yes as a sub-issue of the node where it was found, and carries a hand-off prompt. |
-| `team-workflow` | `/team-workflow:explain` | Explain a topic one step at a time, assuming no prior knowledge: every new term defined as it appears, one idea per message, and the next step only after the user's "got it". |
+The spec-driven design process, in prose, is in [spec-driven-design-process/](spec-driven-design-process/README.md): the single
+source of truth. The plugins are its tools.
 
-## How the team works with it
+| Plugin | Enabled in | What for |
+|--------|------------|----------|
+| `shared` | every repository | Explore before specifying or building (`/shared:explore`); pending items and findings as a tree of GitHub issues (`/shared:issue`, `/shared:tree`, `/shared:baseline`); explanations one step at a time (`/shared:explain`) |
+| `specs` | `<project>-specs` | Layer 1: tools that help people write the specification |
+| `norms` | `<project>-norms` | Layer 2: the norms generator, and the method for a project's own generators |
+| `code` | `<project>-code` | Layer 3: the implementation method and code traceability |
+| `new-project` | nowhere: user scope | Creates the three repositories of a new project (`/new-project:new-project`) |
+
+## Start a new project
+
+Once per person:
+
+```sh
+claude plugin marketplace add jpchauny/claude-plugins
+claude plugin install new-project@jpchauny-plugins --scope user
+```
+
+Then, in any session, `/new-project:new-project <name>`. It creates the three
+repositories with the plugins of each layer enabled in their
+`.claude/settings.json`.
+
+## Add the plugins to an existing repository
+
+In the repository (the commands write `.claude/settings.json`; commit it):
+
+```sh
+claude plugin marketplace add jpchauny/claude-plugins --scope project
+claude plugin install shared@jpchauny-plugins --scope project
+claude plugin install <specs|norms|code>@jpchauny-plugins --scope project
+```
+
+
+### How `shared` works
 
 - **Root:** an open issue labelled `baseline` (`Línea de base YYYY-MM-DD`), found from any repository that has pending items under it; nothing is configured. Its children are the top-level pending items; each bifurcation hangs under the node where it was found, across repositories.
 - **Bifurcation:** Claude proposes it in one line; nothing enters the tree without the user's yes. Every issue carries a hand-off: the context to resume it in any session.
 - **State, from labels:** `question` ⏳ waits for the user, `blocked` ⛔, `breaks-ci` 🔴, otherwise ▶ Claude can advance. Optional subject: `tema:<name>`.
-- **Seeing it:** only on request (`/team-workflow:tree`): a summary and the tree in the chat. A page with the same view only when explicitly asked. Each person sees what their GitHub access allows.
-- **New baseline:** only when the user declares it (`/team-workflow:baseline`): a new root, the open items move under it, the old root closes as a dated snapshot.
+- **Seeing it:** only on request (`/shared:tree`): a summary and the tree in the chat. A page with the same view only when explicitly asked. Each person sees what their GitHub access allows.
+- **New baseline:** only when the user declares it (`/shared:baseline`): a new root, the open items move under it, the old root closes as a dated snapshot.
 - **Exploring is not implementing:** while exploring, Claude answers and proposes no implementation. While working, it shows where it is in one line (baseline › node › step).
-- **Explaining is one step at a time:** on `/team-workflow:explain`, Claude gives one short step per message, defines every new term, and waits for the user's "got it" before the next.
+- **Explaining is one step at a time:** on `/shared:explain`, Claude gives one short step per message, defines every new term, and waits for the user's "got it" before the next.
 
 ## Use it in a project
 
-Once, in the project repository (the commands write `.claude/settings.json`; commit it):
-
-```sh
-claude plugin marketplace add jpchauny/claude-plugins --scope project
-claude plugin install team-workflow@jpchauny-plugins --scope project
-```
-
-Then add to the project's `CLAUDE.md`:
-
-```markdown
-## Issues
-
-Pending items and findings go to the issue tree with `/team-workflow:issue`
-(plugin `team-workflow`, marketplace `jpchauny/claude-plugins`).
-```
-
-And, to make exploratory mode reliable:
-
-```markdown
-## Exploring
-
-When the user opens a problem to think about before specifying or building it,
-or says "exploremos", "modo exploratorio", "qué opciones hay", use
-`/team-workflow:explore`: candidates and trade-offs, no implementation
-proposals, nothing written until the user promotes.
-```
-
-And, to make the step-by-step explanation reliable:
-
-```markdown
-## Explaining
-
-When the user asks for a didactic explanation, or says "explícame paso a
-paso", "explica simple", "explain step by step", use `/team-workflow:explain`:
-one short step per message, every new term defined, the next step only after
-the user's "got it".
-```
-
-A project can add an `## Issue verification` section to its `CLAUDE.md`: the commands that tell whether an issue is resolved. The skill copies them into each hand-off.
 
 ## Each teammate
 
-The repository is public: nothing to configure. Opening a project that declares the marketplace, accept the folder's trust dialog. If Claude Code reports that the plugin is enabled but not installed:
+The repository is public: nothing to configure. Opening a project that
+declares the marketplace, accept the folder's trust dialog. If Claude Code
+reports that a plugin is enabled but not installed:
 
 ```sh
-claude plugin install team-workflow@jpchauny-plugins --scope project
+claude plugin install <plugin>@jpchauny-plugins --scope project
 ```
 
 ## Updates
 
-Change a skill here, push to `main`. Updates are not automatic for a third-party marketplace: each teammate runs
+Every project uses the latest version
+([LAY-6](spec-driven-design-process/layers.md#lay-6--every-project-uses-the-latest-version-of-the-plugins)).
+Change a plugin here, push to `main`. Updates are not automatic for a
+third-party marketplace: each teammate runs
 
 ```sh
 claude plugin marketplace update jpchauny-plugins
-claude plugin update team-workflow@jpchauny-plugins
+claude plugin update <plugin>@jpchauny-plugins
 ```
 
-then `/reload-plugins` or a new session. (Or enable auto-update for this marketplace in `/plugin`, tab **Marketplaces**.)
+then `/reload-plugins` or a new session. (Or enable auto-update for this
+marketplace in `/plugin`, tab **Marketplaces**.)
 
 Validate before pushing:
 
 ```sh
 claude plugin validate .
-claude plugin validate ./plugins/team-workflow
+for p in plugins/*/; do claude plugin validate "$p"; done
 ```

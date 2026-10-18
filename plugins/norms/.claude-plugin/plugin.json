@@ -1,0 +1,5 @@
+{
+  "name": "norms",
+  "description": "Layer 2: the norms generator common to every project (annotates layer 1 with stable IDs), and the method and tools for writing a project's own generators of derived specifications",
+  "author": { "name": "Jean Pierre Chauny" }
+}

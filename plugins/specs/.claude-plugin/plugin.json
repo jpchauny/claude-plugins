@@ -1,0 +1,5 @@
+{
+  "name": "specs",
+  "description": "Layer 1 tools for the people who write a project's specifications in plain prose: readability, renumbering chapters, reviewing a change",
+  "author": { "name": "Jean Pierre Chauny" }
+}

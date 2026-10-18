@@ -1,12 +1,34 @@
 {
   "name": "jpchauny-plugins",
-  "description": "Shared Claude Code skills for Jean Pierre Chauny's projects and team",
-  "owner": { "name": "Jean Pierre Chauny" },
+  "description": "Shared Claude Code plugins for working in three layers: specifications (people), norms (generated), code (agents)",
+  "owner": {
+    "name": "Jean Pierre Chauny"
+  },
   "plugins": [
     {
-      "name": "team-workflow",
-      "source": "./plugins/team-workflow",
+      "name": "shared",
+      "source": "./plugins/shared",
       "description": "How the team works: explore before specifying or building; pending items and findings go to GitHub issues, each with a self-contained hand-off; explanations one step at a time, waiting for the user's got-it"
+    },
+    {
+      "name": "specs",
+      "source": "./plugins/specs",
+      "description": "Layer 1 tools for the people who write a project's specifications in plain prose: readability, renumbering chapters, reviewing a change"
+    },
+    {
+      "name": "norms",
+      "source": "./plugins/norms",
+      "description": "Layer 2: the norms generator common to every project (annotates layer 1 with stable IDs), and the method and tools for writing a project's own generators of derived specifications"
+    },
+    {
+      "name": "code",
+      "source": "./plugins/code",
+      "description": "Layer 3: the implementation method; code and tests built only from a pinned version of layer 2, citing its norm IDs, and every inconsistency sent back to layer 1"
+    },
+    {
+      "name": "new-project",
+      "source": "./plugins/new-project",
+      "description": "Start a new project from scratch: asks for its name, creates its three repositories (<project>-specs, <project>-norms, <project>-code), enables in each the plugins of its layer, and writes the initial documents"
     }
   ]
 }

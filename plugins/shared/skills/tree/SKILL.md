@@ -1,6 +1,6 @@
 ---
 name: tree
-description: Show the tree of pending work (the current baseline issue and its sub-issues, across repositories) in the chat - a one-line summary and a text tree; a page only when the user explicitly asks for it. Use only when the user asks to see the tree, the pending items, what waits for them, or says /team-workflow:tree. Never show it unasked.
+description: Show the tree of pending work (the current baseline issue and its sub-issues, across repositories) in the chat - a one-line summary and a text tree; a page only when the user explicitly asks for it. Use only when the user asks to see the tree, the pending items, what waits for them, or says /shared:tree. Never show it unasked.
 ---
 
 # tree

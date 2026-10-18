@@ -1,6 +1,6 @@
 ---
 name: issue
-description: Propose, and after the user's yes open, a GitHub issue for a pending item or a finding (a "bifurcation") the moment it appears, linked as a sub-issue of the node where it was found and carrying a hand-off prompt. Use whenever work is left undone, something is found wrong, or a decision of the user is needed, and when the user says /team-workflow:issue, "anótalo", "abre una issue", "crea un issue".
+description: Propose, and after the user's yes open, a GitHub issue for a pending item or a finding (a "bifurcation") the moment it appears, linked as a sub-issue of the node where it was found and carrying a hand-off prompt. Use whenever work is left undone, something is found wrong, or a decision of the user is needed, and when the user says /shared:issue, "anótalo", "abre una issue", "crea un issue".
 ---
 
 # issue

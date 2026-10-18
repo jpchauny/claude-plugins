@@ -1,6 +1,6 @@
 ---
 name: explore
-description: Think a problem through before it deserves a spec, a plan or code. A space without force; compares approaches, weighs trade-offs, sketches candidates; does not decide, does not write, does not propose actions or next steps until the user promotes. Only exit, promotion to a spec, a plan, an issue or the project's docs. Use when the user says /team-workflow:explore, "exploremos", "let's explore", "modo exploratorio", "exploratory mode", "pensemos antes de", "think before we", "qué opciones hay", "what are the options", "brainstorm".
+description: Think a problem through before it deserves a spec, a plan or code. A space without force; compares approaches, weighs trade-offs, sketches candidates; does not decide, does not write, does not propose actions or next steps until the user promotes. Only exit, promotion to a spec, a plan, an issue or the project's docs. Use when the user says /shared:explore, "exploremos", "let's explore", "modo exploratorio", "exploratory mode", "pensemos antes de", "think before we", "qué opciones hay", "what are the options", "brainstorm".
 argument-hint: "[problem to explore] | promote <target> | close"
 ---
 
@@ -29,10 +29,10 @@ three leaves anything to discard, because nothing was created here.
 ## Invocation
 
 ```
-/team-workflow:explore <problem>          → opens an exploration thread on that problem
-/team-workflow:explore                    → no argument: ask in one line which problem; never assume
-/team-workflow:explore promote <target>   → promotion gate: hand the thread to the target (see map)
-/team-workflow:explore close              → close the thread without promoting; nothing remains
+/shared:explore <problem>          → opens an exploration thread on that problem
+/shared:explore                    → no argument: ask in one line which problem; never assume
+/shared:explore promote <target>   → promotion gate: hand the thread to the target (see map)
+/shared:explore close              → close the thread without promoting; nothing remains
 ```
 
 `<target>` is one of the destinations in the target map, with its arguments.
@@ -139,7 +139,7 @@ Promoted — thread: <one line> → <destination> <args>
 and executes the target: invokes the destination skill with the `Skill` tool
 passing the direction, or starts the destination task as ordinary work. The
 target lands under its own rules: the project's planning and approval rules,
-`/team-workflow:issue` under its steps. This skill does nothing else.
+`/shared:issue` under its steps. This skill does nothing else.
 
 **No** → nothing is invoked and there is nothing to discard. The thread
 closes or stays open, the user's choice.
@@ -150,8 +150,8 @@ closes or stays open, the user's choice.
 |---|---|---|
 | Change or add a spec | the project's spec process, under its approval rules (in projects whose specs live in another repository, there) | the direction as the seed of the change |
 | Implement | an implementation plan, as ordinary work; in spec-driven projects, the spec comes first | the implementation direction; the work starts there, with its plan approved |
-| A question for the owner, or a pending item | `/team-workflow:issue`, with the options as the decision needed | the direction as options |
-| A bug found while exploring | `/team-workflow:issue`, as a finding | the bug |
+| A question for the owner, or a pending item | `/shared:issue`, with the options as the decision needed | the direction as options |
+| A bug found while exploring | `/shared:issue`, as a finding | the bug |
 | Record what was closed | the project's docs, under its rules (only what was decided, after the decision) | the decision and its why |
 
 ## Non-negotiable rules
@@ -180,14 +180,14 @@ closes or stays open, the user's choice.
 | Specify | the project's spec process (via `promote`) |
 | Implement, not even a prototype | a plan (via `promote`) |
 | Record insights or decisions | the project's docs (via `promote`, only what was closed) |
-| Open an issue | `/team-workflow:issue` (via `promote`) |
+| Open an issue | `/shared:issue` (via `promote`) |
 | Answer "what does the spec say about X" | No skill: read the spec and answer with the source. Do not open a thread for a lookup. |
 | Decide | the user, at the gate |
 
 ## End-to-end example
 
 ```
-User:    /team-workflow:explore how the CLI reports errors — exit codes, JSON, or both
+User:    /shared:explore how the CLI reports errors — exit codes, JSON, or both
 
 Claude:  Problem: how a caller of the CLI learns what went wrong, and how precisely.
 
@@ -210,15 +210,15 @@ Claude:  Problem: how a caller of the CLI learns what went wrong, and how precis
          Open questions
          - Is the schema a public contract or an editor-only convenience? Decides between 2 and 3.
 
-User:    /team-workflow:explore promote issue
+User:    /shared:explore promote issue
 
-Claude:  Target:    /team-workflow:issue — decision needed: is the diagnostics JSON schema public?
+Claude:  Target:    /shared:issue — decision needed: is the diagnostics JSON schema public?
          Direction: both channels (candidate 3); exit codes per CLAUDE.md, JSON behind --json.
                     Undecided: whether the schema is a public contract, and its versioning.
          Promote?
 
 User:    yes
 
-Claude:  Promoted — thread: CLI error reporting → /team-workflow:issue (question)
-         [invokes Skill team-workflow:issue with that direction; the issue lands under its own steps]
+Claude:  Promoted — thread: CLI error reporting → /shared:issue (question)
+         [invokes Skill shared:issue with that direction; the issue lands under its own steps]
 ```
