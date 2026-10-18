@@ -30,31 +30,52 @@ wait for the user.
 
 ## 2. Report
 
-In the chat, in the user's language, at most about 15 lines, with exactly
+In the chat, in the user's language, at most about 20 lines, with exactly
 this template:
 
 ```markdown
 ## Recap — <tema de la sesión en pocas palabras>
 
-**Objetivo:** <lo que pediste; si cambió: "empezó como X, ahora es Y">
+**1. Objetivo:** <lo que pediste; si cambió: "empezó como X, ahora es Y">
 
-**Hecho**
-- <logro, máx. 5 viñetas agrupadas por tema>
+**2. Hecho**
+- 2.1 <logro, agrupado por tema>
+  - 2.1.1 <detalle, solo si hace falta>
+- 2.2 <…>
 
-**Decisiones**
-- <decisión tomada, en una línea>
+**3. Decisiones**
+- 3.1 <decisión tomada, en una línea>
 
-**Pendiente**
-1. Decidir: <pregunta abierta para vos>
-2. Hacer: <lo que falta, incluido lo sin commitear o sin pushear>
+**4. Pendiente**
+- 4.1 Decidir: <pregunta abierta para vos>
+- 4.2 Hacer: <lo que falta, incluido lo sin commitear o sin pushear>
+
+¿Quieres ahondar en algún punto? Escribe su número (por ejemplo `2` o `2.1`).
 ```
 
 Rules:
 
-- Only these four sections. An empty one stays, in one line ("Nada.").
-- **Pendiente** is numbered; first what waits for the user's decision is
-  marked "Decidir", the rest "Hacer".
+- Only these four sections, numbered 1 to 4. An empty one stays, in one
+  line ("Nada.").
+- Every item is numbered by level: section `N`, item `N.M`, sub-item
+  `N.M.K`. At most 5 items per section; a third level only when an item
+  really needs it.
+- In **4. Pendiente**, the items that wait for the user's decision come
+  first, marked "Decidir"; the rest are marked "Hacer".
 - Uncommitted or unpushed files of this session, and background work still
-  running, come from the commands of step 1 and go in **Pendiente**.
+  running, come from the commands of step 1 and go in **4. Pendiente**.
 - If the session was compacted, put above the report the line
   *"Sesión compactada: completado desde el transcript"*.
+- The report always ends with the closing question.
+
+## 3. Go deeper
+
+If the user answers with a number, expand that point and everything
+numbered under it — `2` is the whole section 2, `2.1` only 2.1 and its
+sub-items — and nothing else:
+
+- More detail from the conversation (and the transcript if compacted): what
+  was asked, what was done and why, files and commits, with clickable links.
+- Keep the numbers: the expansion of `2.1` uses `2.1.1`, `2.1.2`…, so the
+  user can go deeper again.
+- End with the same closing question.
