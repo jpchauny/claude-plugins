@@ -14,6 +14,7 @@ source of truth. The plugins are its tools.
 | `norms` | `<project>-norms` | Layer 2: the norms generator, and the method for a project's own generators |
 | `code` | `<project>-code` | Layer 3: the implementation method and code traceability |
 | `new-project` | nowhere: user scope | Creates the three repositories of a new project (`/new-project:new-project`) |
+| `recap` | nowhere: user scope | Puts you back up to speed on the session you invoke it from (`/recap:recap`) |
 
 ## Start a new project
 

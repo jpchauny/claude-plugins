@@ -29,6 +29,11 @@
       "name": "new-project",
       "source": "./plugins/new-project",
       "description": "Start a new project from scratch: asks for its name, creates its three repositories (<project>-specs, <project>-norms, <project>-code), enables in each the plugins of its layer, and writes the initial documents"
+    },
+    {
+      "name": "recap",
+      "source": "./plugins/recap",
+      "description": "Get back into a Claude Code session after time away: a short report of the session it is invoked from - its goal, what was done, where it stopped, what waits for the user, what is pending and the next step"
     }
   ]
 }

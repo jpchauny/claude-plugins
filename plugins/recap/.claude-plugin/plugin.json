@@ -1,0 +1,5 @@
+{
+  "name": "recap",
+  "description": "Get back into a Claude Code session after time away: a short report of the session it is invoked from - its goal, what was done, where it stopped, what waits for the user, what is pending and the next step",
+  "author": { "name": "Jean Pierre Chauny" }
+}
