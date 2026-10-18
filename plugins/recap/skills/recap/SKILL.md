@@ -1,6 +1,6 @@
 ---
 name: recap
-description: Bring the user back up to speed on the current Claude Code session after time away - a short report in the chat of this session only - its goal, what was done, where it stopped, what waits for the user, what is pending, the real state of its files and background work, and the next step. Use when the user says /recap, "recap", "ponme al tanto", "¿dónde estábamos?", "¿en qué quedamos?", "where were we", "catch me up".
+description: Bring the user back up to speed on the current Claude Code session after time away - a short report in the chat of this session only - its goal, what was done, the decisions taken, and what is pending to do or decide. Use when the user says /recap, "recap", "ponme al tanto", "¿dónde estábamos?", "¿en qué quedamos?", "where were we", "catch me up".
 ---
 
 # recap
@@ -30,44 +30,31 @@ wait for the user.
 
 ## 2. Report
 
-In the chat, in the user's language, at most about 25 lines, with exactly
+In the chat, in the user's language, at most about 15 lines, with exactly
 this template:
 
 ```markdown
 ## Recap — <tema de la sesión en pocas palabras>
 
-**Objetivo:** <lo que pediste al empezar; si cambió: "empezó como X, ahora es Y">
+**Objetivo:** <lo que pediste; si cambió: "empezó como X, ahora es Y">
 
 **Hecho**
-- <logro o decisión 1> — `archivo` (commiteado / sin commitear)
-- <logro o decisión 2>
-- <máx. 5 viñetas, agrupadas por tema>
+- <logro, máx. 5 viñetas agrupadas por tema>
 
-**Dónde quedó:** <una frase: lo último que hacía Claude o lo último que pasó>
-
-**Te espera a vos**
-1. <pregunta sin responder o aprobación pendiente>
-2. <…>
-(si no hay: "Nada.")
+**Decisiones**
+- <decisión tomada, en una línea>
 
 **Pendiente**
-- <lo que falta para cumplir el objetivo>
-(si no hay: "Objetivo cumplido.")
-
-**Estado real**
-- Sin commitear: <archivos de esta sesión> | Sin pushear: <n commits>
-- En segundo plano: <tareas/subagentes corriendo> (o "nada")
-
-**Siguiente paso:** <una acción concreta>
+1. Decidir: <pregunta abierta para vos>
+2. Hacer: <lo que falta, incluido lo sin commitear o sin pushear>
 ```
 
 Rules:
 
-- **Te espera a vos** is numbered and comes before **Pendiente**: it is what
-  the user needs first to go on.
-- An empty section stays, in one line ("Nada."); it is never dropped.
-- **Hecho** groups by subject, not step by step; at most 5 bullets.
-- **Estado real** comes only from the commands of step 1.
+- Only these four sections. An empty one stays, in one line ("Nada.").
+- **Pendiente** is numbered; first what waits for the user's decision is
+  marked "Decidir", the rest "Hacer".
+- Uncommitted or unpushed files of this session, and background work still
+  running, come from the commands of step 1 and go in **Pendiente**.
 - If the session was compacted, put above the report the line
   *"Sesión compactada: completado desde el transcript"*.
-- **Siguiente paso** is one action, concrete; no alternatives.
