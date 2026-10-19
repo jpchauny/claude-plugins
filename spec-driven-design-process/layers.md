@@ -25,7 +25,8 @@ variant with fewer.
 ### LAY-2 — People work in layer 1
 
 Layer 1 is the only layer people write, and the only source of truth. It
-changes only by a pull request that a person approves.
+changes only by a pull request that a person approves. It has no required
+structure: any folders, any files, at any depth.
 
 ### LAY-3 — Layer 2 is regenerated whole, from layer 1 only
 
@@ -34,6 +35,14 @@ commit of layer 1: the norms generator annotates the specs, and the project's
 own generators derive the rest (a grammar, a formal semantics, a corpus of
 examples). Each regeneration records the commit of layer 1 it comes from and
 the commit of the generators that produced it.
+
+The norms generator writes `specs-repo-annotated/`: a mirror of the whole
+layer 1 repository, at the same paths, its Markdown files annotated with norm
+IDs and every other file copied as it is. It leaves out only what is
+certainly not specification, such as the configuration of tools and the
+instructions for agents; the generator's specification fixes that list
+([R62](../plugins/norms/specs/norms-versions.md)). When in doubt, a file is
+copied.
 
 ### LAY-4 — Layer 3 reads layer 2, never layer 1
 
