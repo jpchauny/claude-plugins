@@ -1,6 +1,6 @@
 ---
 name: build
-description: Regenerate layer 2 of the current project - annotate its layer 1 specs with stable norm IDs into data/ and annotated/ of this norms repository, then verify the output and show the change report. Use when the user says /norms:build, "regenera las normas", "regenerate layer 2", "build norms", or after layer 1 changed.
+description: Regenerate layer 2 of the current project - mirror its whole layer 1 repository into specs-repo-annotated/ of this norms repository, Markdown annotated with stable norm IDs and every other file copied as it is, record the tree in data/, then verify the output and show the change report. Use when the user says /norms:build, "regenera las normas", "regenerate layer 2", "build norms", or after layer 1 changed.
 argument-hint: "[path of the layer 1 repository] [--commit SHA]"
 ---
 
@@ -35,8 +35,8 @@ the generator's spec,
 
 ## 3. Show
 
-- `git status --short -- data annotated`: what changed in this repository.
+- `git status --short -- data specs-repo-annotated`: what changed in this repository.
 - `data/report.md`: what changed since the previous version, by norm ID.
 
-Commit only when the user asks, and only `data/` and `annotated/`, by
+Commit only when the user asks, and only `data/` and `specs-repo-annotated/`, by
 explicit path.

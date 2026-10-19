@@ -1,6 +1,6 @@
-"""After every build, annotated/ holds exactly this build's copies and their folders.
+"""After every build, specs-repo-annotated/ holds exactly this build's copies and their folders.
 
-Everything else under annotated/ is removed before the copies are
+Everything else under specs-repo-annotated/ is removed before the copies are
 written, a symbolic link itself and never what it leads to, and verify
 names each such path as a problem.
 
@@ -26,18 +26,18 @@ def _verify(f: Foundation, out: Path) -> int:
 
 
 def _foreign(path: Path) -> str:
-    return f"{path}: not an annotated copy of a JSONL file; build removes it (U6)"
+    return f"{path}: not a copy of a JSONL file; build removes it (U6)"
 
 
 def _built(tmp_path: Path) -> tuple[Foundation, Path, Path]:
-    """A foundation of `specs/a.md` and `specs/sub/b.md`, built once; its annotated/ and the files under it."""
+    """A foundation of `specs/a.md` and `specs/sub/b.md`, built once; its specs-repo-annotated/ and the files under it."""
     f = Foundation(tmp_path / "foundation")
     f.write("specs/a.md", "# A\n\nText.\n")
     f.write("specs/sub/b.md", "# B\n")
     f.commit()
     out = tmp_path / "norms"
     assert _build(f, out) == 0
-    return f, out, out / "annotated"
+    return f, out, out / "specs-repo-annotated"
 
 
 def _tree(ann: Path) -> list[str]:

@@ -141,8 +141,8 @@ def _make(path: Path, what: str, elsewhere: Path) -> None:
 @pytest.mark.parametrize(
     ("rel", "what", "message"),
     [
-        ("annotated", "file", "not a folder"),
-        ("annotated", "link to a folder", "a symbolic link"),
+        ("specs-repo-annotated", "file", "not a folder"),
+        ("specs-repo-annotated", "link to a folder", "a symbolic link"),
         ("data/report.md", "folder", "a folder"),
         ("data/report.json", "folder", "a folder"),
         ("data/report.md", "link", "a symbolic link"),
@@ -215,7 +215,7 @@ def test_removing_a_vanished_copy_does_not_follow_a_link_inside_annotated_r62(tm
     f.commit()
     out = tmp_path / "norms"
     assert _build(f, out) == 0
-    ann = out / "annotated" / "specs"
+    ann = out / "specs-repo-annotated" / "specs"
     (ann / "new").mkdir()
     (ann / "old" / "c.md").rename(ann / "new" / "c.md")
     (ann / "old").rmdir()
@@ -242,14 +242,14 @@ def test_removing_a_vanished_copy_removes_a_link_at_its_path_only_r62(tmp_path: 
     assert _build(f, out) == 0
     outside = tmp_path / "outside.md"
     outside.write_text("keep")
-    copy = out / "annotated" / "specs" / "x" / "c.md"
+    copy = out / "specs-repo-annotated" / "specs" / "x" / "c.md"
     copy.unlink()
     copy.symlink_to(outside)
     (f.root / "specs" / "x" / "c.md").unlink()
     f.commit()
     assert _build(f, out) == 0
     assert outside.read_text() == "keep"
-    assert not (out / "annotated" / "specs" / "x").exists()
+    assert not (out / "specs-repo-annotated" / "specs" / "x").exists()
 
 
 # --- report on a folder; verify on an unreadable copy ---------------------------
@@ -277,7 +277,7 @@ def test_verify_reports_an_annotated_copy_it_cannot_read_r64(
     Spec: R62, R64
     """
     f, out = _one_file(tmp_path)
-    copy = out / "annotated" / "specs" / "a.md"
+    copy = out / "specs-repo-annotated" / "specs" / "a.md"
     copy.chmod(0)
     try:
         capsys.readouterr()

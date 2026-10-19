@@ -432,7 +432,7 @@ def test_annotated_markers_and_structure(case: str) -> None:
 
 
 def test_e20_output_mirrors_folders(tmp_path: Path) -> None:
-    """The folder example: `annotated/` keeps the folder tree of foundation; folders get no ID; file marker first.
+    """The folder example: `specs-repo-annotated/` keeps the folder tree of foundation; folders get no ID; file marker first.
 
     Spec: R14, R29, R62 (E20)
     """
@@ -454,7 +454,7 @@ def test_e20_output_mirrors_folders(tmp_path: Path) -> None:
     subprocess.run([*git, "commit", "-q", "-m", "c"], check=True)
     out = tmp_path / "norms"
     assert main(["build", "--foundation", str(foundation), "--out", str(out)]) == 0
-    annotated = out / "annotated"
+    annotated = out / "specs-repo-annotated"
     written = {
         p.relative_to(annotated).as_posix() for p in annotated.rglob("*.md")
     }
@@ -555,10 +555,10 @@ def test_version_example(case: str, tmp_path: Path) -> None:
         sha = subprocess.run([*git, "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
         commits[sha] = name
 
-        cli.build(foundation, "HEAD", "specs", out)
+        cli.build(foundation, "HEAD", out)
         assert cli.verify(foundation, out) == [], folder.name
 
-        annotated = _tree_files(out / "annotated")
+        annotated = _tree_files(out / "specs-repo-annotated")
         expected = _tree_files(folder / "expected")
         assert sorted(annotated) == sorted(expected), folder.name
         for rel, data in expected.items():

@@ -143,10 +143,25 @@ def test_a_md_path_not_utf8_is_refused_naming_it_r34(tmp_path: Path, capsys: pyt
     assert not out.exists()
 
 
-def test_a_non_md_path_not_utf8_is_ignored_r34(tmp_path: Path) -> None:
-    """A path of another name is ignored whatever its bytes.
+def test_an_excluded_path_not_utf8_is_ignored_r34(tmp_path: Path) -> None:
+    """An excluded path is ignored whatever its bytes.
 
-    Spec: R34
+    Spec: R34, R62
+    """
+    f = Foundation(tmp_path / "foundation")
+    f.write("specs/a.md", "# A\n\nx\n")
+    f.git("add", "-A")
+    _add_blob(f, b".tool/x\xff.txt", b"y\n")
+    f.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "c")
+    out = tmp_path / "norms"
+    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert sorted(read_store(out / "data" / "tree.jsonl").files) == ["specs/a.md"]
+
+
+def test_a_selected_path_not_utf8_is_refused_whatever_its_name_r34(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A selected path that is not UTF-8 is refused, a plain copy's as a .md file's.
+
+    Spec: R34, R62
     """
     f = Foundation(tmp_path / "foundation")
     f.write("specs/a.md", "# A\n\nx\n")
@@ -154,5 +169,6 @@ def test_a_non_md_path_not_utf8_is_ignored_r34(tmp_path: Path) -> None:
     _add_blob(f, b"specs/x\xff.txt", b"y\n")
     f.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "c")
     out = tmp_path / "norms"
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
-    assert sorted(read_store(out / "data" / "tree.jsonl").files) == ["specs/a.md"]
+    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert capsys.readouterr().err == "norms-gen: specs/x\\xff.txt: path not UTF-8\n"
+    assert not out.exists()

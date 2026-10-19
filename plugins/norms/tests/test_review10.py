@@ -50,7 +50,7 @@ def test_verify_reports_a_copy_under_a_folder_it_cannot_search_r64(
     Spec: R64, U6
     """
     f, out = _one_file(tmp_path)
-    folder = out / "annotated" / "specs"
+    folder = out / "specs-repo-annotated" / "specs"
     folder.chmod(0)
     try:
         capsys.readouterr()
@@ -208,12 +208,12 @@ def test_build_replaces_a_report_without_write_permission_r62(tmp_path: Path) ->
 def test_build_stops_with_a_message_under_a_folder_it_cannot_search_r62(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Build stops with a message, naming the folder under annotated/ it cannot search.
+    """Build stops with a message, naming the folder under specs-repo-annotated/ it cannot search.
 
     Spec: R62, U6
     """
     f, out = _one_file(tmp_path)
-    folder = out / "annotated" / "specs"
+    folder = out / "specs-repo-annotated" / "specs"
     folder.chmod(0)
     try:
         capsys.readouterr()
@@ -305,20 +305,22 @@ def test_not_in_foundation_is_worded_as_r34_words_git_r64(
 
 
 def test_refusal_messages_are_worded_as_r34_says(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """A refusal is worded exactly as the spec words it: no .md file under the folder.
+    """A refusal is worded exactly as the spec words it: no .md file to build.
 
     Spec: R34
     """
     f = Foundation(tmp_path / "foundation")
-    f.write("specs/a.md", "# A\n")
+    f.write("AGENTS.md", "# Agents\n")
     f.commit()
     out = tmp_path / "norms"
     capsys.readouterr()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out), "--specs-dir", "nope"]) == 2
+    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
     sha = subprocess.run(
         ["git", "-C", str(f.root), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
     ).stdout.strip()
-    assert capsys.readouterr().err == f"norms-gen: no .md file under 'nope' at {sha}; is --specs-dir right?\n"
+    assert capsys.readouterr().err == f"norms-gen: no .md file to build at {sha}; is --foundation right?\n"
+    f.write("specs/a.md", "# A\n")
+    f.commit()
 
     (f.root / "specs" / "a.md").write_bytes(b"# A\xff\n")
     f.commit()

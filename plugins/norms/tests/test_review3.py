@@ -146,7 +146,7 @@ def test_paragraph_leaving_a_collapsed_quote_keeps_its_id_e72() -> None:
         assert status[para.id] == "edited"
 
 
-# --- non-UTF-8 foundation, mistyped --specs-dir (cli) ---------------------------------
+# --- non-UTF-8 foundation, no .md file to build (cli) ---------------------------------
 
 
 def test_non_utf8_file_is_refused_naming_it_r34(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -164,10 +164,10 @@ def test_non_utf8_file_is_refused_naming_it_r34(tmp_path: Path, capsys: pytest.C
     assert not out.exists()
 
 
-def test_mistyped_specs_dir_is_refused_and_keeps_the_store(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """A specs folder with no .md file is refused, and the outputs stay as they were.
+def test_no_md_file_to_build_is_refused_and_keeps_the_store(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A repository with no selected .md file is refused, and the outputs stay as they were.
 
-    Spec: R3, R34
+    Spec: R3, R34, R62
     """
     f = Foundation(tmp_path / "foundation")
     f.write("specs/alpha.md", "# A\n\nx\n")
@@ -175,10 +175,13 @@ def test_mistyped_specs_dir_is_refused_and_keeps_the_store(tmp_path: Path, capsy
     out = tmp_path / "norms"
     build(f, out)
     before = (out / "data" / "tree.jsonl").read_bytes()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out), "--specs-dir", "spec"]) == 2
-    assert "no .md file under 'spec'" in capsys.readouterr().err
+    (f.root / "specs" / "alpha.md").unlink()
+    f.write("CLAUDE.md", "# Agents only\n")
+    f.commit()
+    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert "no .md file to build at " in capsys.readouterr().err
     assert (out / "data" / "tree.jsonl").read_bytes() == before
-    assert (out / "annotated" / "specs" / "alpha.md").exists()
+    assert (out / "specs-repo-annotated" / "specs" / "alpha.md").exists()
 
 
 # --- a retired node's changed_since is of its own step --------------------------

@@ -1,29 +1,33 @@
 """Command line of the layer 2 generator: `norms-gen build | verify | report`.
 
-    norms-gen build  --foundation REPO [--commit SHA] [--specs-dir specs] [--out DIR]
+    norms-gen build  --foundation REPO [--commit SHA] [--out DIR]
     norms-gen verify --foundation REPO [--out DIR]
     norms-gen report [--out DIR] [--json]
 
-Foundation is read through git, never from its working tree: every `.md`
-blob under the specs folder at the commit, with its exact bytes, line
-endings included (`git ls-tree`, `git cat-file blob`). Paths are relative
+Foundation is read through git, never from its working tree: every
+regular file of the repository at the commit, in any folder, but the
+excluded paths (excluded()), with its exact bytes, line endings included
+(`git ls-tree`, `git cat-file blob`). Its `.md` files are annotated; every
+other file is a plain copy, written byte for byte. Paths are relative
 to the foundation repository's root (`specs/language/type-system.md`),
 the same every run, so that a path present in both keeps its prefix.
 
-Output, under `--out` (default: the root of this repository):
+Output, under `--out` (default: the git repository of the working directory):
 
     data/tree.jsonl       the norms tree, the only source of truth for the
                           IDs and their history (foundation's is the content)
     data/report.md        what changed since the previous version, by ID
     data/report.json      the same, as JSON Lines
-    annotated/<path>      each foundation file with its IDs, at the same
-                          relative path: the folder tree is kept
+    specs-repo-annotated/<path>
+                          each foundation file with its IDs, and each plain
+                          copy, at the same relative path: the folder tree
+                          is kept
 
-`build` refuses (exit status 2, nothing written) when the specs folder
-holds no `.md` file at the commit, which a mistyped `--specs-dir` gives
-and which would retire every ID and prefix, when a file is not UTF-8
+`build` refuses (exit status 2, nothing written) when the repository
+holds no selected `.md` file at the commit, which the wrong repository
+gives and which would retire every ID and prefix, when a file is not UTF-8
 or holds a delimiter `⟬` or `⟭`, naming the file, when
-a `.md` path holds a control character, when two paths or folders of
+a selected path holds a control character, when two paths or folders of
 them differ only in case or Unicode normalization (check_paths),
 and when the previous `data/tree.jsonl` cannot be read or is not
 consistent: an ID stored twice, a prefix shared by two files, a retired
@@ -32,12 +36,12 @@ output path is in the way (check_outputs).
 
 `build` matches the new trees against the previous `data/tree.jsonl`
 (the empty store on a first run) and rewrites the outputs: the
-annotated copies first, after everything else under annotated/ is
+copies first, after everything else under specs-repo-annotated/ is
 removed, so that it holds exactly this build's copies and their folders,
 then the JSONL, then the reports. Every output is written as a new file
 (store.write_new), never into the file at its path, so a hard link there
 never carries a write outside the output folder. It is deterministic: with
-the same generator and `--specs-dir`, a rebuild of the same commit
+the same generator, a rebuild of the same commit
 leaves every output byte for byte as it was, when both reports exist.
 In particular, a rebuild of the commit the JSONL is already
 pinned to, when it holds a file line, keeps the `to_review` and
@@ -47,9 +51,10 @@ rebuild.
 
 `verify` re-reads foundation at the commit pinned in the JSONL, checks
 the JSONL itself (each ID stored once, file prefixes unique, no retired
-prefix in use), runs verify.check_file() on every file, and
-names every path under annotated/ that is no copy of them, a copy with
-more than one link, and an annotated/ that is a link or a file.
+prefix in use), runs verify.check_file() on every file, checks every
+plain copy against foundation, and names every path under
+specs-repo-annotated/ that is no copy of them, a copy with more than one
+link, and a specs-repo-annotated/ that is a link or a file.
 It exits with 1 when it finds a problem, a JSONL it cannot read
 included, 0 otherwise.
 
@@ -112,7 +117,7 @@ STORE_PATH = Path("data/tree.jsonl")
 STORE_TMP = Path("data/tree.jsonl.tmp")  # R62: where write_store writes it aside; Note: D45
 REPORT_MD = Path("data/report.md")
 REPORT_JSON = Path("data/report.json")
-ANNOTATED = Path("annotated")
+ANNOTATED = Path("specs-repo-annotated")
 
 def default_out() -> Path:
     """The output folder when --out is not given: the root of the norms repository.
@@ -213,36 +218,64 @@ def resolve_commit(repo: Path, commit: str) -> str:
         raise
 
 
-def list_markdown(repo: Path, commit: str, specs_dir: str) -> dict[str, str]:
-    """path -> blob SHA of every `.md` file under `specs_dir` at `commit`.
+# R62: what is certainly not specification, in any project; the list is fixed
+AGENT_FILES = frozenset(name.casefold() for name in ("CLAUDE.md", "CLAUDE.local.md", "AGENTS.md"))
+ROOT_COMMUNITY_FILES = frozenset(
+    name.casefold() for name in ("LICENSE.md", "CHANGELOG.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md")
+)
 
-    Only regular files (modes 100644 and 100755); symbolic links and
-    submodules are left out, and `specs_dir` loses its trailing slashes.
-    A `.md` path that is not UTF-8 is refused (FoundationError); any other
-    file is ignored, whatever its name.
+
+def excluded(path: str) -> bool:
+    """Whether `path` is one of the excluded paths, which are certainly not specification.
+
+    A folder or a file whose name starts with `.` (tool configuration), a
+    `CLAUDE.md`, `CLAUDE.local.md` or `AGENTS.md` in any folder
+    (instructions for agents), or a community file at the root. Names
+    are compared after `str.casefold()`.
+
+    Spec: R62
+    """
+    parts = path.split("/")
+    if any(part.startswith(".") for part in parts):
+        return True
+    name = parts[-1].casefold()
+    return name in AGENT_FILES or (len(parts) == 1 and name in ROOT_COMMUNITY_FILES)
+
+
+def list_selected(repo: Path, commit: str) -> tuple[dict[str, str], dict[str, str]]:
+    """path -> blob SHA of the selected files at `commit`: the `.md` files, and every other file.
+
+    Every regular file of the repository (modes 100644 and 100755), in any
+    folder, but the excluded paths; symbolic links and submodules are
+    left out. A selected path that is not UTF-8, or that holds a control
+    character, is refused (FoundationError); an excluded path is ignored,
+    whatever it holds.
 
     Spec: R34, R62
     """
-    out = _git(repo, "ls-tree", "-r", "-z", "--full-tree", commit, "--", specs_dir.rstrip("/") + "/")
-    blobs: dict[str, str] = {}
+    out = _git(repo, "ls-tree", "-r", "-z", "--full-tree", commit)
+    markdown: dict[str, str] = {}
+    others: dict[str, str] = {}
     for entry in out.split(b"\0"):
         if not entry:
             continue
         info, path_bytes = entry.split(b"\t", 1)
         mode, kind, sha = info.decode().split()
-        if not (kind == "blob" and mode in ("100644", "100755") and path_bytes.endswith(b".md")):
+        if not (kind == "blob" and mode in ("100644", "100755")):
+            continue
+        if excluded(path_bytes.decode("utf-8", errors="replace")):
             continue
         try:
             path = path_bytes.decode("utf-8")
         except UnicodeDecodeError:
-            # R34: a path is cited in the JSONL, the report and annotated/;
+            # R34: a path is cited in the JSONL, the report and specs-repo-annotated/;
             # its control characters escaped too: a line break would split the message
             name = escape_controls(path_bytes.decode("utf-8", errors="backslashreplace"))
             raise FoundationError(f"{name}: path not UTF-8") from None
         if has_control(path):  # R34: a line break would split a report heading or a message line
             raise FoundationError(f"{escape_controls(path)}: path holds a control character")
-        blobs[path] = sha
-    return dict(sorted(blobs.items()))
+        (markdown if path.endswith(".md") else others)[path] = sha
+    return dict(sorted(markdown.items())), dict(sorted(others.items()))
 
 
 def _fold(path: str) -> str:
@@ -256,7 +289,7 @@ def _fold(path: str) -> str:
 def check_paths(paths: list[str]) -> None:
     """Raise FoundationError when two paths, or folders of them, differ only in case or normalization.
 
-    Their annotated copies would be one file, or one folder, on such a
+    Their copies would be one file, or one folder, on such a
     file system: one copy would overwrite the other, and the folder tree
     would not be kept.
 
@@ -271,11 +304,11 @@ def check_paths(paths: list[str]) -> None:
             first = seen.setdefault(_fold(name), name)
             if first != name:
                 if first in files and name in files:
-                    what = "their annotated copies would be one file and overwrite each other"
+                    what = "their copies would be one file and overwrite each other"
                 elif first in files or name in files:
-                    what = "an annotated copy and a folder of annotated copies would take one name"
+                    what = "a copy and a folder of copies would take one name"
                 else:
-                    what = "their annotated copies would share one folder, and the folder tree would not be kept"
+                    what = "their copies would share one folder, and the folder tree would not be kept"
                 raise FoundationError(
                     f"{first} and {name} differ only in case or Unicode normalization; "
                     f"on a file system that ignores both, {what} (R34)"
@@ -332,7 +365,7 @@ def read_file(repo: Path, commit: str, path: str) -> bytes:
 def check_outputs(out: Path) -> None:
     """Raise OutputError, before anything is written, when an output path is in the way.
 
-    `data/` and `annotated/` must be folders, not symbolic links, and
+    `data/` and `specs-repo-annotated/` must be folders, not symbolic links, and
     `data/report.md`, `data/report.json` and `data/tree.jsonl.tmp` must
     not be folders or symbolic links: writing through a link would write
     outside the output folder, and a folder there is no file of the
@@ -383,7 +416,7 @@ def _write_if_changed(path: Path, data: bytes) -> None:
 
 
 def _kept_names(paths: Sequence[str]) -> tuple[set[str], set[str]]:
-    """The copies of `paths` and the folders that hold them, relative to annotated/.
+    """The copies of `paths` and the folders that hold them, relative to specs-repo-annotated/.
 
     Spec: R62, U6
     """
@@ -393,7 +426,7 @@ def _kept_names(paths: Sequence[str]) -> tuple[set[str], set[str]]:
 
 
 def _sweep_annotated(root: Path, paths: Sequence[str]) -> None:
-    """Remove everything under annotated/ but the copies of `paths` and their folders.
+    """Remove everything under specs-repo-annotated/ but the copies of `paths` and their folders.
 
     Kept: a regular file at the path of a copy, which is then written anew
     when its bytes differ or it has more than one link (_write_if_changed),
@@ -431,13 +464,13 @@ def _sweep_annotated(root: Path, paths: Sequence[str]) -> None:
 
 
 def _foreign_paths(root: Path, paths: Sequence[str]) -> list[str]:
-    """verify's problems for what stands under annotated/ and is no copy of `paths` nor a folder of them.
+    """verify's problems for what stands under specs-repo-annotated/ and is no copy of `paths` nor a folder of them.
 
     Never follows a link and never looks into a foreign folder; what stands
     at a copy's or a folder's path is check_file's `no annotated file`, not
     named again. In the code point order of the paths, each path with its
     control characters escaped, so that a problem stays on one line. A link
-    or a file at annotated/ itself is the problem build refuses it with.
+    or a file at specs-repo-annotated/ itself is the problem build refuses it with.
 
     Spec: R34, R64, U6
     """
@@ -465,7 +498,7 @@ def _foreign_paths(root: Path, paths: Sequence[str]) -> list[str]:
                     pending.append((Path(entry.path), rel + "/"))
             elif rel not in files:
                 where = escape_controls(entry.path)  # R34, R62: a line break would split the problem
-                found.append((rel, f"{where}: not an annotated copy of a JSONL file; build removes it (U6)"))
+                found.append((rel, f"{where}: not a copy of a JSONL file; build removes it (U6)"))
     return [problem for _, problem in sorted(found)]
 
 
@@ -494,7 +527,7 @@ def _report_text(changes_md: str, old_commit: str, new_commit: str) -> str:
 # --- commands -----------------------------------------------------------------
 
 
-def build(foundation: Path, commit: str, specs_dir: str, out: Path) -> Store:
+def build(foundation: Path, commit: str, out: Path) -> Store:
     """Build layer 2 from `foundation` at `commit` into `out`; return the new store.
 
     The new trees are matched against the previous JSONL, their files
@@ -504,11 +537,12 @@ def build(foundation: Path, commit: str, specs_dir: str, out: Path) -> Store:
     Spec: R9, R10, R14, R53, R54, R55, R56, R57, R58, R59, R60
     """
     sha = resolve_commit(foundation, commit)
-    blobs = list_markdown(foundation, sha, specs_dir)
-    if not blobs:  # R34: a mistyped folder would retire every ID and prefix for good
-        raise FoundationError(f"no .md file under {specs_dir!r} at {sha}; is --specs-dir right?")
-    check_paths(list(blobs))
+    blobs, plain_blobs = list_selected(foundation, sha)
+    if not blobs:  # R34: the wrong repository would retire every ID and prefix for good
+        raise FoundationError(f"no .md file to build at {sha}; is --foundation right?")
+    check_paths(list(blobs) + list(plain_blobs))
     sources = {path: read_blob(foundation, blob) for path, blob in blobs.items()}
+    plain = {path: read_blob(foundation, blob) for path, blob in plain_blobs.items()}  # R62: copied byte for byte
     for path, src in sources.items():
         check_source(path, src)
     trees: dict[str, TreeNode] = {path: build_tree(src, path) for path, src in sources.items()}
@@ -537,6 +571,8 @@ def build(foundation: Path, commit: str, specs_dir: str, out: Path) -> Store:
         sha256s={path: hashlib.sha256(src).hexdigest() for path, src in sources.items()},
         insertions=insertions,
     )
+    # R61: a copy line records each plain copy's path and sha256
+    store.copies = {path: hashlib.sha256(data).hexdigest() for path, data in plain.items()}
     rebuild = bool(previous.files) and previous.foundation_commit == sha
     if rebuild:  # R60, U3: same version again, keep its flags
         old = {n.id: n for n in previous.nodes}
@@ -549,7 +585,7 @@ def build(foundation: Path, commit: str, specs_dir: str, out: Path) -> Store:
                 node.changed_since = old[node.id].changed_since  # retired in this version
 
     try:
-        _write_outputs(out, previous, annotated, store, store_path, rebuild, changes, sha)
+        _write_outputs(out, previous, {**annotated, **plain}, store, store_path, rebuild, changes, sha)
     except OSError as exc:  # R62: the system refused a write or a removal, stop there
         where = escape_controls(str(exc.filename if exc.filename is not None else out))  # R34: one line
         raise BuildStopped(f"{where}: cannot be written: {exc.strerror or exc}") from None
@@ -566,7 +602,7 @@ def _write_outputs(
     changes: list[Change],
     sha: str,
 ) -> None:
-    """Write the outputs of build(): the annotated copies, then the JSONL, then the reports.
+    """Write the outputs of build(): the copies, annotated and plain, then the JSONL, then the reports.
 
     Spec: R60, R62, R63, U6
     """
@@ -629,7 +665,40 @@ def verify(foundation: Path, out: Path) -> list[str]:
         if links > 1:  # R64, U6: another name could write the copy
             problems.append(f"{path}: annotated file at {annotated_path} has {links} links; build writes it anew (U6)")
         problems += check_file(path, source, annotated_bytes, stored, by_file[path])
-    return problems + _foreign_paths(out / ANNOTATED, list(store.files))  # U6: what build did not write
+    for path, digest in sorted(store.copies.items()):  # R64: each plain copy, as a file
+        problems += _check_plain_copy(foundation, commit, out, path, digest)
+    return problems + _foreign_paths(out / ANNOTATED, list(store.files) + list(store.copies))  # U6: what build did not write
+
+
+def _check_plain_copy(foundation: Path, commit: str, out: Path, path: str, digest: str) -> list[str]:
+    """verify's problems for one plain copy: in foundation, a file of one name, foundation's bytes.
+
+    Its `sha256` is the whole of its content: the JSONL's must be
+    foundation's, and the copy's.
+
+    Spec: R64
+    """
+    try:
+        source = read_file(foundation, commit, path)
+    except GitError as exc:
+        return [f"{path}: not in foundation at {commit}: {exc}"]
+    copy_path = out / ANNOTATED / path
+    try:
+        if not _is_copy(out / ANNOTATED, path):  # a folder or a symbolic link is not a copy
+            return [f"{path}: no copy at {copy_path}"]
+        links = os.lstat(copy_path).st_nlink
+        data = copy_path.read_bytes()
+    except OSError as exc:  # no permission to read it, or to search a folder of it
+        return [f"{path}: copy at {copy_path} cannot be opened: {exc.strerror or exc}"]
+    problems: list[str] = []
+    if links > 1:  # R64, U6: another name could write the copy
+        problems.append(f"{path}: copy at {copy_path} has {links} links; build writes it anew (U6)")
+    source_digest = hashlib.sha256(source).hexdigest()
+    if source_digest != digest:  # R61: foundation is the version the JSONL recorded
+        problems.append(f"{path}: sha256 {source_digest} differs from the JSONL's {digest}")
+    if hashlib.sha256(data).hexdigest() != digest:
+        problems.append(f"{path}: copy at {copy_path} differs from foundation")
+    return problems
 
 
 def _check_store(store: Store) -> list[str]:
@@ -678,10 +747,9 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="norms-gen", description="Layer 2 generator: the norms tree of foundation.")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    b = commands.add_parser("build", help="build data/tree.jsonl, annotated/ and the report")
+    b = commands.add_parser("build", help="build data/tree.jsonl, specs-repo-annotated/ and the report")
     b.add_argument("--foundation", required=True, type=Path, help="path of the foundation git repository")
     b.add_argument("--commit", default="HEAD", help="foundation commit to build (default HEAD)")
-    b.add_argument("--specs-dir", default="specs", help="folder of foundation to read (default specs)")
     b.add_argument("--out", type=Path, default=None, help="output folder (default: the git repository of the working directory)")
 
     v = commands.add_parser("verify", help="check the output against foundation at the pinned commit")
@@ -729,7 +797,7 @@ def _run(args: argparse.Namespace) -> int:
     Spec: R62, R64
     """
     if args.command == "build":
-        store = build(args.foundation, args.commit, args.specs_dir, args.out)
+        store = build(args.foundation, args.commit, args.out)
         active = len(store.active())
         _say(
             f"built {len(store.files)} files, {active} active nodes, "

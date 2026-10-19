@@ -114,20 +114,20 @@ def first(foundation: Foundation, out: Path) -> str:
 
 
 def test_first_build(foundation: Foundation, out: Path) -> None:
-    """A first run writes the JSONL, the annotated copies of the specs folder only, and the reports, and verifies.
+    """A first run writes the JSONL, the annotated copies of every selected file, the README included, and the reports, and verifies.
 
     Spec: R10, R29, R53, R62, R63, R64
     """
     sha = first(foundation, out)
     store = read_store(out / "data" / "tree.jsonl")
     assert store.foundation_commit == sha
-    assert sorted(store.files) == ["specs/language/type-system.md", "specs/tooling/build.md"]
+    assert sorted(store.files) == ["README.md", "specs/language/type-system.md", "specs/tooling/build.md"]
     assert store.files["specs/language/type-system.md"].prefix == "TYP"
     assert store.files["specs/tooling/build.md"].prefix == "BUI"
-    annotated = (out / "annotated" / "specs/language/type-system.md").read_text(encoding="utf-8")
+    annotated = (out / "specs-repo-annotated" / "specs/language/type-system.md").read_text(encoding="utf-8")
     assert annotated.startswith("⟬TYP⟭\n\n⟬TYP-1 begin⟭\n\n# Types ⟬TYP-2⟭\n")
     assert "- integer is 64 bits ⟬TYP-" in annotated
-    assert not (out / "annotated" / "README.md").exists()
+    assert (out / "specs-repo-annotated" / "README.md").read_text(encoding="utf-8").startswith("⟬REA⟭")
     report = (out / "data" / "report.md").read_text(encoding="utf-8")
     assert "first run" in report and "new: " in report
     assert all(json.loads(line)["status"] == "new" for line in (out / "data" / "report.json").read_text().splitlines())
@@ -215,7 +215,7 @@ def test_move_to_another_file_keeps_id(foundation: Foundation, out: Path) -> Non
     new = by_text(out, "Numbers are always signed.")
     assert new["id"] == old["id"] and new["file"] == "specs/tooling/build.md"
     assert str(new["id"]).startswith("TYP-")  # R11: the prefix stays
-    annotated = (out / "annotated" / "specs/tooling/build.md").read_text(encoding="utf-8")
+    annotated = (out / "specs-repo-annotated" / "specs/tooling/build.md").read_text(encoding="utf-8")
     assert f"Numbers are always signed. ⟬{old['id']}⟭" in annotated
     assert verify(foundation, out) == 0
 
@@ -234,8 +234,8 @@ def test_rename_keeps_prefix(foundation: Foundation, out: Path) -> None:
     store = read_store(out / "data" / "tree.jsonl")
     assert store.files["specs/core/types.md"].prefix == "TYP"
     assert {n["id"] for n in nodes(out) if n["file"] == "specs/core/types.md"} == old_ids
-    assert not (out / "annotated" / "specs/language").exists()
-    assert (out / "annotated" / "specs/core/types.md").exists()
+    assert not (out / "specs-repo-annotated" / "specs/language").exists()
+    assert (out / "specs-repo-annotated" / "specs/core/types.md").exists()
     assert verify(foundation, out) == 0
 
 
@@ -309,7 +309,7 @@ def test_verify_detects_tampering(foundation: Foundation, out: Path) -> None:
     Spec: R64
     """
     first(foundation, out)
-    path = out / "annotated" / "specs/tooling/build.md"
+    path = out / "specs-repo-annotated" / "specs/tooling/build.md"
     path.write_bytes(path.read_bytes().replace(b"Run the build.", b"Run the builds."))
     assert verify(foundation, out) == 1
 

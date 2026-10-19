@@ -104,8 +104,8 @@ def test_a_file_and_a_folder_of_one_name_replace_each_other_r62(tmp_path: Path, 
     f.write(after, "After.\n")
     f.commit()
     assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
-    assert (out / "annotated" / after).is_file()
-    assert sorted(p.relative_to(out / "annotated").as_posix() for p in (out / "annotated").rglob("*.md") if p.is_file()) == sorted(["specs/keep.md", after])
+    assert (out / "specs-repo-annotated" / after).is_file()
+    assert sorted(p.relative_to(out / "specs-repo-annotated").as_posix() for p in (out / "specs-repo-annotated").rglob("*.md") if p.is_file()) == sorted(["specs/keep.md", after])
     assert main(["verify", "--foundation", str(f.root), "--out", str(out)]) == 0
 
 
@@ -121,7 +121,7 @@ def test_verify_reports_a_folder_in_place_of_an_annotated_copy_r64(
     f.write("specs/x.md", "X.\n")
     f.commit()
     assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
-    copy = out / "annotated" / "specs" / "x.md"
+    copy = out / "specs-repo-annotated" / "specs" / "x.md"
     copy.unlink()
     copy.mkdir()
     capsys.readouterr()

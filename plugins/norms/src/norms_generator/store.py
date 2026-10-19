@@ -179,6 +179,7 @@ class Store:
     retired_prefix_list: list[str] = field(default_factory=list)
     files: dict[str, StoredFile] = field(default_factory=dict)
     nodes: list[StoredNode] = field(default_factory=list)
+    copies: dict[str, str] = field(default_factory=dict)  # R61, R62: plain copy path -> sha256 of its bytes
 
     def prefixes(self) -> dict[str, str]:
         """path -> prefix of the files in this store."""
@@ -338,6 +339,8 @@ def store_lines(store: Store) -> list[str]:
                 }
             )
         )
+    for path in sorted(store.copies):  # R61: one copy line per plain copy, by path
+        lines.append(_dumps({"type": "copy", "path": path, "sha256": store.copies[path]}))
     for node in _ordered_nodes(store):
         lines.append(
             _dumps(
@@ -396,7 +399,7 @@ def write_new(path: str | Path, data: bytes) -> None:
     a file someone put there meanwhile. So a hard link at `path`, sharing
     its bytes with another name inside or outside the output folder, is
     never written through: that name keeps its bytes. A folder at `path`
-    is refused by the system (check_outputs and the sweep of annotated/
+    is refused by the system (check_outputs and the sweep of specs-repo-annotated/
     leave none there).
 
     Spec: R62, U6
@@ -556,11 +559,11 @@ def escape_controls(text: str) -> str:
     return "".join(f"\\x{ord(c):02x}" if unicodedata.category(c) == "Cc" else c for c in text)
 
 
-def _is_path(v: Any) -> bool:
-    """A foundation path as git lists it: relative, `/`-separated, a `.md` name.
+def _is_path(v: Any, markdown: bool = True) -> bool:
+    """A foundation path as git lists it: relative, `/`-separated, a `.md` name (a file line) or another (a copy line).
 
     No part is empty, `.` or `..`, and none holds a NUL, so the path stays
-    under annotated/: build removes the annotated copy of a vanished
+    under specs-repo-annotated/: build removes the annotated copy of a vanished
     file's path, which must never reach outside the output folder.
     Nor does it hold another control character, which build refuses in
     a foundation path: a line break would split a heading of the
@@ -568,7 +571,7 @@ def _is_path(v: Any) -> bool:
 
     Spec: R34, R61, R62
     """
-    if not (isinstance(v, str) and v.endswith(".md") and not has_control(v)):
+    if not (isinstance(v, str) and v.endswith(".md") == markdown and not has_control(v)):
         return False
     return all(part not in ("", ".", "..") for part in v.split("/"))
 
@@ -586,7 +589,7 @@ def _is_insertions(v: Any) -> bool:
 def _read_line(store: Store, obj: dict[str, Any]) -> None:
     """Add one JSONL line to `store`.
 
-    Required: `path` and `prefix` on a file line; `id`, `file`, `kind`,
+    Required: `path` and `prefix` on a file line; `path` on a copy line; `id`, `file`, `kind`,
     `start`, `end`, `own_text`, `own_hash` and `tree_hash` on a node line.
     Every other field has a default. A field present with the wrong type
     or form, or an unknown line type, is an error.
@@ -596,7 +599,7 @@ def _read_line(store: Store, obj: dict[str, Any]) -> None:
     if not isinstance(obj, dict):
         raise ValueError("not a JSON object")
     kind = obj.get("type")
-    # R61: a second meta line, or a second file line for one path, replaces the first
+    # R61: a second meta line, or a second file or copy line for one path, replaces the first
     if kind == "meta":
         store.foundation_commit = _field(obj, "foundation_commit", _is_str, "")
         store.generator_version = _field(obj, "generator_version", _is_str, "")
@@ -614,6 +617,8 @@ def _read_line(store: Store, obj: dict[str, Any]) -> None:
                 for offset, text in _field(obj, "insertions", _is_insertions, [])
             ],
         )
+    elif kind == "copy":
+        store.copies[_field(obj, "path", lambda v: _is_path(v, markdown=False))] = _field(obj, "sha256", _is_str, "")
     elif kind == "node":
         store.nodes.append(
             StoredNode(

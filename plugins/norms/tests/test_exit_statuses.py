@@ -103,9 +103,12 @@ def test_a_refusal_exits_with_2_and_writes_nothing_r34_r62(
 
     Spec: R34, R62
     """
-    f, out = _one_file(tmp_path)
-    assert _build(f, out, "--specs-dir", "nope") == cli.EXIT_REFUSED == 2
-    assert capsys.readouterr().err.startswith("norms-gen: no .md file under 'nope' at ")
+    f = Foundation(tmp_path / "foundation")
+    f.write("CLAUDE.md", "# Instructions for agents\n")  # R62: excluded, so no .md file to build
+    f.commit()
+    out = tmp_path / "norms"
+    assert _build(f, out) == cli.EXIT_REFUSED == 2
+    assert capsys.readouterr().err.startswith("norms-gen: no .md file to build at ")
     assert not out.exists()
 
 
@@ -140,7 +143,7 @@ def test_a_build_stopped_by_the_system_exits_with_3_r62(
     monkeypatch.setattr(cli, "write_store", refuse)
     assert _build(f, out) == cli.EXIT_STOPPED == 3
     assert capsys.readouterr().err == f"norms-gen: {jsonl}: cannot be written: Permission denied\n"
-    assert (out / "annotated" / "specs" / "a.md").is_file()  # written before it stopped
+    assert (out / "specs-repo-annotated" / "specs" / "a.md").is_file()  # written before it stopped
     assert not jsonl.exists()
     monkeypatch.undo()
     assert _build(f, out) == 0

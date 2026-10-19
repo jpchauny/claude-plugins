@@ -1,6 +1,6 @@
 """Regressions of the seventh review (fix round 7): one test or more per finding.
 
-The code defects (a JSONL path that leads out of annotated/, an
+The code defects (a JSONL path that leads out of specs-repo-annotated/, an
 inconsistent JSONL that build accepted, `NaN` read as JSON, paths that
 one file system folds into one) were reproduced before they were fixed.
 The other tests pin behaviour the specs now state.
@@ -54,7 +54,7 @@ def _snapshot(out: Path) -> dict[str, bytes]:
     return {str(p.relative_to(out)): p.read_bytes() for p in sorted(out.rglob("*")) if p.is_file()}
 
 
-# --- a `file` line's path cannot lead out of annotated/ -----------------------
+# --- a `file` line's path cannot lead out of specs-repo-annotated/ -----------------------
 
 
 @pytest.mark.parametrize("path", ["/abs/x.md", "../x.md", "specs/../../x.md", "specs//a.md", "./a.md", "specs/a.txt", ""])
@@ -72,7 +72,7 @@ def test_a_file_path_of_another_form_makes_the_jsonl_unreadable_r61(tmp_path: Pa
 def test_build_never_removes_a_file_outside_the_output_folder_r62(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Nothing outside annotated/ is removed; build refuses the JSONL as unreadable.
+    """Nothing outside specs-repo-annotated/ is removed; build refuses the JSONL as unreadable.
 
     Spec: R34, R61, R62
     """
@@ -368,13 +368,13 @@ def test_report_json_lines_and_values_r63(tmp_path: Path) -> None:
     assert section["old_text"] == section["new_text"]  # own texts, also for a container
 
 
-# --- stray files under annotated/ ---------------------------------------------
+# --- stray files under specs-repo-annotated/ ---------------------------------------------
 
 
 def test_stray_files_under_annotated_are_reported_then_removed_u6(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Verify reports a stray file under annotated/, and the next build removes it and its folder.
+    """Verify reports a stray file under specs-repo-annotated/, and the next build removes it and its folder.
 
     Spec: R62, R64, U6
     """
@@ -383,50 +383,115 @@ def test_stray_files_under_annotated_are_reported_then_removed_u6(
     f.commit()
     out = tmp_path / "norms"
     assert _build(f, out) == 0
-    stray = out / "annotated/specs/old/stale.md"
+    stray = out / "specs-repo-annotated/specs/old/stale.md"
     stray.parent.mkdir(parents=True)
     stray.write_text("⟬OLD⟭\n")
     capsys.readouterr()
     assert _verify(f, out) == 1
     assert capsys.readouterr().err == (
-        f"{stray.parent}: not an annotated copy of a JSONL file; build removes it (U6)\nverify: 1 problems\n"
+        f"{stray.parent}: not a copy of a JSONL file; build removes it (U6)\nverify: 1 problems\n"
     )
     assert _build(f, out) == 0
     assert not stray.parent.exists()
     assert _verify(f, out) == 0
 
 
-# --- --specs-dir --------------------------------------------------------------
+# --- the whole repository, the excluded paths, the plain copies --------------------
 
 
-@pytest.mark.parametrize("specs_dir", ["", "/specs", "../x"])
-def test_a_specs_dir_git_rejects_is_refused_with_git_s_message_r34(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], specs_dir: str
-) -> None:
-    """A --specs-dir that git rejects is refused with git's message.
-
-    Spec: R34, R62
-    """
+def _whole_repository(tmp_path: Path) -> tuple[Foundation, Path]:
     f = Foundation(tmp_path / "foundation")
-    f.write("specs/a.md", "alpha\n")
-    f.commit()
-    out = tmp_path / "norms"
-    assert _build(f, out, "--specs-dir", specs_dir) == 2
-    assert capsys.readouterr().err.startswith("norms-gen: git ls-tree -r -z --full-tree ")
-    assert not out.exists()
-
-
-def test_a_specs_dir_loses_its_trailing_slashes_and_dot_reads_the_repository_r62(tmp_path: Path) -> None:
-    """A --specs-dir loses its trailing slashes, and `.` reads the whole repository.
-
-    Spec: R34, R62
-    """
-    f = Foundation(tmp_path / "foundation")
-    f.write("specs/a.md", "alpha\n")
     f.write("README.md", "top\n")
+    f.write("specs/a.md", "alpha\n")
+    f.write("docs/guide.md", "guide\n")
+    f.write("sub/LICENSE.md", "not at the root\n")
+    f.write("CLAUDE.md", "agents\n")
+    f.write("sub/claude.md", "agents\n")
+    f.write("sub/AGENTS.md", "agents\n")
+    f.write("CLAUDE.local.md", "agents\n")
+    f.write(".claude/notes.md", "tool\n")
+    f.write(".github/pr.md", "tool\n")
+    f.write("specs/.hidden/x.md", "tool\n")
+    f.write("License.MD", "community\n")
+    f.write("CHANGELOG.md", "community\n")
+    f.write("CONTRIBUTING.md", "community\n")
+    f.write("CODE_OF_CONDUCT.md", "community\n")
+    f.write("SECURITY.md", "community\n")
+    (f.root / "specs" / "img").mkdir()
+    (f.root / "specs" / "img" / "d.png").write_bytes(b"\x89PNG\r\n\x00\xff")
+    f.write("specs/notes.txt", "plain\r\n")
     f.commit()
-    out = tmp_path / "norms"
-    assert _build(f, out, "--specs-dir", "specs//") == 0
-    assert sorted(read_store(out / "data/tree.jsonl").files) == ["specs/a.md"]
-    assert _build(f, out, "--specs-dir", ".") == 0
-    assert sorted(read_store(out / "data/tree.jsonl").files) == ["README.md", "specs/a.md"]
+    return f, tmp_path / "norms"
+
+
+def test_the_whole_repository_is_read_but_the_excluded_paths_r62(tmp_path: Path) -> None:
+    """Every .md file of the repository is annotated, in any folder, a README included; the excluded paths are not.
+
+    Spec: R62
+    """
+    f, out = _whole_repository(tmp_path)
+    assert _build(f, out) == 0
+    store = read_store(out / "data/tree.jsonl")
+    assert sorted(store.files) == ["README.md", "docs/guide.md", "specs/a.md", "sub/LICENSE.md"]
+    folder = out / "specs-repo-annotated"
+    assert sorted(str(p.relative_to(folder)) for p in folder.rglob("*") if p.is_file()) == [
+        "README.md", "docs/guide.md", "specs/a.md", "specs/img/d.png", "specs/notes.txt", "sub/LICENSE.md",
+    ]
+
+
+def test_every_other_selected_file_is_a_plain_copy_r61_r62(tmp_path: Path) -> None:
+    """A selected file that is not Markdown is copied byte for byte, and its path and sha256 go to a copy line.
+
+    Spec: R61, R62
+    """
+    f, out = _whole_repository(tmp_path)
+    assert _build(f, out) == 0
+    folder = out / "specs-repo-annotated"
+    assert (folder / "specs/img/d.png").read_bytes() == b"\x89PNG\r\n\x00\xff"
+    assert (folder / "specs/notes.txt").read_bytes() == b"plain\r\n"
+    lines = [json.loads(line) for line in (out / "data/tree.jsonl").read_text(encoding="utf-8").splitlines()]
+    copies = [line for line in lines if line["type"] == "copy"]
+    assert [c["path"] for c in copies] == ["specs/img/d.png", "specs/notes.txt"]
+    kinds = [line["type"] for line in lines]
+    assert kinds.index("copy") > max(i for i, k in enumerate(kinds) if k == "file")  # R61: after the file lines
+    assert kinds.index("copy") < kinds.index("node")
+    assert read_store(out / "data/tree.jsonl").copies == {c["path"]: c["sha256"] for c in copies}
+    assert _verify(f, out) == 0
+
+
+def test_verify_checks_each_plain_copy_r64(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A plain copy that is missing, edited or foreign is a problem of verify, worded as the spec words it.
+
+    Spec: R64, U6
+    """
+    f, out = _whole_repository(tmp_path)
+    assert _build(f, out) == 0
+    folder = out / "specs-repo-annotated"
+    (folder / "specs/img/d.png").unlink()
+    (folder / "specs/notes.txt").write_bytes(b"edited\n")
+    (folder / "specs/img/stray.png").write_bytes(b"x")
+    capsys.readouterr()
+    assert _verify(f, out) == 1
+    err = capsys.readouterr().err
+    assert f"specs/img/d.png: no copy at {folder / 'specs/img/d.png'}\n" in err
+    assert f"specs/notes.txt: copy at {folder / 'specs/notes.txt'} differs from foundation\n" in err
+    assert f"{folder / 'specs/img/stray.png'}: not a copy of a JSONL file; build removes it (U6)\n" in err
+    assert _build(f, out) == 0
+    assert _verify(f, out) == 0
+    assert not (folder / "specs/img/stray.png").exists()
+
+
+def test_a_copy_line_reads_back_and_its_path_has_the_form_r61(tmp_path: Path) -> None:
+    """A copy line needs a path that does not end in .md; a file line's path must.
+
+    Spec: R61
+    """
+    jsonl = tmp_path / "tree.jsonl"
+    jsonl.write_text('{"type":"copy","path":"specs/d.png","sha256":"ab"}\n', encoding="utf-8")
+    assert read_store(jsonl).copies == {"specs/d.png": "ab"}
+    jsonl.write_text('{"type":"copy","path":"specs/a.md"}\n', encoding="utf-8")
+    with pytest.raises(StoreError):
+        read_store(jsonl)
+    jsonl.write_text('{"type":"copy","path":"../d.png"}\n', encoding="utf-8")
+    with pytest.raises(StoreError):
+        read_store(jsonl)

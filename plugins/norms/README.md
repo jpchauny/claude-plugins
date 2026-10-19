@@ -1,7 +1,7 @@
 # norms
 
 Layer 2, used in `<project>-norms`: the norms generator, common to every
-project. It annotates the layer 1 specs with stable norm IDs
+project. It mirrors the whole layer 1 repository into `specs-repo-annotated/`, its Markdown annotated with stable norm IDs
 ([LAY-3](../../spec-driven-design-process/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
 
 | Skill | What for |

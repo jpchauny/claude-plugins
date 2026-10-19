@@ -4,7 +4,7 @@ Each defect was reproduced before it was fixed: a build that wrote
 through a hard link outside the output folder, a JSONL line or an
 annotated copy nested too deeply that gave status 4, a foreign name with
 a line break that split verify's problem in two, a closed pipe reported
-as an unexpected error, and verify calling a symbolic link at annotated/
+as an unexpected error, and verify calling a symbolic link at specs-repo-annotated/
 sound.
 """
 
@@ -59,7 +59,7 @@ def test_build_never_writes_through_a_hard_link_at_an_output_path_r62(tmp_path: 
     home = tmp_path / "home"
     home.mkdir()
     outputs = [
-        out / "annotated" / "specs" / "a.md",
+        out / "specs-repo-annotated" / "specs" / "a.md",
         out / "data" / "report.md",
         out / "data" / "report.json",
         out / "data" / "tree.jsonl.tmp",
@@ -89,7 +89,7 @@ def test_build_never_writes_into_foundation_s_working_tree_through_a_hard_link_r
     Spec: R62, U6
     """
     f, out = _built(tmp_path)
-    copy = out / "annotated" / "specs" / "sub" / "b.md"
+    copy = out / "specs-repo-annotated" / "specs" / "sub" / "b.md"
     _hard_link(copy, f.root / "specs" / "sub" / "b.md")
     assert _build(f, out) == 0  # a rebuild of the same commit
     assert f.git("status", "--porcelain") == ""
@@ -104,7 +104,7 @@ def test_a_rebuild_replaces_a_hard_linked_copy_that_holds_the_right_bytes_r62(tm
     Spec: R62, U6
     """
     f, out = _built(tmp_path)
-    copy = out / "annotated" / "specs" / "a.md"
+    copy = out / "specs-repo-annotated" / "specs" / "a.md"
     twin = tmp_path / "twin"
     os.link(copy, twin)
     assert _build(f, out) == 0
@@ -131,7 +131,7 @@ def test_verify_reports_a_hard_linked_copy_r64(tmp_path: Path, capsys: pytest.Ca
     Spec: R64, U6
     """
     f, out = _built(tmp_path)
-    copy = out / "annotated" / "specs" / "a.md"
+    copy = out / "specs-repo-annotated" / "specs" / "a.md"
     os.link(copy, tmp_path / "twin")
     capsys.readouterr()
     assert _verify(f, out) == 1
@@ -184,7 +184,7 @@ def test_verify_reports_the_problems_of_a_copy_nested_too_deeply_r64(
     Spec: R64
     """
     f, out = _built(tmp_path)
-    copy = out / "annotated" / "specs" / "a.md"
+    copy = out / "specs-repo-annotated" / "specs" / "a.md"
     copy.write_bytes(copy.read_bytes() + b">" * 20000 + b" x\n")
     capsys.readouterr()
     assert _verify(f, out) == 1
@@ -206,12 +206,12 @@ def test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64(
     Spec: R34, R62, R64, U6
     """
     f, out = _built(tmp_path)
-    ann = out / "annotated"
+    ann = out / "specs-repo-annotated"
     (ann / "a\nb.md").write_bytes(b"")
     capsys.readouterr()
     assert _verify(f, out) == 1
     assert capsys.readouterr().err == (
-        f"{ann}/a\\x0ab.md: not an annotated copy of a JSONL file; build removes it (U6)\nverify: 1 problems\n"
+        f"{ann}/a\\x0ab.md: not a copy of a JSONL file; build removes it (U6)\nverify: 1 problems\n"
     )
     assert _build(f, out) == 0
     assert not os.path.lexists(ann / "a\nb.md")
@@ -240,16 +240,16 @@ def test_a_closed_standard_output_is_no_error_r62(tmp_path: Path) -> None:
     assert err == b""
 
 
-# --- annotated/ itself a link or a file -----------------------------------------
+# --- specs-repo-annotated/ itself a link or a file -----------------------------------------
 
 
 def test_verify_reports_a_symbolic_link_at_annotated_r64(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """A link at annotated/ is never followed: each copy is missing, and the link is named as build refuses it.
+    """A link at specs-repo-annotated/ is never followed: each copy is missing, and the link is named as build refuses it.
 
     Spec: R34, R64, U6
     """
     f, out = _built(tmp_path)
-    ann = out / "annotated"
+    ann = out / "specs-repo-annotated"
     ann.rename(tmp_path / "real")
     ann.symlink_to(tmp_path / "real")
     capsys.readouterr()
@@ -264,12 +264,12 @@ def test_verify_reports_a_symbolic_link_at_annotated_r64(tmp_path: Path, capsys:
 
 
 def test_verify_reports_a_file_at_annotated_r64(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """A file at annotated/ is named as build refuses it, after each missing copy.
+    """A file at specs-repo-annotated/ is named as build refuses it, after each missing copy.
 
     Spec: R34, R64, U6
     """
     f, out = _built(tmp_path)
-    ann = out / "annotated"
+    ann = out / "specs-repo-annotated"
     ann.rename(tmp_path / "real")
     ann.write_bytes(b"")
     capsys.readouterr()

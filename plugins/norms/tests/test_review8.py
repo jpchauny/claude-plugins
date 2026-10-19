@@ -46,7 +46,7 @@ def _one_file(tmp_path: Path) -> tuple[Foundation, Path]:
     ("paths", "named", "reason"),
     [
         (["specs/A.md", "specs/a.md"], "specs/A.md and specs/a.md", "would be one file and overwrite each other"),
-        (["specs/X.md/b.md", "specs/x.md"], "specs/X.md and specs/x.md", "an annotated copy and a folder"),
+        (["specs/X.md/b.md", "specs/x.md"], "specs/X.md and specs/x.md", "a copy and a folder"),
         (["specs/A/x.md", "specs/a/y.md"], "specs/A and specs/a", "would share one folder"),
     ],
 )
@@ -149,7 +149,7 @@ def test_build_replaces_a_symbolic_link_at_a_copy_s_path_and_verify_reports_it_r
     Spec: R62, R64
     """
     f, out = _one_file(tmp_path)
-    copy = out / "annotated/specs/a.md"
+    copy = out / "specs-repo-annotated/specs/a.md"
     good = copy.read_bytes()
     victim = tmp_path / "victim.md"
     victim.write_text("old\n")
@@ -171,7 +171,7 @@ def test_verify_reports_a_copy_reached_through_a_linked_folder_r64(
     Spec: R62, R64
     """
     f, out = _one_file(tmp_path)
-    folder = out / "annotated/specs"
+    folder = out / "specs-repo-annotated/specs"
     elsewhere = tmp_path / "elsewhere"
     folder.rename(elsewhere)
     folder.symlink_to(elsewhere)

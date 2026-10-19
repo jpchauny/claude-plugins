@@ -51,7 +51,7 @@ Code:
 Tests:
 - `tests/test_cmark.py`: `test_version`, `test_line_col_to_offset`, `test_multibyte_and_tabs`
 - `tests/test_examples.py`: `cmark_xml`
-- `tests/test_review3.py`: `test_non_utf8_file_is_refused_naming_it_r34`, `test_mistyped_specs_dir_is_refused_and_keeps_the_store`
+- `tests/test_review3.py`: `test_non_utf8_file_is_refused_naming_it_r34`, `test_no_md_file_to_build_is_refused_and_keeps_the_store`
 - `tests/test_tree.py`: `test_spans_are_exact_bytes_utf8_and_crlf`
 
 Examples: none
@@ -683,7 +683,7 @@ Examples:
 Spec: `specs/norms-tree.md`
 
 Code:
-- `src/norms_generator/cli.py`: `(module)`, `OutputError`, `GitError`, `FoundationError`, `_git`, `resolve_commit`, `list_markdown`, `_fold`, `check_paths`, `check_source`, `check_outputs`, `_sweep_annotated`, `_foreign_paths`, `verify`, `_check_store`, `_check_node_files`, `main`, `EXIT_REFUSED`, `build`
+- `src/norms_generator/cli.py`: `(module)`, `OutputError`, `GitError`, `FoundationError`, `_git`, `resolve_commit`, `list_selected`, `_fold`, `check_paths`, `check_source`, `check_outputs`, `_sweep_annotated`, `_foreign_paths`, `verify`, `_check_store`, `_check_node_files`, `main`, `EXIT_REFUSED`, `build`
 - `src/norms_generator/store.py`: `store_absent`, `StoreError`, `read_store`, `has_control`, `escape_controls`, `_is_path`, `_read_line`
 
 Tests:
@@ -691,11 +691,11 @@ Tests:
 - `tests/test_exit_statuses.py`: `(module)`, `test_a_refusal_exits_with_2_and_writes_nothing_r34_r62`
 - `tests/test_review10.py`: `test_a_file_at_data_is_a_jsonl_that_cannot_be_opened_r34`, `test_not_in_foundation_is_worded_as_r34_words_git_r64`, `test_refusal_messages_are_worded_as_r34_says`
 - `tests/test_review11.py`: `test_build_refuses_a_jsonl_line_nested_too_deeply_r34`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_verify_reports_a_symbolic_link_at_annotated_r64`, `test_verify_reports_a_file_at_annotated_r64`
-- `tests/test_review3.py`: `test_non_utf8_file_is_refused_naming_it_r34`, `test_mistyped_specs_dir_is_refused_and_keeps_the_store`
+- `tests/test_review3.py`: `test_non_utf8_file_is_refused_naming_it_r34`, `test_no_md_file_to_build_is_refused_and_keeps_the_store`
 - `tests/test_review4.py`: `test_verify_sees_a_wrong_parent_r64`, `test_verify_sees_an_id_stored_twice_and_a_retired_prefix_in_use_r64`, `test_build_refuses_a_file_holding_a_delimiter_r19`, `test_a_corrupt_jsonl_is_a_problem_not_a_crash_r34`, `test_an_unreadable_jsonl_line_is_refused_with_its_line_r34`, `test_optional_jsonl_fields_take_their_defaults_r61`, `test_an_unknown_commit_has_a_message_r34`, `test_a_lone_cr_file_ends_every_inserted_line_with_cr_r52`
-- `tests/test_review5.py`: `test_a_prefix_or_id_with_a_final_line_break_is_refused_r61`, `test_a_md_path_not_utf8_is_refused_naming_it_r34`, `test_a_non_md_path_not_utf8_is_ignored_r34`
+- `tests/test_review5.py`: `test_a_prefix_or_id_with_a_final_line_break_is_refused_r61`, `test_a_md_path_not_utf8_is_refused_naming_it_r34`, `test_an_excluded_path_not_utf8_is_ignored_r34`, `test_a_selected_path_not_utf8_is_refused_whatever_its_name_r34`
 - `tests/test_review6.py`: `test_a_file_and_a_folder_of_one_name_replace_each_other_r62`, `test_verify_reports_a_folder_in_place_of_an_annotated_copy_r64`, `test_a_lone_surrogate_is_refused_and_the_jsonl_kept_r61`
-- `tests/test_review7.py`: `test_build_never_removes_a_file_outside_the_output_folder_r62`, `test_build_refuses_a_jsonl_that_is_not_consistent_r34`, `test_paths_one_file_system_folds_into_one_are_refused_r34`, `test_paths_that_differ_only_in_unicode_normalization_are_refused_r34`, `test_a_specs_dir_git_rejects_is_refused_with_git_s_message_r34`, `test_a_specs_dir_loses_its_trailing_slashes_and_dot_reads_the_repository_r62`
+- `tests/test_review7.py`: `test_build_never_removes_a_file_outside_the_output_folder_r62`, `test_build_refuses_a_jsonl_that_is_not_consistent_r34`, `test_paths_one_file_system_folds_into_one_are_refused_r34`, `test_paths_that_differ_only_in_unicode_normalization_are_refused_r34`
 - `tests/test_review8.py`: `test_the_case_refusal_names_the_two_names_and_a_true_reason_r34`, `test_a_md_path_holding_a_control_character_is_refused_r34`, `test_a_stored_path_holding_a_control_character_has_not_the_form_r61`, `test_a_folder_at_the_jsonl_path_is_refused_by_build_and_reported_by_verify_r34_r64`, `test_a_jsonl_without_read_permission_is_refused_r34`
 - `tests/test_review9.py`: `test_a_path_not_utf8_with_a_line_break_is_named_on_one_line_r34`, `test_a_broken_link_at_the_jsonl_is_refused_not_a_first_run_r34`, `test_a_file_at_data_is_refused_not_a_first_run_r34`, `test_an_output_path_in_the_way_is_refused_and_nothing_written_r62`, `test_a_link_at_data_is_refused_r62`, `test_a_rebuild_with_a_folder_at_a_report_is_refused_r60`
 
@@ -1204,10 +1204,10 @@ Examples:
 Spec: `specs/norms-versions.md`
 
 Code:
-- `src/norms_generator/cli.py`: `(module)`, `generator_version`, `resolve_commit`
+- `src/norms_generator/cli.py`: `(module)`, `generator_version`, `resolve_commit`, `build`, `_check_plain_copy`
 - `src/norms_generator/model.py`: `Kind`
 - `src/norms_generator/prefixes.py`: `assign_prefixes`
-- `src/norms_generator/store.py`: `(module)`, `StoredFile`, `StoredNode`, `Store`, `_dumps`, `store_lines`, `_ordered_nodes`, `write_store`, `StoreError`, `read_store`, `_not_json`, `_check_unicode`, `_field`, `_is_int`, `has_control`, `_is_path`, `_is_insertions`, `_read_line`, `build_store`, `_STORED_PREFIX_RE`, `_STORED_ID_RE`
+- `src/norms_generator/store.py`: `(module)`, `StoredFile`, `StoredNode`, `Store`, `_dumps`, `store_lines`, `_ordered_nodes`, `write_store`, `StoreError`, `read_store`, `_not_json`, `_check_unicode`, `_field`, `_is_int`, `has_control`, `_is_path`, `_is_insertions`, `_read_line`, `build_store`, `Store.copies`, `_STORED_PREFIX_RE`, `_STORED_ID_RE`
 - `src/norms_generator/verify.py`: `(module)`, `check_file`, `_check_tree`, `_check_places`
 
 Tests:
@@ -1217,7 +1217,7 @@ Tests:
 - `tests/test_review4.py`: `test_a_corrupt_jsonl_is_a_problem_not_a_crash_r34`, `test_an_unreadable_jsonl_line_is_refused_with_its_line_r34`, `test_optional_jsonl_fields_take_their_defaults_r61`
 - `tests/test_review5.py`: `test_a_prefix_or_id_with_a_final_line_break_is_refused_r61`
 - `tests/test_review6.py`: `test_a_lone_cr_does_not_split_lines_r61`, `test_a_cr_inside_a_line_is_json_whitespace_r61`, `test_a_lone_surrogate_is_refused_and_the_jsonl_kept_r61`
-- `tests/test_review7.py`: `test_a_file_path_of_another_form_makes_the_jsonl_unreadable_r61`, `test_build_never_removes_a_file_outside_the_output_folder_r62`, `test_build_refuses_a_jsonl_that_is_not_consistent_r34`, `test_nan_and_infinity_make_the_jsonl_unreadable_r61`, `test_a_line_of_unicode_white_space_is_skipped_r61`, `test_an_id_numbered_0_or_with_a_leading_zero_is_refused_r61`, `test_the_meta_line_holds_the_full_sha_and_the_package_version_r61`, `test_a_short_sha_in_the_meta_line_is_not_a_rebuild_r60`
+- `tests/test_review7.py`: `test_a_file_path_of_another_form_makes_the_jsonl_unreadable_r61`, `test_build_never_removes_a_file_outside_the_output_folder_r62`, `test_build_refuses_a_jsonl_that_is_not_consistent_r34`, `test_nan_and_infinity_make_the_jsonl_unreadable_r61`, `test_a_line_of_unicode_white_space_is_skipped_r61`, `test_an_id_numbered_0_or_with_a_leading_zero_is_refused_r61`, `test_the_meta_line_holds_the_full_sha_and_the_package_version_r61`, `test_a_short_sha_in_the_meta_line_is_not_a_rebuild_r60`, `test_every_other_selected_file_is_a_plain_copy_r61_r62`, `test_a_copy_line_reads_back_and_its_path_has_the_form_r61`
 - `tests/test_review8.py`: `test_a_md_path_holding_a_control_character_is_refused_r34`, `test_a_stored_path_holding_a_control_character_has_not_the_form_r61`, `test_a_repeated_name_keeps_its_last_value_and_the_earlier_is_not_checked_r61`
 - `tests/test_store.py`: `(module)`, `test_rerun_identical_keeps_ids_and_reports_nothing`, `test_jsonl_format`, `test_retired_number_never_reused`, `test_read_store_keeps_line_separators_in_text`
 
@@ -1228,8 +1228,8 @@ Examples: none
 Spec: `specs/norms-versions.md`
 
 Code:
-- `src/norms_generator/cli.py`: `(module)`, `default_out`, `OutputError`, `BuildStopped`, `list_markdown`, `check_paths`, `read_blob`, `check_outputs`, `_own_file`, `_write_if_changed`, `_kept_names`, `_sweep_annotated`, `_write_outputs`, `_parser`, `main`, `_run`, `_say`, `_drop_stdout`, `STORE_TMP`, `EXIT_OK`, `EXIT_PROBLEMS`, `EXIT_STOPPED`, `EXIT_UNEXPECTED`, `_foreign_paths`, `build`
-- `src/norms_generator/store.py`: `write_store`, `write_new`, `_is_path`
+- `src/norms_generator/cli.py`: `(module)`, `default_out`, `OutputError`, `BuildStopped`, `excluded`, `list_selected`, `check_paths`, `read_blob`, `check_outputs`, `_own_file`, `_write_if_changed`, `_kept_names`, `_sweep_annotated`, `_write_outputs`, `_parser`, `main`, `_run`, `_say`, `_drop_stdout`, `STORE_TMP`, `EXIT_OK`, `EXIT_PROBLEMS`, `EXIT_STOPPED`, `EXIT_UNEXPECTED`, `AGENT_FILES`, `_foreign_paths`, `build`
+- `src/norms_generator/store.py`: `write_store`, `write_new`, `_is_path`, `Store.copies`
 
 Tests:
 - `tests/test_annotated_u6.py`: `(module)`, `_rebuilt_clean`, `test_a_foreign_file_is_reported_and_removed_u6`, `test_a_foreign_folder_is_named_once_and_removed_with_its_contents_u6`, `test_a_link_to_outside_is_removed_and_its_target_survives_u6`, `test_a_link_inside_a_foreign_folder_is_not_followed_u6`, `test_a_link_at_a_folder_of_copies_is_replaced_by_a_folder_u6`, `test_a_file_at_a_folder_s_path_is_replaced_by_the_folder_u6`, `test_a_folder_at_a_copy_s_path_is_replaced_by_the_copy_u6`, `test_a_name_that_differs_only_in_case_is_foreign_u6`, `test_the_copies_a_lost_jsonl_left_are_removed_u6`, `test_a_rebuild_of_the_same_commit_also_cleans_and_keeps_the_reports_u6`, `test_nothing_outside_the_output_folder_is_touched_u6`
@@ -1238,9 +1238,11 @@ Tests:
 - `tests/test_exit_statuses.py`: `(module)`, `test_every_command_exits_with_0_on_success_r62`, `test_help_exits_with_0_r62`, `test_verify_exits_with_1_on_a_problem_r62_r64`, `test_report_exits_with_1_without_a_report_r62`, `test_a_refusal_exits_with_2_and_writes_nothing_r34_r62`, `test_a_usage_error_exits_with_2_r62`, `test_a_build_stopped_by_the_system_exits_with_3_r62`, `test_an_unexpected_error_in_build_prints_its_traceback_and_exits_with_4_r62`, `test_an_unexpected_error_in_verify_exits_with_4_not_1_r62_r64`, `test_the_installed_command_exits_with_4_on_an_unexpected_error_r62`, `test_an_interrupt_keeps_pythons_default_behaviour_r62`
 - `tests/test_review10.py`: `test_report_under_a_folder_it_cannot_search_cannot_be_opened_r62`, `test_report_at_a_broken_link_cannot_be_opened_r62`, `test_report_at_a_looping_link_cannot_be_opened_r62`, `test_report_absent_says_no_report_r62`, `test_verify_takes_a_broken_data_link_as_no_jsonl_r64`, `test_build_writes_over_a_report_it_cannot_read_r62`, `test_build_stops_with_a_message_in_a_data_folder_it_cannot_write_r62`, `test_build_replaces_a_report_without_write_permission_r62`, `test_build_stops_with_a_message_under_a_folder_it_cannot_search_r62`
 - `tests/test_review11.py`: `test_build_never_writes_through_a_hard_link_at_an_output_path_r62`, `test_build_never_writes_into_foundation_s_working_tree_through_a_hard_link_r62`, `test_a_rebuild_replaces_a_hard_linked_copy_that_holds_the_right_bytes_r62`, `test_a_rebuild_keeps_its_reports_only_as_files_of_their_own_r63`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_a_closed_standard_output_is_no_error_r62`
+- `tests/test_review3.py`: `test_no_md_file_to_build_is_refused_and_keeps_the_store`
 - `tests/test_review4.py`: `test_rebuild_of_a_childless_quote_is_byte_identical`
+- `tests/test_review5.py`: `test_an_excluded_path_not_utf8_is_ignored_r34`, `test_a_selected_path_not_utf8_is_refused_whatever_its_name_r34`
 - `tests/test_review6.py`: `test_a_file_and_a_folder_of_one_name_replace_each_other_r62`, `test_verify_reports_a_folder_in_place_of_an_annotated_copy_r64`, `test_report_prints_crlf_as_it_is_r62`
-- `tests/test_review7.py`: `test_a_file_path_of_another_form_makes_the_jsonl_unreadable_r61`, `test_build_never_removes_a_file_outside_the_output_folder_r62`, `test_stray_files_under_annotated_are_reported_then_removed_u6`, `test_a_specs_dir_git_rejects_is_refused_with_git_s_message_r34`, `test_a_specs_dir_loses_its_trailing_slashes_and_dot_reads_the_repository_r62`
+- `tests/test_review7.py`: `test_a_file_path_of_another_form_makes_the_jsonl_unreadable_r61`, `test_build_never_removes_a_file_outside_the_output_folder_r62`, `test_stray_files_under_annotated_are_reported_then_removed_u6`, `test_the_whole_repository_is_read_but_the_excluded_paths_r62`, `test_every_other_selected_file_is_a_plain_copy_r61_r62`
 - `tests/test_review8.py`: `test_build_replaces_a_symbolic_link_at_a_copy_s_path_and_verify_reports_it_r62_r64`, `test_verify_reports_a_copy_reached_through_a_linked_folder_r64`
 - `tests/test_review9.py`: `test_an_output_path_in_the_way_is_refused_and_nothing_written_r62`, `test_a_link_at_data_is_refused_r62`, `test_a_rebuild_with_a_folder_at_a_report_is_refused_r60`, `test_removing_a_vanished_copy_does_not_follow_a_link_inside_annotated_r62`, `test_removing_a_vanished_copy_removes_a_link_at_its_path_only_r62`, `test_report_on_a_folder_says_it_cannot_be_opened_r62`, `test_verify_reports_an_annotated_copy_it_cannot_read_r64`
 - `tests/test_store.py`: `(module)`, `test_rerun_identical_keeps_ids_and_reports_nothing`
@@ -1276,7 +1278,7 @@ Examples:
 Spec: `specs/norms-versions.md`
 
 Code:
-- `src/norms_generator/cli.py`: `(module)`, `read_file`, `_foreign_paths`, `_is_copy`, `verify`, `_check_store`, `_check_node_files`, `_run`, `EXIT_PROBLEMS`
+- `src/norms_generator/cli.py`: `(module)`, `read_file`, `_foreign_paths`, `_is_copy`, `verify`, `_check_plain_copy`, `_check_store`, `_check_node_files`, `_run`, `EXIT_PROBLEMS`
 - `src/norms_generator/cmark.py`: `render_xml`
 - `src/norms_generator/store.py`: `_read_line`, `read_store`
 - `src/norms_generator/structure.py`: `(module)`, `_sealed`, `_inline_text`, `_clean_text`, `_structure`, `block_structure`
@@ -1293,7 +1295,7 @@ Tests:
 - `tests/test_review3.py`: `test_properties_of_review3_cases`, `test_structure_sees_a_marker_inside_a_code_span_or_link_e17`, `test_structure_ignores_an_id_before_a_hard_break`, `test_markers_check_requires_nested_frames_r24`, `CASES`
 - `tests/test_review4.py`: `test_cases_of_review4_are_sound`, `test_verify_sees_a_wrong_parent_r64`, `test_verify_sees_an_id_stored_twice_and_a_retired_prefix_in_use_r64`, `test_build_refuses_a_file_holding_a_delimiter_r19`, `test_a_corrupt_jsonl_is_a_problem_not_a_crash_r34`, `test_an_unreadable_jsonl_line_is_refused_with_its_line_r34`, `test_optional_jsonl_fields_take_their_defaults_r61`, `test_an_unknown_commit_has_a_message_r34`, `test_a_lone_cr_file_ends_every_inserted_line_with_cr_r52`
 - `tests/test_review6.py`: `test_verify_reports_a_folder_in_place_of_an_annotated_copy_r64`, `test_a_lone_surrogate_is_refused_and_the_jsonl_kept_r61`
-- `tests/test_review7.py`: `test_build_refuses_a_jsonl_that_is_not_consistent_r34`, `test_a_short_sha_in_the_meta_line_is_not_a_rebuild_r60`, `test_stray_files_under_annotated_are_reported_then_removed_u6`
+- `tests/test_review7.py`: `test_build_refuses_a_jsonl_that_is_not_consistent_r34`, `test_a_short_sha_in_the_meta_line_is_not_a_rebuild_r60`, `test_stray_files_under_annotated_are_reported_then_removed_u6`, `test_verify_checks_each_plain_copy_r64`
 - `tests/test_review8.py`: `test_a_folder_at_the_jsonl_path_is_refused_by_build_and_reported_by_verify_r34_r64`, `test_a_jsonl_without_read_permission_is_refused_r34`, `test_build_replaces_a_symbolic_link_at_a_copy_s_path_and_verify_reports_it_r62_r64`, `test_verify_reports_a_copy_reached_through_a_linked_folder_r64`
 - `tests/test_review9.py`: `test_a_broken_link_at_the_jsonl_is_refused_not_a_first_run_r34`, `test_a_file_at_data_is_refused_not_a_first_run_r34`, `test_report_on_a_folder_says_it_cannot_be_opened_r62`, `test_verify_reports_an_annotated_copy_it_cannot_read_r64`
 - `tests/test_structure.py`: `(module)`, `test_control_characters_are_read`, `test_end_markers_inside_an_unclosed_block_are_tolerated_e61`, `test_only_trailing_end_markers_are_tolerated_r48`, `test_tightness_is_ignored_e13`
@@ -1381,12 +1383,12 @@ Examples:
 - E10. Table (GFM §4.10, extension) (`E10`)
 - E74. Bullets, columns and cells reordered (`E74`)
 
-## U6. `annotated/` belongs to the generator
+## U6. `specs-repo-annotated/` belongs to the generator
 
 Spec: `specs/norms-tree.md`
 
 Code:
-- `src/norms_generator/cli.py`: `(module)`, `_own_file`, `_write_if_changed`, `_kept_names`, `_sweep_annotated`, `_foreign_paths`, `_is_copy`, `_write_outputs`, `verify`
+- `src/norms_generator/cli.py`: `(module)`, `_own_file`, `_write_if_changed`, `_kept_names`, `_sweep_annotated`, `_foreign_paths`, `_is_copy`, `_write_outputs`, `verify`, `_check_plain_copy`
 - `src/norms_generator/store.py`: `write_new`
 
 Tests:
@@ -1394,7 +1396,7 @@ Tests:
 - `tests/test_review10.py`: `test_verify_reports_a_copy_under_a_folder_it_cannot_search_r64`, `test_build_stops_with_a_message_under_a_folder_it_cannot_search_r62`
 - `tests/test_review11.py`: `test_build_never_writes_through_a_hard_link_at_an_output_path_r62`, `test_build_never_writes_into_foundation_s_working_tree_through_a_hard_link_r62`, `test_a_rebuild_replaces_a_hard_linked_copy_that_holds_the_right_bytes_r62`, `test_verify_reports_a_hard_linked_copy_r64`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_verify_reports_a_symbolic_link_at_annotated_r64`, `test_verify_reports_a_file_at_annotated_r64`
 - `tests/test_review6.py`: `test_a_file_and_a_folder_of_one_name_replace_each_other_r62`, `test_verify_reports_a_folder_in_place_of_an_annotated_copy_r64`
-- `tests/test_review7.py`: `test_stray_files_under_annotated_are_reported_then_removed_u6`
+- `tests/test_review7.py`: `test_stray_files_under_annotated_are_reported_then_removed_u6`, `test_verify_checks_each_plain_copy_r64`
 - `tests/test_review9.py`: `test_removing_a_vanished_copy_does_not_follow_a_link_inside_annotated_r62`
 
 Examples: none
