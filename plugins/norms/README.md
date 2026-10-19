@@ -1,16 +1,37 @@
 # norms
 
-Layer 2, in `<project>-norms`: the norms generator common to every project,
-and the method for writing a project's own generators of derived
-specifications ([LAY-3](../../spec-driven-design-process/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
+Layer 2, used in `<project>-norms`: the norms generator, common to every
+project. It annotates the layer 1 specs with stable norm IDs
+([LAY-3](../../spec-driven-design-process/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
 
-## Tools
+| Skill | What for |
+|---|---|
+| `/norms:build` | Regenerate layer 2 from layer 1, verify it, show the change report |
+| `/norms:verify` | Check that layer 2 is exactly what the generator produces |
 
-None yet. Planned:
+## Map
 
-- The norms generator: annotates layer 1 with stable norm IDs. It moves here
-  from `clean-language-norms`, and is callable both from a session and from
-  automation without Claude Code.
-- The method for a project's own generators (a grammar, a formal semantics):
-  what they read, what they write, how they cite norm IDs.
-- A skeleton for a new generator.
+| Path | What it is |
+|---|---|
+| [specs/](specs/) | The generator's specification: the source of truth for its output |
+| [src/norms_generator/](src/norms_generator/) | The generator, a Python package with the command `norms-gen` |
+| [tests/](tests/) | Its tests, one or more per requirement and example of the specs |
+| [docs/](docs/) | Implementation decisions, and the generated traceability from requirements to code and tests |
+
+## Without Claude Code
+
+Automation, such as a CI job, installs the generator straight from this
+repository, with [uv](https://docs.astral.sh/uv/):
+
+```sh
+uvx --from "git+https://github.com/jpchauny/claude-plugins#subdirectory=plugins/norms" \
+    norms-gen build --foundation <layer 1 repository>
+```
+
+## Develop
+
+```sh
+cd plugins/norms
+uv run pytest
+uv run python tests/traceability.py   # regenerate docs/traceability.md
+```

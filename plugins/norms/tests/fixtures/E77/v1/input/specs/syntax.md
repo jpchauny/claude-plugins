@@ -1,0 +1,3 @@
+# Syntax
+
+Blocks use tabs.

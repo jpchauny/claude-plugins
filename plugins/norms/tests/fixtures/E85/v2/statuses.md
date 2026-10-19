@@ -1,0 +1,7 @@
+- `TYP` (file): `child_changed`, changed children `TYP-6`, `TYP-1`, `changed_since` `c1`.
+- `TYP-6` (paragraph): `moved`, parent `TYP-4` → `TYP`, `changed_since` null.
+- `TYP-1` (section): `retired`, `changed_since` `c1`.
+- `TYP-2` (heading): `retired`, `changed_since` `c1`.
+- `TYP-3` (paragraph): `retired`, `changed_since` `c1`.
+- `TYP-4` (section): `retired`, `changed_since` `c1`.
+- `TYP-5` (heading): `retired`, `changed_since` `c1`.

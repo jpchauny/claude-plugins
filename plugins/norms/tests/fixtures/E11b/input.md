@@ -1,0 +1,1 @@
+> **Note:** integers never promote.

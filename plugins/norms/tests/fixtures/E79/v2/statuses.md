@@ -1,0 +1,2 @@
+- `BET` (file): `moved`, from `specs/beta.md`, `changed_since` null.
+- `ALP` (file): `moved`, from `specs/alpha.md`, `changed_since` null.

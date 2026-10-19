@@ -1,0 +1,3 @@
+- `QUO` (file): `child_changed`, moved from `specs/drafts/quote.md`, changed children `QUO-2`, `QUO-1`, `changed_since` `c3`.
+- `QUO-2` (block_quote): `new`, `changed_since` null.
+- `QUO-1` (block_quote): `retired`, `changed_since` `c3`.

@@ -1,0 +1,1 @@
+- `TYP` (file): `moved`, from `specs/type-system.md`, `changed_since` null.

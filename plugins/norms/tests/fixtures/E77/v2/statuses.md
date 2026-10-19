@@ -1,0 +1,5 @@
+- `SYN` (file): `child_changed`, changed children `SYN-1`, `changed_since` `c1`.
+- `SYN-1` (section): `child_changed`, changed children `TYP-4`, `changed_since` `c1`.
+- `TYP-4` (paragraph): `moved`, from `specs/type-system.md`, parent `TYP-1` → `SYN-1`, `changed_since` null.
+- `TYP` (file): `child_changed`, changed children `TYP-1`, `changed_since` `c1`.
+- `TYP-1` (section): `child_changed`, changed children `TYP-4`, `changed_since` `c1`.

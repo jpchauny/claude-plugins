@@ -1,0 +1,5 @@
+- `BUI` (file): `child_changed`, changed children `BUI-1`, `changed_since` `c1`.
+- `BUI-1` (list): `child_changed`, changed children `BUI-5`, `BUI-3`, `BUI-4`, `changed_since` `c1`.
+- `BUI-5` (item): `new`, `changed_since` null.
+- `BUI-3` (item): `edited`, similarity 0.9474, `to_review`, `changed_since` `c1`.
+- `BUI-4` (item): `edited`, similarity 0.95, `to_review`, `changed_since` `c1`.

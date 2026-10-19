@@ -1,0 +1,4 @@
+- Exit codes:
+  - 0 when the build passes;
+  - 1 when it fails.
+- Output goes to stderr.

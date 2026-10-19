@@ -1,0 +1,23 @@
+[project]
+name = "norms-generator"
+version = "0.1.0"
+description = "Layer 2 norms generator: annotates layer 1 specs with stable norm IDs"
+authors = [
+    { name = "Jean Pierre Chauny", email = "jeanpierrechauny@yahoo.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "cmarkgfm>=2025.10.22",
+]
+
+[project.scripts]
+norms-gen = "norms_generator.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.17,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

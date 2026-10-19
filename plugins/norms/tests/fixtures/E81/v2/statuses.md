@@ -1,0 +1,4 @@
+- `MEM` (file): `child_changed`, changed children `MEM-1`, `changed_since` `c1`.
+- `MEM-1` (section): `child_changed`, changed children `MEM-4`, `MEM-3`, `changed_since` `c1`.
+- `MEM-4` (paragraph): `new`, `changed_since` null.
+- `MEM-3` (paragraph): `retired`, `changed_since` `c1`.

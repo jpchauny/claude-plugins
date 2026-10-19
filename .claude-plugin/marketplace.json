@@ -18,7 +18,7 @@
     {
       "name": "norms",
       "source": "./plugins/norms",
-      "description": "Layer 2: the norms generator common to every project (annotates layer 1 with stable IDs), and the method and tools for writing a project's own generators of derived specifications"
+      "description": "Layer 2: the norms generator common to every project, which annotates layer 1 specs with stable norm IDs (/norms:build, /norms:verify)"
     },
     {
       "name": "code",

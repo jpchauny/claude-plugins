@@ -1,0 +1,2 @@
+- `QUO` (file): `new`, `changed_since` null.
+- `QUO-1` (block_quote): `new`, `changed_since` null.

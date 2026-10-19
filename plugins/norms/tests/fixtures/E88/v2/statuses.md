@@ -1,0 +1,4 @@
+- `TYP` (file): `child_changed`, changed children `TYP-1`, `changed_since` `c1`.
+- `TYP-1` (table): `child_changed`, changed children `TYP-4`, `changed_since` `c1`.
+- `TYP-4` (table_row): `edited`, changed children `TYP-6`, `to_review`, `changed_since` `c1`.
+- `TYP-6` (table_cell): `edited`, similarity 0.8, `to_review`, `changed_since` `c1`.

@@ -1,0 +1,5 @@
+- `TYP` (file): `child_changed`, changed children `TYP-1`, `changed_since` `c2`.
+- `TYP-1` (section): `child_changed`, changed children `TYP-7`, `changed_since` `c2`.
+- `TYP-7` (section): `new`, `changed_since` null.
+- `TYP-8` (heading): `new`, `changed_since` null.
+- `TYP-9` (paragraph): `new`, `changed_since` null.
