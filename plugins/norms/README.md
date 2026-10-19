@@ -16,7 +16,7 @@ project. It annotates the layer 1 specs with stable norm IDs
 | [specs/](specs/) | The generator's specification: the source of truth for its output |
 | [src/norms_generator/](src/norms_generator/) | The generator, a Python package with the command `norms-gen` |
 | [tests/](tests/) | Its tests, one or more per requirement and example of the specs |
-| [docs/](docs/) | Implementation decisions, and the generated traceability from requirements to code and tests |
+| [docs/](docs/) | How to develop the generator, its implementation decisions, and the generated traceability from requirements to code and tests |
 
 ## Without Claude Code
 
@@ -30,8 +30,4 @@ uvx --from "git+https://github.com/jpchauny/claude-plugins#subdirectory=plugins/
 
 ## Develop
 
-```sh
-cd plugins/norms
-uv run pytest
-uv run python tests/traceability.py   # regenerate docs/traceability.md
-```
+See [docs/development.md](docs/development.md).
