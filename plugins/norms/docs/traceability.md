@@ -1401,6 +1401,17 @@ Tests:
 
 Examples: none
 
+## U7. Everything of the generator is in the plugin `norms`
+
+Spec: `specs/norms-tree.md`
+
+Code: none
+
+Tests:
+- `tests/test_self_contained.py`: `(module)`, `test_every_part_is_in_the_plugin_folder`, `test_no_part_of_the_generator_is_outside_the_plugin_folder`
+
+Examples: none
+
 ## Requirements no code cites
 
 - R2. Freedom
@@ -1408,6 +1419,7 @@ Examples: none
 - R20. The agent comes first; examples with fixtures: E13
 - R22. For now, a person tells the implementation repositories that a new version exists
 - R32. A viewer
+- U7. Everything of the generator is in the plugin `norms`
 
 ## Requirements no test cites
 

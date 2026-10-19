@@ -19,9 +19,9 @@ import traceability
 
 
 def test_spec_ids_are_contiguous() -> None:
-    """The specs define R1-R64, U1-U6 and E1-E89, each once."""
+    """The specs define R1-R64, U1-U7 and E1-E89, each once."""
     entries = traceability.specs()
-    for kind, last in (("R", 64), ("U", 6), ("E", 89)):
+    for kind, last in (("R", 64), ("U", 7), ("E", 89)):
         ids = sorted(int(i[1:]) for i in entries if i[0] == kind)
         assert ids == list(range(1, last + 1)), kind
 

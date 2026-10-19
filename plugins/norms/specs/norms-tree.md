@@ -14,7 +14,7 @@ Two companion documents complete it, with requirement and example numbers that f
 - [norms-annotation-cases.md](norms-annotation-cases.md): where IDs go in special cases, such as items whose first block is not a paragraph, tabs, empty items, definitions next to text, short or long table rows, and unclosed blocks (R35–R52, E25–E68).
 - [norms-versions.md](norms-versions.md): how nodes are followed from one version of foundation to the next, how numbers and prefixes are given and never reused, the statuses, the JSONL, the output files, the change report and `verify` (R53–R64, E69–E89).
 
-Everything that affects the generator's output or its data is in these three documents. The decisions of the user that the requirements cite (U1–U6) are recorded, with their reasons, in [Decisions of the user](#decisions-of-the-user).
+Everything that affects the generator's output or its data is in these three documents. The decisions of the user that the requirements cite (U1–U7) are recorded, with their reasons, in [Decisions of the user](#decisions-of-the-user).
 
 ## Requirements
 
@@ -223,6 +223,8 @@ The user took these decisions where the generator had to choose between two read
 - **U6. `specs-repo-annotated/` belongs to the generator.** After every build, `specs-repo-annotated/` holds exactly this build's copies, annotated and plain, and the folders that hold them, and nothing else. Everything else under it is removed: a file that is no copy, a folder that holds no copy (with everything in it), a symbolic link wherever it stands, a folder at the path of a copy, a file at the path of a folder of copies, and the copies left by a build whose JSONL was lost. A symbolic link is removed itself and never followed, so nothing outside the output folder is touched. `verify` reports each such path as a problem.
   - Why: `specs-repo-annotated/` is derived from foundation, and only the generator writes there. Foundation is the single source of truth: anything else written there skips the process, and is not kept.
   - Details: R62, R64.
+- **U7. Everything of the generator is in the plugin `norms`.** Everything developed for the generator lives in the folder `plugins/norms/` of the repository `jpchauny/claude-plugins`, and nowhere else: these specs (`specs/`), the code (`src/`), the tests and their fixtures (`tests/`), the documents of its development (`docs/`), the skills that run it (`skills/`), and the files of its package (`pyproject.toml`, `uv.lock`). A project's norms repository holds only the output of a build (R62), never a part of the generator, and no other folder of `jpchauny/claude-plugins` holds one either.
+  - Why: one generator serves every project, so it has one place, and every project uses the same version of it. A plugin is installed as its own folder and nothing else of the repository, so a part of the generator outside `plugins/norms/` would be missing wherever the plugin is installed.
 
 ## Elements
 
