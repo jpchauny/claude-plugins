@@ -9,7 +9,7 @@ are its tools, and each tool cites the rules of this folder it carries out.
 | File | What it holds |
 |---|---|
 | [layers.md](layers.md) | The three layers, who writes each, what each may read, and how a change moves between them |
-| [writing-specs.md](writing-specs.md) | How every spec is worded: the rules, the approver's checklist, and the decisions between rules |
+| [writing-specs.md](../plugins/specs/writing-specs.md) | How every spec is worded: the rules, the approver's checklist, and the decisions between rules |
 | [research/](research/spec-dimensions.md) | The research behind the rules: the dimensions of a spec and the tensions between them |
 
 Rules carry an ID (`LAY-1`) that is given once and never reused. A tool

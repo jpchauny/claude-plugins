@@ -2,13 +2,13 @@
 
 **Status:** Draft
 
-This guideline says how to word every spec that people write. Its goal is that the implementing agent builds what the authors of the spec meant. Rule SPC-n comes from core dimension Cn in [research/spec-dimensions.md](research/spec-dimensions.md). Decision SPC-Tn comes from tension Tn in the same file. That file gives the reasons for each rule.
+This guideline says how to word every spec that people write. Its goal is that the implementing agent builds what the authors of the spec meant. Rule SPC-n comes from core dimension Cn in [spec-dimensions.md](../../spec-driven-design-process/research/spec-dimensions.md). Decision SPC-Tn comes from tension Tn in the same file. That file gives the reasons for each rule.
 
 ## Purpose and scope
 
 - This guideline is for the people who write specs and for the approver.
-- It covers every spec that people write, which is layer 1 of every project ([LAY-2](layers.md)).
-- [layers.md](layers.md) says where specs live and how they change. That process is outside this guideline.
+- It covers every spec that people write, which is layer 1 of every project ([LAY-2](../../spec-driven-design-process/layers.md)).
+- [layers.md](../../spec-driven-design-process/layers.md) says where specs live and how they change. That process is outside this guideline.
 - This guideline covers what a spec must say and how the spec words it. This includes results that a test can check.
 - No rule in this guideline requires a particular tool, template or folder structure.
 - This guideline is a process document, not a spec: nobody implements it, so its rules do not apply to it. Its authority comes from the approval of the people who own the process.
