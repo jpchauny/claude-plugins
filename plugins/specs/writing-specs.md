@@ -189,7 +189,7 @@ SPC-1 to SPC-12 apply to every spec. SPC-13 to SPC-20 apply only when their "App
 
 **Weak:** "Members get a discount on large orders."
 
-**Rewrite:** "A member must get 10% off an order of 100.00 EUR or more. Binding examples:
+**Rewrite:** "A member must get 10% off an order of 100.00 EUR or more. Binding examples, in which only the customer's status and the order amount matter:
 
 - a member's order of 99.99 EUR gets no discount;
 - a member's order of 100.00 EUR gets 10.00 EUR off;
