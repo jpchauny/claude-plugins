@@ -1,7 +1,0 @@
-{
-  "name": "shared",
-  "description": "Module shared: what is the same in the three layers - explore before specifying or building; pending items and findings as GitHub issues; explanations one step at a time; a recap of the current session",
-  "author": {
-    "name": "Jean Pierre Chauny"
-  }
-}

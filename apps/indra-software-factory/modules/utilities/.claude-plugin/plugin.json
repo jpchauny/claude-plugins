@@ -1,0 +1,8 @@
+{
+  "name": "utilities",
+  "description": "Module utilities: tools usable in any layer - explore before specifying or building; pending items and findings as a tree of GitHub issues; explanations one step at a time; a recap of the current session",
+  "author": {
+    "name": "Jean Pierre Chauny"
+  },
+  "skills": "./use-cases/"
+}

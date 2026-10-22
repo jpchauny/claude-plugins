@@ -4,10 +4,11 @@ A Claude Code app, published as the plugin marketplace `jpchauny-plugins`, for
 working in three layers: specifications written by people, norms generated
 from them, code built from the norms by agents.
 
-The app is built from specs: the rules of the three layers are in
-[specs/layers.md](specs/layers.md), the modules in
-[specs/modules.md](specs/modules.md), and how the app is developed in
-[specs/development.md](specs/development.md).
+The repository is a marketplace of apps, built from specs at four levels:
+marketplace, app, module and use case, each with its folder `specs/`. The
+marketplace is in [specs/marketplace.md](specs/marketplace.md), how an app is
+developed in [specs/development.md](specs/development.md), and this app in
+[apps/indra-software-factory/specs/app.md](apps/indra-software-factory/specs/app.md).
 
 | Module (plugin) | Use cases |
 |--------|----------|
@@ -17,7 +18,7 @@ The app is built from specs: the rules of the three layers are in
 | `code-implementation` | Implement the changed norms (not yet built) |
 | `drift-management` | Report a drift (not yet built) |
 | `workflow-orchestration` | Start a run (not yet built) |
-| `shared` | Explore (`/shared:explore`); the issue tree (`/shared:issue`, `/shared:tree`, `/shared:baseline`); explain one step at a time (`/shared:explain`); recap the session (`/shared:recap`) |
+| `utilities` | Explore (`/utilities:explore`); the issue tree (`/utilities:issue`, `/utilities:tree`, `/utilities:baseline`); explain one step at a time (`/utilities:explain`); recap the session (`/utilities:recap`) |
 
 The plugin `indra-software-factory` is the app itself: it declares every
 module as a dependency, so installing it installs them all.
@@ -44,15 +45,15 @@ claude plugin install indra-software-factory@jpchauny-plugins --scope project
 ```
 
 
-### How `shared` works
+### How `utilities` works
 
 - **Root:** an open issue labelled `baseline` (`Línea de base YYYY-MM-DD`), found from any repository that has pending items under it; nothing is configured. Its children are the top-level pending items; each bifurcation hangs under the node where it was found, across repositories.
 - **Bifurcation:** Claude proposes it in one line; nothing enters the tree without the user's yes. Every issue carries a hand-off: the context to resume it in any session.
 - **State, from labels:** `question` ⏳ waits for the user, `blocked` ⛔, `breaks-ci` 🔴, otherwise ▶ Claude can advance. Optional subject: `tema:<name>`.
-- **Seeing it:** only on request (`/shared:tree`): a summary and the tree in the chat. A page with the same view only when explicitly asked. Each person sees what their GitHub access allows.
-- **New baseline:** only when the user declares it (`/shared:baseline`): a new root, the open items move under it, the old root closes as a dated snapshot.
+- **Seeing it:** only on request (`/utilities:tree`): a summary and the tree in the chat. A page with the same view only when explicitly asked. Each person sees what their GitHub access allows.
+- **New baseline:** only when the user declares it (`/utilities:baseline`): a new root, the open items move under it, the old root closes as a dated snapshot.
 - **Exploring is not implementing:** while exploring, Claude answers and proposes no implementation. While working, it shows where it is in one line (baseline › node › step).
-- **Explaining is one step at a time:** on `/shared:explain`, Claude gives one short step per message, defines every new term, and waits for the user's "got it" before the next.
+- **Explaining is one step at a time:** on `/utilities:explain`, Claude gives one short step per message, defines every new term, and waits for the user's "got it" before the next.
 
 ## Use it in a project
 
@@ -70,7 +71,7 @@ claude plugin install indra-software-factory@jpchauny-plugins --scope project
 ## Updates
 
 Every project uses the latest version
-([LAY-6](specs/layers.md#lay-6--every-project-uses-the-latest-version-of-the-plugins)).
+([LAY-6](apps/indra-software-factory/specs/layers.md#lay-6--every-project-uses-the-latest-version-of-the-plugins)).
 Change a plugin here, push to `main`. Updates are not automatic for a
 third-party marketplace: each teammate runs
 
@@ -86,5 +87,6 @@ Validate before pushing:
 
 ```sh
 claude plugin validate .
-for p in plugins/*/; do claude plugin validate "$p"; done
+claude plugin validate apps/indra-software-factory
+for p in apps/indra-software-factory/modules/*/; do claude plugin validate "$p"; done
 ```

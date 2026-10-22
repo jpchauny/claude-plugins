@@ -7,42 +7,42 @@
   "plugins": [
     {
       "name": "indra-software-factory",
-      "source": "./plugins/indra-software-factory",
+      "source": "./apps/indra-software-factory",
       "description": "Indra Software Factory: the app. Installs every module - specs written by people, norms generated from them, code built from the norms by agents"
     },
     {
-      "name": "shared",
-      "source": "./plugins/shared",
-      "description": "Module shared: what is the same in the three layers - explore before specifying or building; pending items and findings as GitHub issues; explanations one step at a time; a recap of the current session"
+      "name": "utilities",
+      "source": "./apps/indra-software-factory/modules/utilities",
+      "description": "Module utilities: tools usable in any layer - explore before specifying or building; pending items and findings as a tree of GitHub issues; explanations one step at a time; a recap of the current session"
     },
     {
       "name": "project-management",
-      "source": "./plugins/project-management",
+      "source": "./apps/indra-software-factory/modules/project-management",
       "description": "Module project-management: the three repositories of a project, their creation and their life cycle (/project-management:create-project)"
     },
     {
       "name": "specs-management",
-      "source": "./plugins/specs-management",
+      "source": "./apps/indra-software-factory/modules/specs-management",
       "description": "Module specs-management, layer 1: the AI recommends how to improve the specs that the authors write (/specs-management:audit)"
     },
     {
       "name": "norms-management",
-      "source": "./plugins/norms-management",
+      "source": "./apps/indra-software-factory/modules/norms-management",
       "description": "Module norms-management, layer 2: the norms and every specification derived from them; the norms generator (/norms-management:build, /norms-management:verify)"
     },
     {
       "name": "code-implementation",
-      "source": "./plugins/code-implementation",
+      "source": "./apps/indra-software-factory/modules/code-implementation",
       "description": "Module code-implementation, layer 3: code built from the norms, and its traceability to norm IDs"
     },
     {
       "name": "drift-management",
-      "source": "./plugins/drift-management",
+      "source": "./apps/indra-software-factory/modules/drift-management",
       "description": "Module drift-management: a drift between specs and code, sent back to layer 1"
     },
     {
       "name": "workflow-orchestration",
-      "source": "./plugins/workflow-orchestration",
+      "source": "./apps/indra-software-factory/modules/workflow-orchestration",
       "description": "Module workflow-orchestration: the flow across the modules - what starts a run, the order of the steps, the hand-offs, and how each step runs in its repository"
     }
   ]

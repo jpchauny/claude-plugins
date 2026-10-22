@@ -1,0 +1,8 @@
+{
+  "name": "project-management",
+  "description": "Module project-management: the three repositories of a project, their creation and their life cycle (/project-management:create-project)",
+  "author": {
+    "name": "Jean Pierre Chauny"
+  },
+  "skills": "./use-cases/"
+}
