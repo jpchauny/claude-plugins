@@ -1,6 +1,7 @@
 # Development
 
-**Status:** Draft
+**Prefix:** DEV
+
 **Audience:** Whoever develops an app of this marketplace, people and Claude sessions
 
 **Scope:** How every app of this marketplace is developed: the method, the four levels and where the specs and the implementation of each level live, and the format of a use case. What the marketplace is, is in [marketplace.md](marketplace.md)

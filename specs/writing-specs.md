@@ -1,5 +1,7 @@
 # Writing specs
 
+**Prefix:** SPC
+
 This guideline says how to word a good spec. Its goal is that the implementing agent builds what the authors of the spec meant. Rule SPC-n comes from core dimension Cn in [spec-dimensions.md](https://github.com/jpchauny/claude-plugins/blob/main/research/SDD/spec-dimensions.md). Decision SPC-Tn comes from tension Tn in the same file. That file gives the reasons for each rule.
 
 ## Purpose and scope

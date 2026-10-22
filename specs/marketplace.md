@@ -1,6 +1,7 @@
 # Marketplace
 
-**Status:** Draft
+**Prefix:** MKT
+
 **Audience:** Whoever installs an app of this marketplace, or adds or changes one
 
 **Scope:** What this repository is, which apps it holds, and how a person installs one. How an app is developed is in [development.md](development.md)
