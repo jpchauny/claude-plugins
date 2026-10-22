@@ -1,6 +1,5 @@
 # Norms Annotation Cases
 
-**Status:** Draft
 **Audience:** Whoever builds the layer 2 generator, and the agents that read its output
 
 **Scope:** Where the generator puts IDs in the special cases of GFM: items, link reference definitions, tables, block quotes, unclosed blocks, tabs, and the cases where only a wider frame keeps the file

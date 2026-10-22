@@ -1,6 +1,5 @@
 # Code implementation
 
-**Status:** Draft
 **Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `code-implementation`
 
 **Scope:** Layer 3: code built from the norms, and its traceability to norm IDs

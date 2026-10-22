@@ -1,6 +1,5 @@
 # Project management
 
-**Status:** Draft
 **Audience:** The people who use the app; whoever builds a use case of the plugin `project-management`
 
 **Scope:** The module `project-management`: the three repositories of a project, their creation and their life cycle. For now, only their creation is specified

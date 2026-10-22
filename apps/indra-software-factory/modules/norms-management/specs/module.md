@@ -1,6 +1,5 @@
 # Norms management
 
-**Status:** Draft
 **Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `norms-management`
 
 **Scope:** Layer 2: the norms and every specification derived from them

@@ -1,6 +1,5 @@
 # Norms Versions
 
-**Status:** Draft
 **Audience:** Whoever builds the layer 2 generator, and the agents that read its output
 
 **Scope:** How the generator follows the nodes of foundation from one version to the next: matching, numbers and prefixes over time, statuses, the JSONL, the outputs, the change report and verify's checks

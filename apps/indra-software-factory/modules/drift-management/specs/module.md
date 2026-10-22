@@ -1,6 +1,5 @@
 # Drift management
 
-**Status:** Draft
 **Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `drift-management`
 
 **Scope:** A drift between specs and code, sent back to layer 1

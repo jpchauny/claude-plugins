@@ -1,6 +1,5 @@
 # Workflow orchestration
 
-**Status:** Draft
 **Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `workflow-orchestration`
 
 **Scope:** The flow across the modules: what starts a run, the order of the steps, the hand-offs, how each step runs in its repository, and what the orchestrator never does

@@ -1,6 +1,5 @@
 # Create a project
 
-**Status:** Draft
 **Audience:** The people who start a project; whoever builds the skill `create-project` of the plugin `project-management`
 
 **Scope:** The use case that creates the three repositories of a new project

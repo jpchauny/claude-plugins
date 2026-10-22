@@ -1,6 +1,5 @@
 # Annotate the specs
 
-**Status:** Draft
 **Audience:** The people who regenerate the norms of a project; whoever builds the skill `annotate-specs` of the plugin `norms-management`
 
 **Scope:** The use case that annotates the specs of a project's specs repository with stable norm IDs, from one commit, in its norms repository. How the generator builds the tree, places the IDs and keeps them from one version to the next is in its own specs, which this one cites and does not repeat: [norms-tree.md](../../../specs/norms-tree.md) (R1–R34), [norms-annotation-cases.md](../../../specs/norms-annotation-cases.md) (R35–R52) and [norms-versions.md](../../../specs/norms-versions.md) (R53–R64)

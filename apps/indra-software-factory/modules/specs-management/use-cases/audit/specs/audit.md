@@ -1,6 +1,5 @@
 # Specs Audit
 
-**Status:** Draft
 **Audience:** The people who write the specs of a layer 1 repository and their approver, who read the report; the model of the Claude Code session, which invokes the audit; the agents of workflow mode (AUD-23); whoever builds the skill
 
 **Scope:** What `/specs-management:audit` checks in the spec files of a layer 1 repository, how it runs, what it reports, and what it never does

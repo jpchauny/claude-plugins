@@ -1,6 +1,5 @@
 # Specs management
 
-**Status:** Draft
 **Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `specs-management`
 
 **Scope:** Layer 1: the AI recommends how to improve the specs that the authors write

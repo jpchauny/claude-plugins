@@ -1,6 +1,5 @@
 # Indra Software Factory
 
-**Status:** Draft
 **Audience:** The people who use the app; whoever builds one of its modules
 
 **Scope:** What the app is, how it is used, and its modules. The app is one of the marketplace, listed in [marketplace.md](../../../specs/marketplace.md); each module specifies its own use cases

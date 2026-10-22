@@ -1,6 +1,5 @@
 # Norms Tree
 
-**Status:** Draft
 **Audience:** Whoever builds the layer 2 generator, and the agents that read its output
 
 **Scope:** How layer 2 represents foundation as a tree, gives each node an ID, and writes an annotated copy of each foundation file

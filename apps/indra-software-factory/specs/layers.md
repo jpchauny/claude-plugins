@@ -1,7 +1,5 @@
 # Layers
 
-**Status:** Draft
-
 Every project is specified and built in three layers, each in its own
 repository.
 
