@@ -6,8 +6,8 @@ from them, code built from the norms by agents.
 
 The app is built from specs: the rules of the three layers are in
 [specs/layers.md](specs/layers.md), the modules in
-[specs/modules.md](specs/modules.md), and each module specifies its use cases
-in the folder `specs/` of its plugin.
+[specs/modules.md](specs/modules.md), and how the app is developed in
+[specs/development.md](specs/development.md).
 
 | Module (plugin) | Use cases |
 |--------|----------|

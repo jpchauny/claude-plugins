@@ -8,3 +8,8 @@ permiso antes, diciendo qué archivo y para qué. El permiso vale solo
 para ese pedido, no para los siguientes.
 
 En búsquedas por el repo (grep, find, Explore), excluir `research/`.
+
+## Desarrollo de la app (2026-10-22)
+
+Esta app se desarrolla con spec-driven development: antes de cambiar
+cualquier cosa, seguir [specs/development.md](specs/development.md).

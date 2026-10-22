@@ -18,8 +18,8 @@ Every module obeys the rules of the three layers, LAY-1 to LAY-6, in
 | Term | Meaning |
 |---|---|
 | App | The plugin `indra-software-factory`, which holds no use case and declares every module as a dependency, so that installing it installs them all. |
-| Module | A set of use cases with one responsibility, built as one plugin of the same name. Its use cases are specified in the folder `specs/` of the plugin. |
-| Use case | One thing the user invokes, built as one skill of its module: `/<module>:<use case>`. |
+| Module | A set of use cases with one responsibility, built as one plugin of the same name. |
+| Use case | One thing the user invokes, as `/<module>:<use case>`. |
 
 ## Modules
 
@@ -35,7 +35,8 @@ Every module obeys the rules of the three layers, LAY-1 to LAY-6, in
 
 ## Rules
 
-- **APP-1.** Each module is one plugin, named as the module, and each use case is one skill of it, named as the use case.
-- **APP-2.** A use case is built from its spec in the folder `specs/` of its plugin, and from nothing else.
-- **APP-3.** The app is installed once per person, at user scope. Each repository of a project also enables the app in its `.claude/settings.json`.
-- **APP-4.** Every use case is installed in every repository, so a use case that belongs to one layer checks the repository it runs in and refuses outside its layer.
+How the app is developed, a module as a plugin and a use case as a skill
+of it, is in [development.md](development.md).
+
+- **APP-1.** The app is installed once per person, at user scope. Each repository of a project also enables the app in its `.claude/settings.json`.
+- **APP-2.** Every use case is installed in every repository, so a use case that belongs to one layer checks the repository it runs in and refuses outside its layer.

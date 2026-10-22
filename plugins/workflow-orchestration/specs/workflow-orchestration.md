@@ -29,4 +29,4 @@ The module `workflow-orchestration` of the app Indra Software Factory, built as 
 ## Open questions
 
 1. Trigger: does a person start each run (`/workflow-orchestration:run`), or does a merge in `<project>-specs` start it automatically (GitHub Actions)?
-2. How a step runs in its repository: every module is installed everywhere ([APP-4](../../../specs/modules.md#rules)), so a step that ran in the orchestrator's session would see the three repositories. Candidate: each step is a headless session, `claude -p`, started with its repository as working directory, which sees only that repository.
+2. How a step runs in its repository: every module is installed everywhere ([APP-2](../../../specs/modules.md#rules)), so a step that ran in the orchestrator's session would see the three repositories. Candidate: each step is a headless session, `claude -p`, started with its repository as working directory, which sees only that repository.
