@@ -1,5 +1,5 @@
 {
   "name": "shared",
-  "description": "How the team works: explore before specifying or building; pending items and findings go to GitHub issues, each with a self-contained hand-off; explanations one step at a time, waiting for the user's got-it",
+  "description": "How the team works: explore before specifying or building; pending items and findings go to GitHub issues, each with a self-contained hand-off; explanations one step at a time, waiting for the user's got-it; a recap of the current session after time away",
   "author": { "name": "Jean Pierre Chauny" }
 }

@@ -9,12 +9,11 @@ source of truth. The plugins are its tools.
 
 | Plugin | Enabled in | What for |
 |--------|------------|----------|
-| `shared` | every repository | Explore before specifying or building (`/shared:explore`); pending items and findings as a tree of GitHub issues (`/shared:issue`, `/shared:tree`, `/shared:baseline`); explanations one step at a time (`/shared:explain`) |
+| `shared` | every repository | Explore before specifying or building (`/shared:explore`); pending items and findings as a tree of GitHub issues (`/shared:issue`, `/shared:tree`, `/shared:baseline`); explanations one step at a time (`/shared:explain`); a recap of the current session (`/shared:recap`) |
 | `specs` | `<project>-specs` | Layer 1: tools that help people write the specification |
 | `norms` | `<project>-norms` | Layer 2: the norms generator, and the method for a project's own generators |
 | `code` | `<project>-code` | Layer 3: the implementation method and code traceability |
-| `new-project` | nowhere: user scope | Creates the three repositories of a new project (`/new-project:new-project`) |
-| `recap` | nowhere: user scope | Puts you back up to speed on the session you invoke it from (`/recap:recap`) |
+| `orchestrator` | nowhere: user scope | Coordinates the work across the three repositories of a project; creates the three repositories of a new project (`/orchestrator:new-project`) |
 
 ## Start a new project
 
@@ -22,10 +21,10 @@ Once per person:
 
 ```sh
 claude plugin marketplace add jpchauny/claude-plugins
-claude plugin install new-project@jpchauny-plugins --scope user
+claude plugin install orchestrator@jpchauny-plugins --scope user
 ```
 
-Then, in any session, `/new-project:new-project <name>`. It creates the three
+Then, in any session, `/orchestrator:new-project <name>`. It creates the three
 repositories with the plugins of each layer enabled in their
 `.claude/settings.json`.
 
@@ -66,7 +65,7 @@ claude plugin install <plugin>@jpchauny-plugins --scope project
 ## Updates
 
 Every project uses the latest version
-([LAY-6](spec-driven-design-process/layers.md#lay-6--every-project-uses-the-latest-version-of-the-plugins)).
+([LAY-6](plugins/orchestrator/specs/layers.md#lay-6--every-project-uses-the-latest-version-of-the-plugins)).
 Change a plugin here, push to `main`. Updates are not automatic for a
 third-party marketplace: each teammate runs
 

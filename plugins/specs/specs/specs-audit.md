@@ -5,7 +5,7 @@
 
 **Scope:** What `/specs:audit` checks in the spec files of a layer 1 repository, how it runs, what it reports, and what it never does
 
-The audit helps the people who write specs to follow the guideline, [writing-specs.md](../writing-specs.md). The audit reads the spec files of one layer 1 repository ([LAY-2](../../../spec-driven-design-process/layers.md)) and reports in the chat where they break the guideline, with a proposed rewrite for each finding. The audit only recommends: nothing restricts what people write (LAY-2), and no agent takes the report as input.
+The audit helps the people who write specs to follow the guideline, [writing-specs.md](../writing-specs.md). The audit reads the spec files of one layer 1 repository ([LAY-2](../../orchestrator/specs/layers.md)) and reports in the chat where they break the guideline, with a proposed rewrite for each finding. The audit only recommends: nothing restricts what people write (LAY-2), and no agent takes the report as input.
 
 ## Conventions and terms
 This section states how to read this spec.

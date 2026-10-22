@@ -5,7 +5,7 @@
 Layer 2 of `{{project}}`: `{{owner}}/{{project}}-specs` annotated with stable
 norm IDs, and every specification derived from it. It is regenerated whole
 from a commit of layer 1 and never edited by hand
-([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/spec-driven-design-process/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
+([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/plugins/orchestrator/specs/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
 
 | Layer | Repository |
 |---|---|

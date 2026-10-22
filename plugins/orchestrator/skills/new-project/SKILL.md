@@ -7,7 +7,7 @@ argument-hint: "[project name]"
 # new-project
 
 Creates the three repositories of a new project, as
-[spec-driven-design-process/layers.md](https://github.com/jpchauny/claude-plugins/blob/main/spec-driven-design-process/layers.md) requires (LAY-1): one per
+[plugins/orchestrator/specs/layers.md](https://github.com/jpchauny/claude-plugins/blob/main/plugins/orchestrator/specs/layers.md) requires (LAY-1): one per
 layer, each with the plugins of its layer enabled.
 
 ## 1. Ask

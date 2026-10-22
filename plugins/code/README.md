@@ -2,9 +2,9 @@
 
 Layer 3, in `<project>-code`: the implementation method. Code and tests are
 built from layer 2 alone and cite its norm IDs
-([LAY-4](../../spec-driven-design-process/layers.md#lay-4--layer-3-reads-layer-2-never-layer-1));
+([LAY-4](../orchestrator/specs/layers.md#lay-4--layer-3-reads-layer-2-never-layer-1));
 an inconsistency goes back to layer 1 first
-([LAY-5](../../spec-driven-design-process/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
+([LAY-5](../orchestrator/specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
 
 ## Tools
 

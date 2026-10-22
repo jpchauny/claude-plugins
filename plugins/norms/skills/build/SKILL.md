@@ -7,7 +7,7 @@ argument-hint: "[path of the layer 1 repository] [--commit SHA]"
 # build
 
 Regenerates layer 2 whole from one commit of layer 1
-([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/spec-driven-design-process/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
+([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/plugins/orchestrator/specs/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
 Run it from the norms repository of the project: the output goes to the root
 of the git repository of the working directory.
 

@@ -4,7 +4,7 @@
 
 Layer 1 of `{{project}}`: its specification, in plain prose, written by
 people. The only source of truth of the project
-([LAY-2](https://github.com/jpchauny/claude-plugins/blob/main/spec-driven-design-process/layers.md#lay-2--people-work-in-layer-1)).
+([LAY-2](https://github.com/jpchauny/claude-plugins/blob/main/plugins/orchestrator/specs/layers.md#lay-2--people-work-in-layer-1)).
 
 | Layer | Repository |
 |---|---|
@@ -15,7 +15,7 @@ people. The only source of truth of the project
 ## Working here
 
 - The specs live under `specs/`. Every change reaches `main` by a pull request a person approves.
-- Issues opened by layer 3 (inconsistencies found while implementing) are fixed here first ([LAY-5](https://github.com/jpchauny/claude-plugins/blob/main/spec-driven-design-process/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
+- Issues opened by layer 3 (inconsistencies found while implementing) are fixed here first ([LAY-5](https://github.com/jpchauny/claude-plugins/blob/main/plugins/orchestrator/specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
 
 ## Issues
 

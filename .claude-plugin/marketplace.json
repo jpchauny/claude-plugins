@@ -8,7 +8,7 @@
     {
       "name": "shared",
       "source": "./plugins/shared",
-      "description": "How the team works: explore before specifying or building; pending items and findings go to GitHub issues, each with a self-contained hand-off; explanations one step at a time, waiting for the user's got-it"
+      "description": "How the team works: explore before specifying or building; pending items and findings go to GitHub issues, each with a self-contained hand-off; explanations one step at a time, waiting for the user's got-it; a recap of the current session after time away"
     },
     {
       "name": "specs",
@@ -26,14 +26,9 @@
       "description": "Layer 3: the implementation method; code and tests built only from a pinned version of layer 2, citing its norm IDs, and every inconsistency sent back to layer 1"
     },
     {
-      "name": "new-project",
-      "source": "./plugins/new-project",
-      "description": "Start a new project from scratch: asks for its name, creates its three repositories (<project>-specs, <project>-norms, <project>-code), enables in each the plugins of its layer, and writes the initial documents"
-    },
-    {
-      "name": "recap",
-      "source": "./plugins/recap",
-      "description": "Get back into a Claude Code session after time away: a short report of the session it is invoked from - its goal, what was done, the decisions taken, and what is pending to do or decide"
+      "name": "orchestrator",
+      "source": "./plugins/orchestrator",
+      "description": "Above the three layers, across the three repositories of a project: coordinates the work from specs to norms to code, and starts a new project (creates its three repositories, enables in each the plugins of its layer, writes the initial documents)"
     }
   ]
 }

@@ -7,8 +7,8 @@ This guideline says how to word every spec that people write. Its goal is that t
 ## Purpose and scope
 
 - This guideline is for the people who write specs and for the approver.
-- It covers every spec that people write, which is layer 1 of every project ([LAY-2](../../spec-driven-design-process/layers.md)).
-- [layers.md](../../spec-driven-design-process/layers.md) says where specs live and how they change. That process is outside this guideline.
+- It covers every spec that people write, which is layer 1 of every project ([LAY-2](../orchestrator/specs/layers.md)).
+- [layers.md](../orchestrator/specs/layers.md) says where specs live and how they change. That process is outside this guideline.
 - This guideline covers what a spec must say and how the spec words it. This includes results that a test can check.
 - No rule in this guideline requires a particular tool, template or folder structure.
 - This guideline is a process document, not a spec: nobody implements it, so its rules do not apply to it. Its authority comes from the approval of the people who own the process.
