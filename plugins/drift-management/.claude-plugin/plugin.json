@@ -1,0 +1,7 @@
+{
+  "name": "drift-management",
+  "description": "Module drift-management: a drift between specs and code, sent back to layer 1",
+  "author": {
+    "name": "Jean Pierre Chauny"
+  }
+}

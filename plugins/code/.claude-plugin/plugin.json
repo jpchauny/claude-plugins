@@ -1,5 +1,0 @@
-{
-  "name": "code",
-  "description": "Layer 3: the implementation method; code and tests built only from a pinned version of layer 2, citing its norm IDs, and every inconsistency sent back to layer 1",
-  "author": { "name": "Jean Pierre Chauny" }
-}

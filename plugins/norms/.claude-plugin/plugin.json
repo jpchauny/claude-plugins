@@ -1,7 +1,0 @@
-{
-  "name": "norms",
-  "description": "Layer 2: the norms generator common to every project, which annotates layer 1 specs with stable norm IDs (/norms:build, /norms:verify)",
-  "author": {
-    "name": "Jean Pierre Chauny"
-  }
-}

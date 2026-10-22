@@ -1,0 +1,7 @@
+{
+  "name": "norms-management",
+  "description": "Module norms-management, layer 2: the norms and every specification derived from them; the norms generator (/norms-management:build, /norms-management:verify)",
+  "author": {
+    "name": "Jean Pierre Chauny"
+  }
+}

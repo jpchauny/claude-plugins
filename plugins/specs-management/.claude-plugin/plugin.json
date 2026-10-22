@@ -1,0 +1,7 @@
+{
+  "name": "specs-management",
+  "description": "Module specs-management, layer 1: the AI recommends how to improve the specs that the authors write (/specs-management:audit)",
+  "author": {
+    "name": "Jean Pierre Chauny"
+  }
+}

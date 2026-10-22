@@ -1,34 +1,49 @@
 {
   "name": "jpchauny-plugins",
-  "description": "Shared Claude Code plugins for working in three layers: specifications (people), norms (generated), code (agents)",
+  "description": "Indra Software Factory: an app of Claude Code plugins for working in three layers - specifications (people), norms (generated), code (agents). Install indra-software-factory; each module is a plugin",
   "owner": {
     "name": "Jean Pierre Chauny"
   },
   "plugins": [
     {
+      "name": "indra-software-factory",
+      "source": "./plugins/indra-software-factory",
+      "description": "Indra Software Factory: the app. Installs every module - specs written by people, norms generated from them, code built from the norms by agents"
+    },
+    {
       "name": "shared",
       "source": "./plugins/shared",
-      "description": "How the team works: explore before specifying or building; pending items and findings go to GitHub issues, each with a self-contained hand-off; explanations one step at a time, waiting for the user's got-it; a recap of the current session after time away"
+      "description": "Module shared: what is the same in the three layers - explore before specifying or building; pending items and findings as GitHub issues; explanations one step at a time; a recap of the current session"
     },
     {
-      "name": "specs",
-      "source": "./plugins/specs",
-      "description": "Layer 1 tools for the people who write a project's specifications in plain prose: readability, renumbering chapters, reviewing a change"
+      "name": "project-management",
+      "source": "./plugins/project-management",
+      "description": "Module project-management: the three repositories of a project, their creation and their life cycle (/project-management:create-project)"
     },
     {
-      "name": "norms",
-      "source": "./plugins/norms",
-      "description": "Layer 2: the norms generator common to every project, which annotates layer 1 specs with stable norm IDs (/norms:build, /norms:verify)"
+      "name": "specs-management",
+      "source": "./plugins/specs-management",
+      "description": "Module specs-management, layer 1: the AI recommends how to improve the specs that the authors write (/specs-management:audit)"
     },
     {
-      "name": "code",
-      "source": "./plugins/code",
-      "description": "Layer 3: the implementation method; code and tests built only from a pinned version of layer 2, citing its norm IDs, and every inconsistency sent back to layer 1"
+      "name": "norms-management",
+      "source": "./plugins/norms-management",
+      "description": "Module norms-management, layer 2: the norms and every specification derived from them; the norms generator (/norms-management:build, /norms-management:verify)"
     },
     {
-      "name": "orchestrator",
-      "source": "./plugins/orchestrator",
-      "description": "Above the three layers, across the three repositories of a project: coordinates the work from specs to norms to code, and starts a new project (creates its three repositories, enables in each the plugins of its layer, writes the initial documents)"
+      "name": "code-implementation",
+      "source": "./plugins/code-implementation",
+      "description": "Module code-implementation, layer 3: code built from the norms, and its traceability to norm IDs"
+    },
+    {
+      "name": "drift-management",
+      "source": "./plugins/drift-management",
+      "description": "Module drift-management: a drift between specs and code, sent back to layer 1"
+    },
+    {
+      "name": "workflow-orchestration",
+      "source": "./plugins/workflow-orchestration",
+      "description": "Module workflow-orchestration: the flow across the modules - what starts a run, the order of the steps, the hand-offs, and how each step runs in its repository"
     }
   ]
 }

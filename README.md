@@ -1,41 +1,46 @@
-# claude-plugins
+# Indra Software Factory
 
-A Claude Code plugin marketplace (`jpchauny-plugins`) for working in three
-layers: specifications written by people, norms generated from them, code
-built from the norms by agents.
+A Claude Code app, published as the plugin marketplace `jpchauny-plugins`, for
+working in three layers: specifications written by people, norms generated
+from them, code built from the norms by agents.
 
-The spec-driven design process, in prose, is in [spec-driven-design-process/](spec-driven-design-process/README.md): the single
-source of truth. The plugins are its tools.
+The app is built from specs: the rules of the three layers are in
+[specs/layers.md](specs/layers.md), the modules in
+[specs/modules.md](specs/modules.md), and each module specifies its use cases
+in the folder `specs/` of its plugin.
 
-| Plugin | Enabled in | What for |
-|--------|------------|----------|
-| `shared` | every repository | Explore before specifying or building (`/shared:explore`); pending items and findings as a tree of GitHub issues (`/shared:issue`, `/shared:tree`, `/shared:baseline`); explanations one step at a time (`/shared:explain`); a recap of the current session (`/shared:recap`) |
-| `specs` | `<project>-specs` | Layer 1: tools that help people write the specification |
-| `norms` | `<project>-norms` | Layer 2: the norms generator, and the method for a project's own generators |
-| `code` | `<project>-code` | Layer 3: the implementation method and code traceability |
-| `orchestrator` | nowhere: user scope | Coordinates the work across the three repositories of a project; creates the three repositories of a new project (`/orchestrator:new-project`) |
+| Module (plugin) | Use cases |
+|--------|----------|
+| `project-management` | Create a project (`/project-management:create-project`) |
+| `specs-management` | Recommend improvements to the specs (`/specs-management:audit`) |
+| `norms-management` | Regenerate the norms (`/norms-management:build`, `/norms-management:verify`) |
+| `code-implementation` | Implement the changed norms (not yet built) |
+| `drift-management` | Report a drift (not yet built) |
+| `workflow-orchestration` | Start a run (not yet built) |
+| `shared` | Explore (`/shared:explore`); the issue tree (`/shared:issue`, `/shared:tree`, `/shared:baseline`); explain one step at a time (`/shared:explain`); recap the session (`/shared:recap`) |
 
-## Start a new project
+The plugin `indra-software-factory` is the app itself: it declares every
+module as a dependency, so installing it installs them all.
+
+## Install
 
 Once per person:
 
 ```sh
 claude plugin marketplace add jpchauny/claude-plugins
-claude plugin install orchestrator@jpchauny-plugins --scope user
+claude plugin install indra-software-factory@jpchauny-plugins --scope user
 ```
 
-Then, in any session, `/orchestrator:new-project <name>`. It creates the three
-repositories with the plugins of each layer enabled in their
-`.claude/settings.json`.
+Then, in any session, `/project-management:create-project <name>`. It creates
+the three repositories, each enabling the app in its `.claude/settings.json`.
 
-## Add the plugins to an existing repository
+## Add the app to an existing repository
 
 In the repository (the commands write `.claude/settings.json`; commit it):
 
 ```sh
 claude plugin marketplace add jpchauny/claude-plugins --scope project
-claude plugin install shared@jpchauny-plugins --scope project
-claude plugin install <specs|norms|code>@jpchauny-plugins --scope project
+claude plugin install indra-software-factory@jpchauny-plugins --scope project
 ```
 
 
@@ -59,19 +64,19 @@ declares the marketplace, accept the folder's trust dialog. If Claude Code
 reports that a plugin is enabled but not installed:
 
 ```sh
-claude plugin install <plugin>@jpchauny-plugins --scope project
+claude plugin install indra-software-factory@jpchauny-plugins --scope project
 ```
 
 ## Updates
 
 Every project uses the latest version
-([LAY-6](plugins/orchestrator/specs/layers.md#lay-6--every-project-uses-the-latest-version-of-the-plugins)).
+([LAY-6](specs/layers.md#lay-6--every-project-uses-the-latest-version-of-the-plugins)).
 Change a plugin here, push to `main`. Updates are not automatic for a
 third-party marketplace: each teammate runs
 
 ```sh
 claude plugin marketplace update jpchauny-plugins
-claude plugin update <plugin>@jpchauny-plugins
+claude plugin update indra-software-factory@jpchauny-plugins
 ```
 
 then `/reload-plugins` or a new session. (Or enable auto-update for this

@@ -1,5 +1,0 @@
-{
-  "name": "orchestrator",
-  "description": "Above the three layers, across the three repositories of a project: coordinates the work from specs to norms to code, and starts a new project (creates its three repositories, enables in each the plugins of its layer, writes the initial documents)",
-  "author": { "name": "Jean Pierre Chauny" }
-}
