@@ -104,14 +104,17 @@ SPC-1 to SPC-12 apply to every spec. SPC-13 to SPC-20 apply only when their "App
 
 **Checked by:** SPC-Q2, SPC-Q3.
 
-### SPC-3 — Every domain term must be defined once and keep one meaning across the whole spec set
+### SPC-3 — Each spec must define its own domain terms, and each term must keep one meaning across the whole spec set
 
+- Each spec must define, in its own terms section, every domain term that it uses.
+- The spec set must not have a central glossary.
+- A term that two specs define must have the same meaning in both.
 - A term must not have synonyms.
 - Where a term has a narrower meaning than in everyday use, its definition must say so.
 - The spec set must be written in one language.
 - The only exception to the one-language rule is user-facing text, which must be in the language that the component speaks to its users (SPC-6).
 
-**Why:** Models treat synonyms as different concepts. Models also replace local terms with their public meaning. One vocabulary in one language keeps search and references consistent.
+**Why:** Models treat synonyms as different concepts. Models also replace local terms with their public meaning. One vocabulary in one language keeps search and references consistent. A spec that defines its own terms can be read alone, without loading a glossary.
 
 **Weak:** "A member can borrow 5 books. A user with an overdue book cannot borrow."
 
@@ -258,6 +261,7 @@ SPC-1 to SPC-12 apply to every spec. SPC-13 to SPC-20 apply only when their "App
 ### SPC-11 — Each fact must be stated in one place, as a general statement followed by its exceptions
 
 - Other places must refer to that fact, not repeat it.
+- Exception: a term definition is repeated in each spec that uses the term (SPC-3).
 - The exceptions to a general statement must be listed explicitly with it.
 - Where two statements or two qualities can collide, the spec must state which one wins.
 
