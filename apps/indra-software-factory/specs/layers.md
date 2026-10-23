@@ -28,13 +28,24 @@ Layer 1 is the only layer people write, and the only source of truth. It
 changes only by a pull request that a person approves. It has no required
 structure: any folders, any files, at any depth.
 
-### LAY-3 — Layer 2 is regenerated whole, from layer 1 only
+### LAY-3 — Layer 2 is derived from layer 1 only, and only what changed is regenerated
 
-Nobody, person or agent, edits layer 2 by hand. It is regenerated whole from a
-commit of layer 1: the norms generator annotates the specs, and the project's
-own generators derive the rest (a grammar, a formal semantics, a corpus of
-examples). Each regeneration records the commit of layer 1 it comes from and
-the commit of the generators that produced it.
+Nobody, person or agent, edits layer 2 by hand. It is derived from a commit of
+layer 1: the norms generator annotates the specs, and the project's own
+generators derive the rest from the annotated specs (a grammar, a formal
+semantics, a corpus of examples). A new commit of layer 1 regenerates only
+what a change of it calls for: an annotated file whose source changed, and
+each part of a derived specification that comes from a norm that changed or
+is gone. Everything else stays as it is. Each regeneration records the commit
+of layer 1 it comes from and the commit of the generators that produced it.
+
+Every part of a derived specification cites the norms it comes from, one
+citation per norm, in the form that code uses
+([IMP-6](../modules/code-implementation/use-cases/implement/specs/implement.md)):
+`<norm ID>@<norm hash>: <reason>` after the comment mark of its language. A
+derived specification makes no decision that the norms do not make: where they
+leave a gap, the part is not derived and an issue goes to layer 1
+([LAY-5](#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
 
 The norms generator writes `specs-repo-annotated/`: a mirror of the whole
 layer 1 repository, at the same paths, its Markdown files annotated with norm

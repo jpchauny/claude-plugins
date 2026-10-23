@@ -7,7 +7,7 @@ argument-hint: "[path of the layer 1 repository]"
 # verify
 
 Layer 2 is never edited by hand
-([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
+([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)).
 This checks it, from the norms repository of the project.
 
 1. Find layer 1 as the `build` skill of this plugin does.

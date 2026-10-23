@@ -22,7 +22,7 @@ Where the three repositories of a project are is [ORC-20](../../../../project-ma
 | Norm ID | The ID of a norm, as the norms generator gives it, written in the annotated specs between `⟬` and `⟭`. |
 | Norms of the task | The norms that the task needs, which the skill selects and the user confirms (IMP-4). |
 | Norm hash | The first 8 hex digits of the `tree_hash` of a norm in `data/tree.jsonl` of the norms repository ([R31](../../../../norms-management/specs/norms-tree.md), [R61](../../../../norms-management/specs/norms-versions.md)), such as `5a627175`. It changes when the text of the norm, or of any node inside it, changes, and only then. |
-| Citation | One line of comment in code or in a test, `<norm ID>@<norm hash>: <reason>` after the comment mark of the language, such as `# INV-7@5a627175: one row per invoice` in Python or `// INV-7@5a627175: one row per invoice` in Rust and JavaScript. It names a norm that the code implements or the test checks, the version of the norm that it was written for, and why. |
+| Citation | One line of comment in code or in a test, `<norm ID>@<norm hash>: <reason>` after the comment mark of the language, such as `# INV-7@5a627175: one row per invoice` in Python or `// INV-7@5a627175: one row per invoice` in Rust and JavaScript. It names a norm that the code implements or the test checks, the version of the norm that it was written for, and why. A specification derived from the norms, such as a grammar or a semantics, cites its norms with the same citation ([LAY-3](../../../../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)); code built from a part of it cites the norms that part cites. |
 
 ## Implement a task
 
@@ -205,5 +205,4 @@ Feature: Implement a task
 ## Open questions
 
 1. Where does the citation go for a file whose language has no comment, such as JSON?
-2. How does code cite a part of a specification derived from the norms (a grammar, a semantics, a corpus of examples, [LAY-3](../../../../../specs/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)), which has no norm ID? `norms-management` does not specify those derived specifications yet.
-3. How does this use case relate to [ORC-11](../../../specs/module.md#implement-the-changed-norms), where the step implements every changed norm from a hand-off, and not a task the user gives? Is it the same skill with two ways to start, or two use cases?
+2. How does this use case relate to [ORC-11](../../../specs/module.md#implement-the-changed-norms), where the step implements every changed norm from a hand-off, and not a task the user gives? Is it the same skill with two ways to start, or two use cases?

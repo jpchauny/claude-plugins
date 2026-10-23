@@ -16,7 +16,7 @@ The module `norms-management` of the app Indra Software Factory, listed in [app.
 
 ## Regenerate the norms
 
-- **ORC-8.** In `<project>-norms`, the step runs `/norms-management:build` at the commit of layer 1 that starts the run ([ORC-15](../../workflow-orchestration/specs/module.md#start-a-run)), then `/norms-management:verify`. A failure of either ends the run, with the generator's message shown as it is ([LAY-3](../../../specs/layers.md#lay-3--layer-2-is-regenerated-whole-from-layer-1-only)).
+- **ORC-8.** In `<project>-norms`, the step runs `/norms-management:build` at the commit of layer 1 that starts the run ([ORC-15](../../workflow-orchestration/specs/module.md#start-a-run)), then `/norms-management:verify`. A failure of either ends the run, with the generator's message shown as it is ([LAY-3](../../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)).
 - **ORC-9.** Its hand-off is the commit of `<project>-norms` that holds the regenerated `data/` and `specs-repo-annotated/`, and its `data/report.md`, which lists by norm ID what changed.
 - **ORC-10.** When `data/report.md` shows no change of norm, the run ends after this step: there is nothing to implement.
 
