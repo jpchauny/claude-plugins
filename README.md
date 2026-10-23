@@ -20,8 +20,9 @@ developed in [specs/development.md](specs/development.md), and this app in
 | `workflow-orchestration` | Start a run (not yet built) |
 | `utilities` | Explore (`/utilities:explore`); the issue tree (`/utilities:issue`, `/utilities:tree`, `/utilities:baseline`); explain one step at a time (`/utilities:explain`); recap the session (`/utilities:recap`) |
 
-The plugin `indra-software-factory` is the app itself: it declares every
-module as a dependency, so installing it installs them all.
+Each module is a plugin of its own. A repository enables only the modules
+of its layer
+([APP-6](apps/indra-software-factory/specs/app.md#rules)).
 
 ## Install
 
@@ -29,19 +30,23 @@ Once per person:
 
 ```sh
 claude plugin marketplace add jpchauny/claude-plugins
-claude plugin install indra-software-factory@jpchauny-plugins --scope user
+claude plugin install project-management@jpchauny-plugins --scope user
 ```
 
 Then, in any session, `/project-management:create-project <name>`. It creates
-the three repositories, each enabling the app in its `.claude/settings.json`.
+the three repositories, each enabling in its `.claude/settings.json`
+`utilities` and the module of its layer.
 
-## Add the app to an existing repository
+## Add the modules to an existing repository
 
-In the repository (the commands write `.claude/settings.json`; commit it):
+In the repository (the commands write `.claude/settings.json`; commit it),
+with `<module>` the module of its layer: `specs-management`,
+`norms-management` or `code-implementation`:
 
 ```sh
 claude plugin marketplace add jpchauny/claude-plugins --scope project
-claude plugin install indra-software-factory@jpchauny-plugins --scope project
+claude plugin install utilities@jpchauny-plugins --scope project
+claude plugin install <module>@jpchauny-plugins --scope project
 ```
 
 
@@ -62,10 +67,11 @@ claude plugin install indra-software-factory@jpchauny-plugins --scope project
 
 The repository is public: nothing to configure. Opening a project that
 declares the marketplace, accept the folder's trust dialog. If Claude Code
-reports that a plugin is enabled but not installed:
+reports that a plugin is enabled but not installed, install each plugin
+that the repository's `.claude/settings.json` enables:
 
 ```sh
-claude plugin install indra-software-factory@jpchauny-plugins --scope project
+claude plugin install <plugin>@jpchauny-plugins --scope project
 ```
 
 ## Updates
@@ -77,8 +83,10 @@ third-party marketplace: each teammate runs
 
 ```sh
 claude plugin marketplace update jpchauny-plugins
-claude plugin update indra-software-factory@jpchauny-plugins
+claude plugin update <plugin>@jpchauny-plugins
 ```
+
+for each plugin they have installed.
 
 then `/reload-plugins` or a new session. (Or enable auto-update for this
 marketplace in `/plugin`, tab **Marketplaces**.)

@@ -17,7 +17,7 @@ A use case of the module `project-management`, specified in [module.md](../../..
 
 ```gherkin
 Feature: Create a project
-  In order to start each layer in its own repository, with the app enabled
+  In order to start each layer in its own repository, with the modules of its layer enabled
   As a person who starts a project
   I want its three repositories created in one go
 
@@ -89,21 +89,21 @@ Feature: Create a project
       And the user does not approve it
       Then the skill creates nothing
 
-  Rule: ORC-5 Each repository starts with the app enabled
+  Rule: ORC-5 Each repository starts with the modules of its layer enabled, as APP-6 says
 
     Scenario Outline: The repository of one layer
       Given the user approved the plan for the project "billing"
       When the project is created
       Then the repository "billing-<layer>" exists on GitHub with the chosen owner and visibility
       And it is cloned in the local folder, beside the other two
-      And its ".claude/settings.json" enables the plugin "indra-software-factory"
+      And its ".claude/settings.json" enables the plugins "utilities" and "<module>", and no other
       And it holds a "CLAUDE.md" and a "README.md", pushed in its first commit
 
       Examples:
-        | layer |
-        | specs |
-        | norms |
-        | code  |
+        | layer | module              |
+        | specs | specs-management    |
+        | norms | norms-management    |
+        | code  | code-implementation |
 
   Rule: ORC-19 A creation that fails halfway removes nothing and reports what exists
 

@@ -11,7 +11,7 @@
 | Term | Meaning |
 |---|---|
 | Marketplace | The Claude Code plugin marketplace `jpchauny-plugins`: this repository, `jpchauny/claude-plugins`. |
-| App | What a person installs from the marketplace: one plugin that brings its modules with it ([DEV-7](development.md#levels)). |
+| App | A set of modules, each one a plugin that a person installs on its own ([DEV-7](development.md#levels)). |
 
 ## Rules
 
@@ -22,10 +22,11 @@
   |---|---|
   | Indra Software Factory | [apps/indra-software-factory/](../apps/indra-software-factory/specs/app.md) |
 
-- **MKT-3.** `.claude-plugin/marketplace.json` lists every plugin of every app, the app's own and each of its modules', with the folder of each.
-- **MKT-4.** A person adds the marketplace once, then installs an app at user scope:
+- **MKT-3.** `.claude-plugin/marketplace.json` lists every plugin of every app, one per module, with the folder of each.
+- **MKT-4.** A person adds the marketplace once:
 
   ```sh
   claude plugin marketplace add jpchauny/claude-plugins
-  claude plugin install <app>@jpchauny-plugins --scope user
   ```
+
+  Which modules of an app are installed, at which scope and in which repository, the spec of the app says.

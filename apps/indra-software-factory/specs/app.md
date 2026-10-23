@@ -6,8 +6,8 @@
 
 Indra Software Factory is an app of Claude Code plugins for working in three
 layers: specifications written by people, norms generated from them, code
-built from the norms by agents. A person installs the app once, and then
-invokes its use cases.
+built from the norms by agents. A person installs each module where APP-6
+says, and then invokes its use cases.
 
 Every module obeys the rules of the three layers, LAY-1 to LAY-6, in
 [layers.md](layers.md): they are the foundation of the app, not a module.
@@ -16,7 +16,7 @@ Every module obeys the rules of the three layers, LAY-1 to LAY-6, in
 
 | Term | Meaning |
 |---|---|
-| App | The plugin `indra-software-factory`, which holds no use case and declares every module as a dependency, so that installing it installs them all. |
+| App | Indra Software Factory: its modules, each one a plugin installed on its own. The app itself is no plugin. |
 | Module | A set of use cases with one responsibility, built as one plugin of the same name. |
 | Use case | One thing the user invokes, as `/<module>:<use case>`. |
 
@@ -37,5 +37,20 @@ Every module obeys the rules of the three layers, LAY-1 to LAY-6, in
 How the app is developed, a module as a plugin and a use case as a skill
 of it, is in [development.md](../../../specs/development.md).
 
-- **APP-1.** The app is installed once per person, at user scope. Each repository of a project also enables the app in its `.claude/settings.json`.
-- **APP-2.** Every use case is installed in every repository, so a use case that belongs to one layer checks the repository it runs in and refuses outside its layer.
+- **APP-5.** Each module is a plugin of its own. No module depends on another, and no plugin installs them together.
+- **APP-6.** Where each module is installed (complete list):
+
+  | Module | Where |
+  |---|---|
+  | `project-management` | At user scope, once per person: its use case `create-project` runs before the repositories of a project exist. |
+  | `specs-management` | Enabled in the `.claude/settings.json` of `<project>-specs` only. |
+  | `norms-management` | Enabled in the `.claude/settings.json` of `<project>-norms` only. |
+  | `code-implementation` | Enabled in the `.claude/settings.json` of `<project>-code` only. |
+  | `utilities` | Enabled in the `.claude/settings.json` of each of the three repositories. |
+  | `workflow-orchestration`, `drift-management` | Not yet decided: open question 1. |
+
+- **APP-7.** A use case of one layer is not installed outside the repository of its layer (APP-6), so it cannot be invoked there.
+
+## Open questions
+
+1. Where are `workflow-orchestration` and `drift-management` installed? Both work across the three repositories, and neither has a use case yet.

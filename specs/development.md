@@ -15,7 +15,7 @@ follows it.
 | Term | Meaning |
 |---|---|
 | Level | One of the four parts that hold one another: the marketplace, an app, a module, a use case. |
-| App | What a person installs: a set of modules. |
+| App | A set of modules, each installed on its own. |
 | Module | A set of use cases of one app, with one responsibility. |
 | Use case | One thing the user invokes. |
 | Spec | A file that specifies a level. |
@@ -42,8 +42,8 @@ follows it.
 
 - **DEV-6.** Each level holds its specs in its own folder `specs/`. A spec states what is true for its level and for every level inside it, and cites the levels above it instead of repeating them (DEV-4). The specs of a use case are `specs/<use case>.md`; the spec that says what a module is, is `specs/module.md`; the one that says what an app is, is `specs/app.md`.
 - **DEV-7.** Each level is built as a part of Claude Code (complete list):
-  - an app is one plugin, at `apps/<app>/`, named as the app. It holds no use case, and declares each of its modules as a dependency, so that installing it installs them all;
-  - a module is one plugin, named as the module. Once it has a use case, its `.claude-plugin/plugin.json` declares `"skills": "./use-cases/"`. It has no folder `skills/`;
+  - an app is no plugin: it is the folder `apps/<app>/` of its specs and its modules. No plugin installs the modules of an app together;
+  - a module is one plugin, named as the module, which depends on no other plugin. Once it has a use case, its `.claude-plugin/plugin.json` declares `"skills": "./use-cases/"`. It has no folder `skills/`;
   - a use case is one skill, named as the use case and invoked as `/<module>:<use case>`. Its folder holds its `SKILL.md`, and the scripts and templates that only it uses. Code that several use cases of a module share is in the module's folder.
 
 ## Format of a use case

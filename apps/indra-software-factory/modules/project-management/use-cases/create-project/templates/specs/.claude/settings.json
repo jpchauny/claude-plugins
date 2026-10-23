@@ -8,6 +8,7 @@
     }
   },
   "enabledPlugins": {
-    "indra-software-factory@jpchauny-plugins": true
+    "utilities@jpchauny-plugins": true,
+    "specs-management@jpchauny-plugins": true
   }
 }

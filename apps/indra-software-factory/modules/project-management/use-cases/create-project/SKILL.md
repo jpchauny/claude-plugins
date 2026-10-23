@@ -1,6 +1,6 @@
 ---
 name: create-project
-description: Start a new project from scratch in three layers - ask for its name, create on GitHub its three repositories <project>-specs, <project>-norms and <project>-code, enable in each the app Indra Software Factory, and write and push the initial documents. Use when the user types /project-management:create-project, or says in words that they want to start a new project with its three repositories ("nuevo proyecto", "crear proyecto", "start a new project").
+description: Start a new project from scratch in three layers - ask for its name, create on GitHub its three repositories <project>-specs, <project>-norms and <project>-code, enable in each the modules of its layer, and write and push the initial documents. Use when the user types /project-management:create-project, or says in words that they want to start a new project with its three repositories ("nuevo proyecto", "crear proyecto", "start a new project").
 argument-hint: "[project name]"
 ---
 
@@ -8,7 +8,7 @@ argument-hint: "[project name]"
 
 Creates the three repositories of a new project, as
 [specs/layers.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md) requires (LAY-1): one per
-layer, each with the app Indra Software Factory enabled. Its specification is
+layer, each with `utilities` and the module of its layer enabled (APP-6). Its specification is
 [specs/create-project.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md).
 
 ## 1. Ask
@@ -43,7 +43,8 @@ Owner:       <owner> (<visibility>)
 Repositories <owner>/<project>-specs
              <owner>/<project>-norms
              <owner>/<project>-code
-Enabled:     indra-software-factory in each
+Enabled:     utilities, and specs-management / norms-management /
+             code-implementation in its repository
 Local:       <folder>/<project>-{specs,norms,code}
 ```
 

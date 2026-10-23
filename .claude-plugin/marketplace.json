@@ -1,15 +1,10 @@
 {
   "name": "jpchauny-plugins",
-  "description": "Indra Software Factory: an app of Claude Code plugins for working in three layers - specifications (people), norms (generated), code (agents). Install indra-software-factory; each module is a plugin",
+  "description": "Indra Software Factory: an app of Claude Code plugins for working in three layers - specifications (people), norms (generated), code (agents). Each module is a plugin, installed on its own in the repository of its layer",
   "owner": {
     "name": "Jean Pierre Chauny"
   },
   "plugins": [
-    {
-      "name": "indra-software-factory",
-      "source": "./apps/indra-software-factory",
-      "description": "Indra Software Factory: the app. Installs every module - specs written by people, norms generated from them, code built from the norms by agents"
-    },
     {
       "name": "utilities",
       "source": "./apps/indra-software-factory/modules/utilities",
