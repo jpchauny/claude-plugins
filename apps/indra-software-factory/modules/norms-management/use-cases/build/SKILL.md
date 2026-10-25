@@ -1,7 +1,7 @@
 ---
 name: build
 description: Regenerate layer 2 of the current project - mirror its whole layer 1 repository into specs-repo-annotated/ of this norms repository, Markdown annotated with stable norm IDs and every other file copied as it is, record the tree in data/, then verify the output and show the change report. Use when the user says /norms-management:build, "regenera las normas", "regenerate layer 2", "build norms", or after layer 1 changed.
-argument-hint: "[path of the layer 1 repository] [--commit SHA]"
+argument-hint: "[--commit SHA]"
 ---
 
 # build
@@ -13,12 +13,17 @@ of the git repository of the working directory.
 
 ## 1. Find layer 1
 
-The first that applies:
+Only through `project.json` (ORC-34), with the script of this plugin:
 
-1. The path given as argument.
-2. The layer 1 repository named in this repository's `CLAUDE.md` or `README.md`.
-3. The sibling folder `../<project>-specs`, where `<project>` is this repository's folder name without `-norms`.
-4. Otherwise ask the user for the path, in one line.
+```sh
+python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/find_layer1.py" --repo "$(git rev-parse --show-toplevel)"
+```
+
+It prints the absolute path of the repository of layer 1, or an error. It
+also checks that this repository's `project.json` is the same as the one of
+layer 1 (ORC-24). On an
+error, write nothing, show it as it is and stop: never look for layer 1
+anywhere else, and never ask for its path (ORC-22).
 
 ## 2. Build, verify, report
 
