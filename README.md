@@ -12,17 +12,18 @@ developed in [specs/development.md](specs/development.md), and this app in
 
 | Module (plugin) | Use cases |
 |--------|----------|
+| `development-methodology` | None: it gives every session an index of the development methodology (the four layers, the flow, their terms) |
 | `project-management` | Create a project (`/project-management:create-project`) |
 | `specs-management` | Recommend improvements to the specs (`/specs-management:audit`) |
 | `norms-management` | Regenerate the norms (`/norms-management:build`, `/norms-management:verify`) |
 | `code-implementation` | Implement the changed norms (not yet built) |
 | `drift-management` | Report a drift (not yet built) |
-| `workflow-orchestration` | Start a run (not yet built) |
+| `workflow-orchestration` | Run the flow (not yet built) |
 | `utilities` | Explore (`/utilities:explore`); the issue tree (`/utilities:issue`, `/utilities:tree`, `/utilities:baseline`); explain one step at a time (`/utilities:explain`); recap the session (`/utilities:recap`) |
 
-Each module is a plugin of its own. A repository enables only the modules
-of its layer
-([APP-6](apps/indra-software-factory/specs/app.md#rules)).
+Each module is a plugin of its own. A repository enables
+`development-methodology`, `utilities` and the module of its layer
+([APP-6](apps/indra-software-factory/modules/development-methodology/specs/layers.md#where-each-module-is-installed)).
 
 ## Install
 
@@ -35,7 +36,7 @@ claude plugin install project-management@jpchauny-plugins --scope user
 
 Then, in any session, `/project-management:create-project <name>`. It creates
 the repositories of the four layers, each enabling in its `.claude/settings.json`
-`utilities` and the module of its layer.
+`development-methodology`, `utilities` and the module of its layer.
 
 ## Add the modules to an existing repository
 
@@ -45,6 +46,7 @@ with `<module>` the module of its layer: `specs-management`,
 
 ```sh
 claude plugin marketplace add jpchauny/claude-plugins --scope project
+claude plugin install development-methodology@jpchauny-plugins --scope project
 claude plugin install utilities@jpchauny-plugins --scope project
 claude plugin install <module>@jpchauny-plugins --scope project
 ```
@@ -77,7 +79,7 @@ claude plugin install <plugin>@jpchauny-plugins --scope project
 ## Updates
 
 Every project uses the latest version
-([LAY-6](apps/indra-software-factory/specs/layers.md#lay-6--every-project-uses-the-latest-version-of-the-plugins)).
+([LAY-6](apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
 Change a plugin here, push to `main`. Updates are not automatic for a
 third-party marketplace: each teammate runs
 

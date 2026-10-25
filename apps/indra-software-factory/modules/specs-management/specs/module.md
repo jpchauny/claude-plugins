@@ -8,4 +8,4 @@ The module `specs-management` of the app Indra Software Factory, listed in [app.
 
 ## Recommend improvements to the specs
 
-- **ORC-7.** The draft specs and the specs are free: nothing restricts what the authors write ([LAY-2](../../../specs/layers.md#lay-2--people-work-in-layers-0-and-1)). The only use case of this module is the audit, `/specs-management:audit` of the plugin `specs-management`, which recommends how to improve the specs and changes nothing; its specification is [specs-audit.md](../use-cases/audit/specs/audit.md).
+- **ORC-7.** The draft specs and the specs are free: nothing restricts what the authors write ([LAY-2](../../development-methodology/specs/layers.md#rules)). The only use case of this module is the audit, `/specs-management:audit` of the plugin `specs-management`, which recommends how to improve the specs and changes nothing; its specification is [specs-audit.md](../use-cases/audit/specs/audit.md).

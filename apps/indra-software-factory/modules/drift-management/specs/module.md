@@ -15,4 +15,4 @@ The module `drift-management` of the app Indra Software Factory, listed in [app.
 
 ## Report a drift
 
-- **ORC-14.** When the step of [code-implementation](../../code-implementation/specs/module.md) finds a drift, it opens an issue in the repository of layer 1 and does not work around it. The run ends there for the affected norms; a new run starts from the commit of layer 1 that fixes it ([LAY-5](../../../specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
+- **ORC-14.** When the step of [code-implementation](../../code-implementation/specs/module.md) finds a drift, it opens an issue in the repository of layer 1 and does not work around it. The run ends there for the affected norms; a new run starts from the commit of layer 1 that fixes it ([LAY-5](../../development-methodology/specs/layers.md#rules)).

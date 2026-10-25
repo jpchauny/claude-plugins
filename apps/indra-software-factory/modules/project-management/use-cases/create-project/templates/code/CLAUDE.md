@@ -3,14 +3,14 @@
 ## What this repository is
 
 Layer 3 of `{{project}}`: code and tests, built by agents from layer 2
-alone ([LAY-4](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-4--layer-3-reads-layer-2-never-layer-1)).
+alone ([LAY-4](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
 
 {{repositories}}
 
 ## Working here
 
 - Never write code that is not in layer 2. Code and tests cite the norm IDs they implement or check.
-- When a norm or a derived norm is wrong, missing or contradictory, do not work around it: open an issue in `{{owner}}/{{project}}-specs` ([LAY-5](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
+- When a norm or a derived norm is wrong, missing or contradictory, do not work around it: open an issue in `{{owner}}/{{project}}-specs` ([LAY-5](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
 - Open this repository alone in its VS Code window: a folder added to the same workspace becomes readable and writable from the session.
 
 ## Issues

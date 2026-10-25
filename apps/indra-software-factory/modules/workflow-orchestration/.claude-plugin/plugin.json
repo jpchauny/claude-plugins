@@ -1,6 +1,6 @@
 {
   "name": "workflow-orchestration",
-  "description": "Module workflow-orchestration: the flow across the modules - what starts a run, the order of the steps, the hand-offs, and how each step runs in its repository",
+  "description": "Module workflow-orchestration: runs the flow across the modules - what triggers a run, and how each step runs in its repository",
   "author": {
     "name": "Jean Pierre Chauny"
   }

@@ -6,6 +6,11 @@
   },
   "plugins": [
     {
+      "name": "development-methodology",
+      "source": "./apps/indra-software-factory/modules/development-methodology",
+      "description": "Module development-methodology: the development methodology - the four layers, the flow of a run across them, and their terms - with an index of it in every session of every repository of a project"
+    },
+    {
       "name": "utilities",
       "source": "./apps/indra-software-factory/modules/utilities",
       "description": "Module utilities: tools usable in any layer - explore before specifying or building; pending items and findings as a tree of GitHub issues; explanations one step at a time; a recap of the current session"
@@ -38,7 +43,7 @@
     {
       "name": "workflow-orchestration",
       "source": "./apps/indra-software-factory/modules/workflow-orchestration",
-      "description": "Module workflow-orchestration: the flow across the modules - what starts a run, the order of the steps, the hand-offs, and how each step runs in its repository"
+      "description": "Module workflow-orchestration: runs the flow across the modules - what triggers a run, and how each step runs in its repository"
     }
   ]
 }

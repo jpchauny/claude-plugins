@@ -2,9 +2,9 @@
 
 Layer 3, in each repository of layer 3: the implementation method. Code and tests are
 built from layer 2 alone and cite its norm IDs
-([LAY-4](../../specs/layers.md#lay-4--layer-3-reads-layer-2-never-layer-1));
+([LAY-4](../development-methodology/specs/layers.md#rules));
 an inconsistency goes back to layer 1 first
-([LAY-5](../../specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
+([LAY-5](../development-methodology/specs/layers.md#rules)).
 
 ## Tools
 

@@ -2,7 +2,7 @@
 
 Layer 2, used in the repository of layer 2: the norms generator, common to every
 project. It mirrors the whole layer 1 repository into `specs-repo-annotated/`, its Markdown annotated with stable norm IDs, which makes it norms
-([LAY-3](../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)).
+([LAY-3](../development-methodology/specs/layers.md#rules)).
 
 | Skill | What for |
 |---|---|

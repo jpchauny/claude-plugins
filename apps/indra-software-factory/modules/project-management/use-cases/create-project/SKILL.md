@@ -7,7 +7,7 @@ argument-hint: "[project name]"
 # create-project
 
 Creates the repositories of the four layers of a new project, as
-[specs/layers.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md) requires (LAY-1), each with `utilities` and the module of its layer enabled (APP-6), and the
+[specs/layers.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md) requires (LAY-1), each with `development-methodology`, `utilities` and the module of its layer enabled (APP-6), and the
 `project.json` of the project in every one (ORC-20). Its specification is
 [specs/create-project.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md).
 
@@ -51,7 +51,7 @@ Repositories  0 <owner>/<project>-drafts      specs-management
               1 <owner>/<project>-specs       specs-management
               2 <owner>/<project>-norms       norms-management
               3 <owner>/<project>-code[-<c>]  code-implementation
-              (utilities enabled in every one)
+              (development-methodology and utilities enabled in every one)
 Folder:       <project folder>/<name of each repository>
 ```
 

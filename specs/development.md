@@ -16,15 +16,15 @@ follows it.
 |---|---|
 | Level | One of the four parts that hold one another: the marketplace, an app, a module, a use case. |
 | App | A set of modules, each installed on its own. |
-| Module | A set of use cases of one app, with one responsibility. |
+| Module | A part of one app with one responsibility: its use cases, its hooks, or both. |
 | Use case | One thing the user invokes. |
 | Spec | A file that specifies a level. |
-| Implementation | The skill of a use case, and the code, scripts, templates and tests it uses. |
+| Implementation | The skill of a use case, and the code, scripts, templates and tests it uses; the hooks of a module, and the scripts and tests they use. |
 
 ## Method
 
 - **DEV-1.** Every change starts in a spec: a new use case, a change of behaviour or a fix that the spec does not already require. The user approves the spec before it is implemented.
-- **DEV-2.** A use case is implemented from its spec, and from nothing else.
+- **DEV-2.** A use case is implemented from its spec, and from nothing else. The hooks of a module are implemented from the spec of the module, and from nothing else.
 - **DEV-3.** Once implemented, the implementation is checked against every rule and scenario of its spec. A gap is fixed in the implementation; when the spec is what is wrong, the spec is fixed first, and approved again.
 - **DEV-4.** Each fact is written in one place. Every other place that needs it refers to that place, and does not repeat it.
 - **DEV-9.** Every spec of this marketplace must follow [writing-specs.md](writing-specs.md).
@@ -44,6 +44,7 @@ follows it.
 - **DEV-7.** Each level is built as a part of Claude Code (complete list):
   - an app is no plugin: it is the folder `apps/<app>/` of its specs and its modules. No plugin installs the modules of an app together;
   - a module is one plugin, named as the module, which depends on no other plugin. Once it has a use case, its `.claude-plugin/plugin.json` declares `"skills": "./use-cases/"`. It has no folder `skills/`;
+  - a module may have hooks, with or without a use case. Its hooks are declared in its file `hooks/hooks.json`, and the scripts they run are in its folder `scripts/`. A module with no use case has no skill;
   - a use case is one skill, named as the use case and invoked as `/<module>:<use case>`. Its folder holds its `SKILL.md`, and the scripts and templates that only it uses. Code that several use cases of a module share is in the module's folder.
 
 ## Format of a use case

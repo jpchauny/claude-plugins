@@ -11,7 +11,7 @@ A use case of the module `project-management`, specified in [module.md](../../..
 | Term | Meaning |
 |---|---|
 | Skill | The skill `create-project` of the plugin `project-management`; the actor of every requirement that names no other. |
-| Project | The repositories of its four layers ([LAY-1](../../../../../specs/layers.md#lay-1--every-project-has-four-layers-each-in-its-own-repositories)), as its `project.json` lists them ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
+| Project | The repositories of its four layers ([LAY-1](../../../../development-methodology/specs/layers.md#rules)), as its `project.json` lists them ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
 | Project folder | The folder that holds the repositories of a project ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
 
 ## Create a project
@@ -117,7 +117,7 @@ Feature: Create a project
       When the project is created
       Then the repository "<repository>" exists on GitHub with the chosen owner and visibility
       And it is cloned in the project folder, in the folder "<repository>"
-      And its ".claude/settings.json" enables the plugins "utilities" and "<module>", and no other plugin
+      And its ".claude/settings.json" enables the plugins "development-methodology", "utilities" and "<module>", and no other plugin
       And it holds a "CLAUDE.md", a "README.md" and the "project.json" of the project, pushed in its first commit
 
       Examples:

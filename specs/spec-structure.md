@@ -12,7 +12,7 @@
 | Level | The marketplace, an app, a module or a use case ([DEV-5](development.md#levels)). |
 | Spec | A Markdown file in the folder `specs/` of a level. |
 | Clause | One binding statement of a spec, with its own ID. |
-| Prefix | The upper-case letters that start the ID of every clause of one spec. |
+| Prefix | The upper-case letters that start the ID of every clause written in one spec, except a clause moved into it from another spec (SST-11). |
 
 ## Specs of each level
 
@@ -45,8 +45,9 @@
 ## IDs of clauses
 
 - **SST-6.** Each spec has its own prefix: three or more upper-case ASCII letters, given to no other spec of the marketplace.
-- **SST-7.** Each clause has the ID `<prefix>-<n>`, where `<n>` is the next number never given in that spec, starting at 1. An ID never changes and is never given again: a clause that is removed leaves its number unused.
+- **SST-7.** Each clause written in a spec has the ID `<prefix>-<n>`, where `<n>` is the next number never given in that spec, starting at 1. An ID never changes and is never given again: a clause that is removed leaves its number unused.
 - **SST-8.** A clause starts with its ID: in bold at the start of a list item, `**SST-1.**`, or after `Rule:` in a use case (SST-10).
+- **SST-11.** A clause moved from one spec to another keeps its ID, prefix included (SST-7): it is no clause of the spec whose prefix it bears any more, and that spec never gives its number again. The spec it moved to gives its own prefix to every clause written in it afterwards.
 
 ## Citing
 

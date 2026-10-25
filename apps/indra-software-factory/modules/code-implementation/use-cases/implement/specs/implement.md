@@ -4,7 +4,7 @@
 
 **Audience:** The people who ask for code to be built from the norms of a project; whoever builds the skill `implement` of the plugin `code-implementation`
 
-**Scope:** The use case that implements a task that the user gives, in the code repository, from the norms and the derived norms of the norms repository alone, with every piece of code and every test citing the norms it comes from and the version of each. How the code is reviewed when a cited norm changes is not here: it is open question 2. How the norms are annotated with IDs is in the specs of `norms-management`. This spec cites [LAY-3](../../../../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated) (how layer 2 is derived), [LAY-4](../../../../../specs/layers.md#lay-4--layer-3-reads-layer-2-never-layer-1) (layer 3 reads layer 2, never layer 1), [LAY-5](../../../../../specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first) (an inconsistency goes back to layer 1) and [ORC-20](../../../../project-management/specs/module.md#where-the-repositories-are) (where the repositories of a project are)
+**Scope:** The use case that implements a task that the user gives, in the code repository, from the norms and the derived norms of the norms repository alone, with every piece of code and every test citing the norms it comes from and the version of each. How the code is reviewed when a cited norm changes is not here: it is open question 2. How the norms are annotated with IDs is in the specs of `norms-management`. This spec cites [LAY-3](../../../../development-methodology/specs/layers.md#rules) (how layer 2 is derived), [LAY-4](../../../../development-methodology/specs/layers.md#rules) (layer 3 reads layer 2, never layer 1), [LAY-5](../../../../development-methodology/specs/layers.md#rules) (an inconsistency goes back to layer 1) and [ORC-20](../../../../project-management/specs/module.md#where-the-repositories-are) (where the repositories of a project are)
 
 A use case of the module `code-implementation`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
@@ -14,13 +14,13 @@ A use case of the module `code-implementation`, specified in [module.md](../../.
 |---|---|
 | Skill | The skill `implement` of the plugin `code-implementation`, invoked as `/code-implementation:implement`; the actor of every rule that names no other. |
 | Task | What the user asks to implement, in their own words, such as "the export of invoices to CSV". |
-| Layer | One of the four layers of a project, each in its own repositories ([layers.md](../../../../../specs/layers.md)): 0, the draft specs; 1, the specs; 2, the norms and the derived norms; 3, the code. |
+| Layer | One of the four layers of a project, each in its own repositories ([layers.md](../../../../development-methodology/specs/layers.md)): 0, the draft specs; 1, the specs; 2, the norms and the derived norms; 3, the code. |
 | Specs repository | The repository `<project>-specs`: layer 1, written by people, which the skill never reads. |
 | Code repository | The repository where the skill runs and writes: an entry of `project.json` with `layer` 3 ([ORC-20, ORC-21](../../../../project-management/specs/module.md#where-the-repositories-are)). |
 | Norms repository | The entry of `project.json` with `layer` 2 ([ORC-20](../../../../project-management/specs/module.md#where-the-repositories-are)), which the skill only reads. |
 | Norms generator | The command `norms-gen` of the plugin `norms-management`, which writes `specs-repo-annotated/` and `data/tree.jsonl` in the norms repository. |
-| Derived norm | A norm of the norms repository that a project's own generator derives from the norms, such as a rule of a grammar or of a semantics ([LAY-3](../../../../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)). |
-| Issue | A GitHub issue of the specs repository, which reports an inconsistency of the norms ([LAY-5](../../../../../specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)). |
+| Derived norm | A norm of the norms repository that a project's own generator derives from the norms, such as a rule of a grammar or of a semantics ([LAY-3](../../../../development-methodology/specs/layers.md#rules)). |
+| Issue | A GitHub issue of the specs repository, which reports an inconsistency of the norms ([LAY-5](../../../../development-methodology/specs/layers.md#rules)). |
 | Norm | A node of `specs-repo-annotated/` in the norms repository, with its norm ID, such as `SYN-3`. |
 | Norm ID | The ID of a norm, such as `SYN-3`, as the norms generator gives it. The skill reads the IDs from `data/tree.jsonl`, the only source of truth for them ([R23](../../../../norms-management/specs/norms-tree.md#storage-and-process)), and not from the markers of `specs-repo-annotated/`, which take several forms ([R24](../../../../norms-management/specs/norms-tree.md#annotations)). |
 | Norms of the task | The norms that the task needs, which the skill selects and the user confirms (IMP-4). |

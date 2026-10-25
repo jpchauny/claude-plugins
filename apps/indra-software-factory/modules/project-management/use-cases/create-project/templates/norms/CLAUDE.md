@@ -5,7 +5,7 @@
 Layer 2 of `{{project}}`: the norms, which are `{{owner}}/{{project}}-specs`
 annotated with stable norm IDs, and the derived norms. It is derived from
 layer 1 only, regenerated only where layer 1 changed, and never edited by hand
-([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)).
+([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
 
 {{repositories}}
 
