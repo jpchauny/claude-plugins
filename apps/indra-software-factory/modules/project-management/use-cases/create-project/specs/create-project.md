@@ -36,14 +36,14 @@ Feature: Create a project
       When the user asks how a project is organized
       Then no creation starts
 
-  Rule: ORC-2 The skill asks in one message for everything it was not given
+  Rule: ORC-2 The skill asks in one message for everything it was not given, and then for the names of the components
 
     Scenario: Nothing given
       When the creation starts with no project name
       Then the skill asks, in one numbered message, for:
         | Question            | Default                                       |
         | Project name        | none                                          |
-        | Components          | none: layer 3 is one repository               |
+        | More than one component | no: layer 3 is one repository           |
         | GitHub owner        | the account logged in to GitHub               |
         | Visibility          | private                                       |
         | Project folder      | the folder "<project>" in the current directory |
@@ -51,7 +51,22 @@ Feature: Create a project
     Scenario: The name given with the command
       When the user types "/project-management:create-project billing"
       Then the skill does not ask for the project name
-      And it asks for the components, the owner, the visibility and the project folder
+      And it asks whether there is more than one component, the owner, the visibility and the project folder
+
+    Scenario: One component
+      When the user answers that there is not more than one component
+      Then the skill does not ask for the names of the components
+      And layer 3 is one repository, "<project>-code"
+
+    Scenario: More than one component
+      When the user answers that there is more than one component
+      Then the skill asks, in a second message, for the names of the components
+      And layer 3 is one repository "<project>-code-<component>" per component
+
+    Scenario: Fewer than two names
+      Given the user answered that there is more than one component
+      When the user gives only the component "api"
+      Then the skill asks again for the names of the components, at least two
 
     Scenario: A name that is not lowercase-dash
       When the user gives the project name "Billing App"

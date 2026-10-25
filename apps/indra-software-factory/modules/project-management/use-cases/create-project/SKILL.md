@@ -16,10 +16,16 @@ Creates the repositories of the four layers of a new project, as
 Ask in one message, numbered, with the default of each:
 
 1. **Project name**, lowercase-dash (`billing`, `clean-language`). Skip if given as argument.
-2. **Components** of layer 3, lowercase-dash, comma-separated (`api, web`). Default: none, and layer 3 is one repository `<project>-code`.
+2. **More than one component** in layer 3? Default: no, and layer 3 is one repository `<project>-code`.
 3. **GitHub owner**. Default: the logged-in account, `gh api user --jq .login`.
 4. **Visibility** of the repositories. Default: private.
 5. **Project folder**, where every repository is cloned. Default: the folder `<project>` in the current directory.
+
+When the answer to 2 is yes, ask in a second message for the **names of the
+components**, lowercase-dash, comma-separated (`api, web`): layer 3 is one
+repository `<project>-code-<component>` per component. When fewer than two
+names come, ask again for them, at least two. When the answer is no, ask for
+no names.
 
 The name and each component must match `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`.
 When one does not, ask again for it alone, in lowercase-dash, before going on
