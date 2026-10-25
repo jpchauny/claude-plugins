@@ -3,7 +3,7 @@
 Each case was found by a reviewer and reproduced before it was fixed;
 the exact outputs pin where the IDs go, the property test checks every
 case for pure insertion, well-formed markers, blank lines and the
-same block structure as foundation.
+same block structure as the specs.
 
 Spec: R30
 """
@@ -21,7 +21,7 @@ from norms_generator.structure import block_structure
 from norms_generator.tree import build_tree, walk
 from norms_generator.verify import _check_markers
 from test_annotate import check_insertions
-from test_cli import Foundation, build, main, nodes
+from test_cli import SpecsRepo, build, main, nodes
 from test_examples import check_blank_lines, check_markers
 
 # Every input of the review's findings that broke the structure or the markers.
@@ -66,7 +66,7 @@ CASES: list[str] = [
 
 @pytest.mark.parametrize("source", CASES)
 def test_properties_of_review3_cases(source: str) -> None:
-    """Each case is pure insertion, its markers well formed, its blank lines right and its blocks foundation's.
+    """Each case is pure insertion, its markers well formed, its blank lines right and its blocks the specs'.
 
     Spec: R23, R29, R30, R64
     """
@@ -130,7 +130,7 @@ def _step(files: dict[str, bytes], previous: Store, commit: str) -> tuple[Store,
     trees = {p: build_tree(s, p) for p, s in files.items()}
     prefixes = assign_prefixes(sorted(trees), previous.prefixes(), previous.retired_prefixes(), detect_renames(trees, previous))
     changes = assign_ids(trees, previous, prefixes)
-    store = build_store(trees, prefixes, previous, changes, foundation_commit=commit)
+    store = build_store(trees, prefixes, previous, changes, specs_commit=commit)
     return store, {c.id: c.status.value for c in changes}
 
 
@@ -146,20 +146,20 @@ def test_paragraph_leaving_a_collapsed_quote_keeps_its_id_e72() -> None:
         assert status[para.id] == "edited"
 
 
-# --- non-UTF-8 foundation, no .md file to build (cli) ---------------------------------
+# --- non-UTF-8 the specs, no .md file to build (cli) ---------------------------------
 
 
 def test_non_utf8_file_is_refused_naming_it_r34(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """A foundation file that is not UTF-8 is refused, naming it, and nothing is written.
+    """A spec file that is not UTF-8 is refused, naming it, and nothing is written.
 
     Spec: R3, R34
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     (f.root / "specs").mkdir()
     (f.root / "specs" / "a.md").write_bytes(b"# Caf\xe9\n\nText.\n")
     f.commit()
     out = tmp_path / "norms"
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     assert "specs/a.md: not UTF-8" in capsys.readouterr().err
     assert not out.exists()
 
@@ -169,7 +169,7 @@ def test_no_md_file_to_build_is_refused_and_keeps_the_store(tmp_path: Path, caps
 
     Spec: R3, R34, R62
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/alpha.md", "# A\n\nx\n")
     f.commit()
     out = tmp_path / "norms"
@@ -178,7 +178,7 @@ def test_no_md_file_to_build_is_refused_and_keeps_the_store(tmp_path: Path, caps
     (f.root / "specs" / "alpha.md").unlink()
     f.write("CLAUDE.md", "# Agents only\n")
     f.commit()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     assert "no .md file to build at " in capsys.readouterr().err
     assert (out / "data" / "tree.jsonl").read_bytes() == before
     assert (out / "specs-repo-annotated" / "specs" / "alpha.md").exists()
@@ -192,7 +192,7 @@ def test_retired_node_changed_since_is_of_the_step_it_retired_in_e84(tmp_path: P
 
     Spec: R60, U3 (E84)
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     out = tmp_path / "norms"
     f.write("specs/a.md", "# A\n\nfirst paragraph here\n\nsecond one, to be removed entirely\n")
     c1 = f.commit()

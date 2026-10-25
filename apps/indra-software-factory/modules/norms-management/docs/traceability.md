@@ -164,7 +164,7 @@ Code:
 
 Tests:
 - `tests/test_cli.py`: `test_first_build`
-- `tests/test_prefixes.py`: `(module)`, `test_type_system_is_typ`, `test_real_foundation_unique_and_stable`, `test_collisions_use_folder_letters`, `test_short_name_takes_folder_letters`, `test_new_file_never_takes_existing_or_retired_prefix`, `test_adding_a_file_changes_no_other_prefix`, `test_vanished_file_prefix_not_reused_when_retired`, `test_candidates_are_unique_and_endless`
+- `tests/test_prefixes.py`: `(module)`, `test_type_system_is_typ`, `test_real_specs_unique_and_stable`, `test_collisions_use_folder_letters`, `test_short_name_takes_folder_letters`, `test_new_file_never_takes_existing_or_retired_prefix`, `test_adding_a_file_changes_no_other_prefix`, `test_vanished_file_prefix_not_reused_when_retired`, `test_candidates_are_unique_and_endless`
 - `tests/test_review5.py`: `test_a_file_named_dot_md_has_an_empty_name_r10`, `test_only_ascii_letters_count_before_upper_casing_r10`
 - `tests/test_store.py`: `test_vanished_file_retires_its_prefix`
 
@@ -232,7 +232,7 @@ Code:
 
 Tests:
 - `tests/test_examples.py`: `test_e20_output_mirrors_folders`
-- `tests/test_prefixes.py`: `(module)`, `test_real_foundation_unique_and_stable`
+- `tests/test_prefixes.py`: `(module)`, `test_real_specs_unique_and_stable`
 
 Examples:
 - E20. Folder (not GFM) (`E20`)
@@ -357,7 +357,7 @@ Tests: none
 
 Examples: none
 
-## R23. The JSONL is the only source of truth for the IDs; foundation, for the content
+## R23. The JSONL is the only source of truth for the IDs; the specs, for the content
 
 Spec: `specs/norms-tree.md`
 
@@ -683,13 +683,13 @@ Examples:
 Spec: `specs/norms-tree.md`
 
 Code:
-- `src/norms_generator/cli.py`: `(module)`, `OutputError`, `GitError`, `FoundationError`, `_git`, `resolve_commit`, `list_selected`, `_fold`, `check_paths`, `check_source`, `check_outputs`, `_sweep_annotated`, `_foreign_paths`, `verify`, `_check_store`, `_check_node_files`, `main`, `EXIT_REFUSED`, `build`
+- `src/norms_generator/cli.py`: `(module)`, `OutputError`, `GitError`, `SpecsError`, `_git`, `resolve_commit`, `list_selected`, `_fold`, `check_paths`, `check_source`, `check_outputs`, `_sweep_annotated`, `_foreign_paths`, `verify`, `_check_store`, `_check_node_files`, `main`, `EXIT_REFUSED`, `build`
 - `src/norms_generator/store.py`: `store_absent`, `StoreError`, `read_store`, `has_control`, `escape_controls`, `_is_path`, `_read_line`
 
 Tests:
-- `tests/test_cli.py`: `(module)`, `test_bad_foundation_exits_non_zero`
+- `tests/test_cli.py`: `(module)`, `test_bad_specs_exits_non_zero`
 - `tests/test_exit_statuses.py`: `(module)`, `test_a_refusal_exits_with_2_and_writes_nothing_r34_r62`
-- `tests/test_review10.py`: `test_a_file_at_data_is_a_jsonl_that_cannot_be_opened_r34`, `test_not_in_foundation_is_worded_as_r34_words_git_r64`, `test_refusal_messages_are_worded_as_r34_says`
+- `tests/test_review10.py`: `test_a_file_at_data_is_a_jsonl_that_cannot_be_opened_r34`, `test_not_in_the_specs_is_worded_as_r34_words_git_r64`, `test_refusal_messages_are_worded_as_r34_says`
 - `tests/test_review11.py`: `test_build_refuses_a_jsonl_line_nested_too_deeply_r34`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_verify_reports_a_symbolic_link_at_annotated_r64`, `test_verify_reports_a_file_at_annotated_r64`
 - `tests/test_review3.py`: `test_non_utf8_file_is_refused_naming_it_r34`, `test_no_md_file_to_build_is_refused_and_keeps_the_store`
 - `tests/test_review4.py`: `test_verify_sees_a_wrong_parent_r64`, `test_verify_sees_an_id_stored_twice_and_a_retired_prefix_in_use_r64`, `test_build_refuses_a_file_holding_a_delimiter_r19`, `test_a_corrupt_jsonl_is_a_problem_not_a_crash_r34`, `test_an_unreadable_jsonl_line_is_refused_with_its_line_r34`, `test_optional_jsonl_fields_take_their_defaults_r61`, `test_an_unknown_commit_has_a_message_r34`, `test_a_lone_cr_file_ends_every_inserted_line_with_cr_r52`
@@ -1133,7 +1133,7 @@ Code:
 
 Tests:
 - `tests/test_cli.py`: `(module)`, `test_rename_keeps_prefix`
-- `tests/test_prefixes.py`: `(module)`, `test_real_foundation_unique_and_stable`, `test_new_file_never_takes_existing_or_retired_prefix`, `test_rename_keeps_prefix`, `test_vanished_file_prefix_not_reused_when_retired`, `test_bad_rename_raises`, `test_rename_onto_a_path_that_still_exists_r12`, `test_swapped_names_swap_prefixes_r12`
+- `tests/test_prefixes.py`: `(module)`, `test_real_specs_unique_and_stable`, `test_new_file_never_takes_existing_or_retired_prefix`, `test_rename_keeps_prefix`, `test_vanished_file_prefix_not_reused_when_retired`, `test_bad_rename_raises`, `test_rename_onto_a_path_that_still_exists_r12`, `test_swapped_names_swap_prefixes_r12`
 - `tests/test_review4.py`: `test_a_folder_moved_whole_is_detected_quickly_d40`, `test_a_wording_change_across_the_corpus_is_detected_quickly_d40`, `test_a_stub_filled_in_keeps_its_prefix_e81`, `test_a_file_rewritten_in_place_keeps_its_prefix_r58`
 - `tests/test_review8.py`: `test_a_path_emptied_or_filled_in_keeps_its_prefix_r58`
 - `tests/test_store.py`: `(module)`, `test_rename_keeps_prefix_and_ids`, `test_vanished_file_retires_its_prefix`, `test_moved_file_keeps_its_prefix_when_a_new_file_takes_its_path_r12`, `test_swapped_file_names_keep_their_prefixes_r12`, `test_a_file_edited_in_place_keeps_its_prefix`, `test_renamed_and_lightly_edited_file_keeps_its_prefix_e78`, `test_a_moved_file_without_content_keeps_its_prefix_r12`, `test_a_file_replaced_at_its_path_gets_a_new_prefix_e80`
@@ -1237,7 +1237,7 @@ Tests:
 - `tests/test_examples.py`: `test_e20_output_mirrors_folders`
 - `tests/test_exit_statuses.py`: `(module)`, `test_every_command_exits_with_0_on_success_r62`, `test_help_exits_with_0_r62`, `test_verify_exits_with_1_on_a_problem_r62_r64`, `test_report_exits_with_1_without_a_report_r62`, `test_a_refusal_exits_with_2_and_writes_nothing_r34_r62`, `test_a_usage_error_exits_with_2_r62`, `test_a_build_stopped_by_the_system_exits_with_3_r62`, `test_an_unexpected_error_in_build_prints_its_traceback_and_exits_with_4_r62`, `test_an_unexpected_error_in_verify_exits_with_4_not_1_r62_r64`, `test_the_installed_command_exits_with_4_on_an_unexpected_error_r62`, `test_an_interrupt_keeps_pythons_default_behaviour_r62`
 - `tests/test_review10.py`: `test_report_under_a_folder_it_cannot_search_cannot_be_opened_r62`, `test_report_at_a_broken_link_cannot_be_opened_r62`, `test_report_at_a_looping_link_cannot_be_opened_r62`, `test_report_absent_says_no_report_r62`, `test_verify_takes_a_broken_data_link_as_no_jsonl_r64`, `test_build_writes_over_a_report_it_cannot_read_r62`, `test_build_stops_with_a_message_in_a_data_folder_it_cannot_write_r62`, `test_build_replaces_a_report_without_write_permission_r62`, `test_build_stops_with_a_message_under_a_folder_it_cannot_search_r62`
-- `tests/test_review11.py`: `test_build_never_writes_through_a_hard_link_at_an_output_path_r62`, `test_build_never_writes_into_foundation_s_working_tree_through_a_hard_link_r62`, `test_a_rebuild_replaces_a_hard_linked_copy_that_holds_the_right_bytes_r62`, `test_a_rebuild_keeps_its_reports_only_as_files_of_their_own_r63`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_a_closed_standard_output_is_no_error_r62`
+- `tests/test_review11.py`: `test_build_never_writes_through_a_hard_link_at_an_output_path_r62`, `test_build_never_writes_into_the_specs_working_tree_through_a_hard_link_r62`, `test_a_rebuild_replaces_a_hard_linked_copy_that_holds_the_right_bytes_r62`, `test_a_rebuild_keeps_its_reports_only_as_files_of_their_own_r63`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_a_closed_standard_output_is_no_error_r62`
 - `tests/test_review3.py`: `test_no_md_file_to_build_is_refused_and_keeps_the_store`
 - `tests/test_review4.py`: `test_rebuild_of_a_childless_quote_is_byte_identical`
 - `tests/test_review5.py`: `test_an_excluded_path_not_utf8_is_ignored_r34`, `test_a_selected_path_not_utf8_is_refused_whatever_its_name_r34`
@@ -1290,7 +1290,7 @@ Tests:
 - `tests/test_cli.py`: `(module)`, `test_first_build`, `test_verify_detects_tampering`, `test_verify_uses_the_pinned_commit`
 - `tests/test_examples.py`: `same_structure`, `_structure`, `check_pure_insertion`, `test_fixture_structure_survives`, `test_annotated_markers_and_structure`, `test_version_example`, `UNCLOSED`
 - `tests/test_exit_statuses.py`: `(module)`, `test_verify_exits_with_1_on_a_problem_r62_r64`, `test_an_unexpected_error_in_verify_exits_with_4_not_1_r62_r64`
-- `tests/test_review10.py`: `test_verify_reports_a_copy_under_a_folder_it_cannot_search_r64`, `test_verify_takes_a_broken_data_link_as_no_jsonl_r64`, `test_not_in_foundation_is_worded_as_r34_words_git_r64`
+- `tests/test_review10.py`: `test_verify_reports_a_copy_under_a_folder_it_cannot_search_r64`, `test_verify_takes_a_broken_data_link_as_no_jsonl_r64`, `test_not_in_the_specs_is_worded_as_r34_words_git_r64`
 - `tests/test_review11.py`: `test_verify_reports_a_hard_linked_copy_r64`, `test_verify_reports_a_jsonl_line_nested_too_deeply_r64`, `test_verify_reports_the_problems_of_a_copy_nested_too_deeply_r64`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_verify_reports_a_symbolic_link_at_annotated_r64`, `test_verify_reports_a_file_at_annotated_r64`
 - `tests/test_review3.py`: `test_properties_of_review3_cases`, `test_structure_sees_a_marker_inside_a_code_span_or_link_e17`, `test_structure_ignores_an_id_before_a_hard_break`, `test_markers_check_requires_nested_frames_r24`, `CASES`
 - `tests/test_review4.py`: `test_cases_of_review4_are_sound`, `test_verify_sees_a_wrong_parent_r64`, `test_verify_sees_an_id_stored_twice_and_a_retired_prefix_in_use_r64`, `test_build_refuses_a_file_holding_a_delimiter_r19`, `test_a_corrupt_jsonl_is_a_problem_not_a_crash_r34`, `test_an_unreadable_jsonl_line_is_refused_with_its_line_r34`, `test_optional_jsonl_fields_take_their_defaults_r61`, `test_an_unknown_commit_has_a_message_r34`, `test_a_lone_cr_file_ends_every_inserted_line_with_cr_r52`
@@ -1394,7 +1394,7 @@ Code:
 Tests:
 - `tests/test_annotated_u6.py`: `(module)`, `_rebuilt_clean`, `test_a_foreign_file_is_reported_and_removed_u6`, `test_a_foreign_folder_is_named_once_and_removed_with_its_contents_u6`, `test_a_link_to_outside_is_removed_and_its_target_survives_u6`, `test_a_link_inside_a_foreign_folder_is_not_followed_u6`, `test_a_link_at_a_folder_of_copies_is_replaced_by_a_folder_u6`, `test_a_file_at_a_folder_s_path_is_replaced_by_the_folder_u6`, `test_a_folder_at_a_copy_s_path_is_replaced_by_the_copy_u6`, `test_a_name_that_differs_only_in_case_is_foreign_u6`, `test_the_copies_a_lost_jsonl_left_are_removed_u6`, `test_a_rebuild_of_the_same_commit_also_cleans_and_keeps_the_reports_u6`, `test_nothing_outside_the_output_folder_is_touched_u6`
 - `tests/test_review10.py`: `test_verify_reports_a_copy_under_a_folder_it_cannot_search_r64`, `test_build_stops_with_a_message_under_a_folder_it_cannot_search_r62`
-- `tests/test_review11.py`: `test_build_never_writes_through_a_hard_link_at_an_output_path_r62`, `test_build_never_writes_into_foundation_s_working_tree_through_a_hard_link_r62`, `test_a_rebuild_replaces_a_hard_linked_copy_that_holds_the_right_bytes_r62`, `test_verify_reports_a_hard_linked_copy_r64`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_verify_reports_a_symbolic_link_at_annotated_r64`, `test_verify_reports_a_file_at_annotated_r64`
+- `tests/test_review11.py`: `test_build_never_writes_through_a_hard_link_at_an_output_path_r62`, `test_build_never_writes_into_the_specs_working_tree_through_a_hard_link_r62`, `test_a_rebuild_replaces_a_hard_linked_copy_that_holds_the_right_bytes_r62`, `test_verify_reports_a_hard_linked_copy_r64`, `test_verify_writes_a_foreign_name_with_a_line_break_on_one_line_r64`, `test_verify_reports_a_symbolic_link_at_annotated_r64`, `test_verify_reports_a_file_at_annotated_r64`
 - `tests/test_review6.py`: `test_a_file_and_a_folder_of_one_name_replace_each_other_r62`, `test_verify_reports_a_folder_in_place_of_an_annotated_copy_r64`
 - `tests/test_review7.py`: `test_stray_files_under_annotated_are_reported_then_removed_u6`, `test_verify_checks_each_plain_copy_r64`
 - `tests/test_review9.py`: `test_removing_a_vanished_copy_does_not_follow_a_link_inside_annotated_r62`

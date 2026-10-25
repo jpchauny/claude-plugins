@@ -15,10 +15,10 @@ Two kinds of example, two fixture layouts:
 
 * Annotation examples (specs/norms-tree.md, specs/norms-annotation-cases.md):
   each `### E<n>.` section holds one or more pairs of ```markdown fences,
-  a foundation text and its annotated copy. The first pair is fixture
+  a spec text and its annotated copy. The first pair is fixture
   `E<nn>`, the next ones `E<nn>b`, `E<nn>c`, ...
 
-      input.md     the foundation text
+      input.md     the spec text
       expected.md  its annotated copy
       notes.md     only when the fixture is not annotated with the
                    defaults (prefix TYP, no file marker): it holds
@@ -28,18 +28,18 @@ Two kinds of example, two fixture layouts:
   starts with a bare prefix marker (`⟬TYP⟭`) shows the file marker.
 
 * Version examples (specs/norms-versions.md): each is a sequence of
-  foundation versions built one after the other. Fixture `E<nn>`
+  versions of the specs built one after the other. Fixture `E<nn>`
   holds one folder per version:
 
-      v<k>/input/<path>     each foundation file of version k
+      v<k>/input/<path>     each spec file of version k
       v<k>/expected/<path>  its annotated copy (with the file marker)
       v<k>/statuses.md      from v2 on: the spec's list of statuses, and
                             its `retired_prefixes` line when there is one
       v<k>/report.md        when the spec shows it: data/report.md
-                            without its `Foundation` line
+                            without its `Specs` line
 
 E20 (a folder) has no text to annotate: its fixture is notes.md alone,
-written by hand, and its test builds a small foundation.
+written by hand, and its test builds a small the specs.
 
 This module is tooling: its prose names examples and fixtures, so
 tests/traceability.py leaves it out of the check of the format.
@@ -79,7 +79,7 @@ _VERSION_TOKEN_RE = re.compile(
     r"(?P<f2>`{3,})markdown\n(?P<ann>.*?)^(?P=f2)\n"
     r"|^Statuses at v(?P<sv>\d+):\n\n(?P<st>(?:- [^\n]*\n)+)"
     r"|^(?P<rp>`retired_prefixes`: [^\n]*\n)"
-    r"|^`data/report\.md` at v(?P<rv>\d+), without its `Foundation` line:\n\n"
+    r"|^`data/report\.md` at v(?P<rv>\d+), without its `Specs` line:\n\n"
     r"(?P<f3>`{3,})markdown\n(?P<rep>.*?)^(?P=f3)\n",
     re.M | re.S,
 )
@@ -89,7 +89,7 @@ _ID_RE = re.compile(r"⟬([A-Z]+)-[0-9]+(?: begin| end)?⟭")
 
 @dataclass
 class Pair:
-    """One foundation text and its annotated copy."""
+    """One spec text and its annotated copy."""
 
     name: str  # fixture name: E03, E03b, ...
     spec: str  # the spec file it comes from
@@ -109,13 +109,13 @@ class Pair:
 
 @dataclass
 class Version:
-    """One foundation version of a version example."""
+    """One version of the specs of a version example."""
 
     number: int
-    files: dict[str, bytes] = field(default_factory=dict)  # path -> foundation bytes
+    files: dict[str, bytes] = field(default_factory=dict)  # path -> bytes of the spec file
     annotated: dict[str, bytes] = field(default_factory=dict)  # path -> annotated bytes
     statuses: str | None = None  # the spec's list, plus its retired_prefixes line
-    report: str | None = None  # data/report.md without its Foundation line
+    report: str | None = None  # data/report.md without its Specs line
 
 
 @dataclass

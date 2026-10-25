@@ -127,7 +127,7 @@ def run(trees: dict[str, TreeNode], previous: Store, commit: str) -> tuple[Store
     renames = detect_renames(trees, previous)
     prefixes = assign_prefixes(sorted(trees), previous.prefixes(), previous.retired_prefixes(), renames)
     changes = assign_ids(trees, previous, prefixes)
-    store = build_store(trees, prefixes, previous, changes, foundation_commit=commit, generator_version="0.1.0")
+    store = build_store(trees, prefixes, previous, changes, specs_commit=commit, generator_version="0.1.0")
     return store, changes
 
 
@@ -182,7 +182,7 @@ def test_jsonl_format(tmp_path: Path) -> None:
         prefixes,
         Store(),
         changes,
-        foundation_commit="abc",
+        specs_commit="abc",
         generator_version="0.1.0",
         sha256s={TYP: "f" * 64},
         insertions={TYP: [Insertion(0, "⟬TYP⟭\n\n".encode())]},
@@ -195,7 +195,7 @@ def test_jsonl_format(tmp_path: Path) -> None:
     assert [line["type"] for line in lines] == ["meta", "file", "node", "node"]
     for line, text in zip(lines, raw.splitlines()):
         assert list(json.loads(text)) == sorted(json.loads(text))
-    assert lines[0]["foundation_commit"] == "abc"
+    assert lines[0]["specs_commit"] == "abc"
     assert lines[1]["insertions"] == [[0, "⟬TYP⟭\n\n"]]
     node = lines[3]
     assert node["id"] == "TYP-1" and node["parent"] == "TYP" and node["status"] == "active"

@@ -12,8 +12,8 @@ input.md and expected.md, and notes.md when the pair is not annotated
 with the defaults (prefix TYP, no file marker). Each is checked:
 annotate == expected, strip == input, markers valid, structure kept.
 
-Version examples: one folder per foundation version. Each
-version is committed to a throwaway git foundation and built with
+Version examples: one folder per version of the specs. Each
+version is committed to a throwaway git specs repository and built with
 `norms-gen build` on top of the previous one; its annotated files, its
 statuses and its report must be the spec's, and `verify` must pass.
 
@@ -404,7 +404,7 @@ def test_annotate_matches_expected(case: str) -> None:
 
 @pytest.mark.parametrize("case", CASES)
 def test_strip_gives_back_input(case: str) -> None:
-    """Removing the insertions gives back the foundation file.
+    """Removing the insertions gives back the spec file.
 
     Spec: R23
     """
@@ -432,28 +432,28 @@ def test_annotated_markers_and_structure(case: str) -> None:
 
 
 def test_e20_output_mirrors_folders(tmp_path: Path) -> None:
-    """The folder example: `specs-repo-annotated/` keeps the folder tree of foundation; folders get no ID; file marker first.
+    """The folder example: `specs-repo-annotated/` keeps the folder tree of the specs; folders get no ID; file marker first.
 
     Spec: R14, R29, R62 (E20)
     """
     from norms_generator.cli import main
 
-    foundation = tmp_path / "foundation"
+    specs_repo = tmp_path / "specs"
     files = {
-        "specs/README.md": "# Foundation\n\nThe specs of Clean.\n",
+        "specs/README.md": "# The specs\n\nThe specs of Clean.\n",
         "specs/language/type-system.md": "# Types\n\nClean has types.\n",
         "specs/tooling/build.md": "Run the build.\n",
     }
     for rel, text in files.items():
-        path = foundation / rel
+        path = specs_repo / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
-    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-C", str(foundation)]
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-C", str(specs_repo)]
     subprocess.run([*git, "init", "-q"], check=True)
     subprocess.run([*git, "add", "-A"], check=True)
     subprocess.run([*git, "commit", "-q", "-m", "c"], check=True)
     out = tmp_path / "norms"
-    assert main(["build", "--foundation", str(foundation), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(specs_repo), "--out", str(out)]) == 0
     annotated = out / "specs-repo-annotated"
     written = {
         p.relative_to(annotated).as_posix() for p in annotated.rglob("*.md")
@@ -534,20 +534,20 @@ def test_version_example(case: str, tmp_path: Path) -> None:
     from norms_generator import cli
     from norms_generator.store import read_store
 
-    foundation = tmp_path / "foundation"
-    foundation.mkdir()
+    specs_repo = tmp_path / "specs"
+    specs_repo.mkdir()
     out = tmp_path / "norms"
-    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-C", str(foundation)]
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-C", str(specs_repo)]
     subprocess.run([*git, "init", "-q", "-b", "main"], check=True)
     commits: dict[str, str] = {}  # sha -> c1, c2, ...
     previous: str | None = None
     for folder in _versions(case):
         name = "c" + folder.name[1:]
-        for old in [p for p in foundation.rglob("*") if p.is_file() and ".git" not in p.parts]:
+        for old in [p for p in specs_repo.rglob("*") if p.is_file() and ".git" not in p.parts]:
             old.unlink()
         inputs = _tree_files(folder / "input")
         for rel, data in inputs.items():
-            path = foundation / rel
+            path = specs_repo / rel
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
         subprocess.run([*git, "add", "-A"], check=True)
@@ -555,8 +555,8 @@ def test_version_example(case: str, tmp_path: Path) -> None:
         sha = subprocess.run([*git, "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
         commits[sha] = name
 
-        cli.build(foundation, "HEAD", out)
-        assert cli.verify(foundation, out) == [], folder.name
+        cli.build(specs_repo, "HEAD", out)
+        assert cli.verify(specs_repo, out) == [], folder.name
 
         annotated = _tree_files(out / "specs-repo-annotated")
         expected = _tree_files(folder / "expected")
@@ -569,8 +569,8 @@ def test_version_example(case: str, tmp_path: Path) -> None:
 
         report_md = (out / "data" / "report.md").read_text(encoding="utf-8")
         since = f"`{previous}`" if previous else "nothing (first run)"
-        foundation_line = f"\nFoundation {since} -> `{sha}`.\n"
-        assert foundation_line in report_md
+        specs_line = f"\nSpecs {since} -> `{sha}`.\n"
+        assert specs_line in report_md
         if (folder / "statuses.md").exists():
             changes = [json.loads(line) for line in (out / "data" / "report.json").read_text(encoding="utf-8").splitlines()]
             store = read_store(out / "data" / "tree.jsonl")
@@ -580,5 +580,5 @@ def test_version_example(case: str, tmp_path: Path) -> None:
                 text += "\n`retired_prefixes`: " + ", ".join(f"`{p}`" for p in store.retired_prefix_list) + ".\n"
             assert text == (folder / "statuses.md").read_text(encoding="utf-8"), folder.name
         if (folder / "report.md").exists():
-            assert report_md.replace(foundation_line, "", 1) == (folder / "report.md").read_text(encoding="utf-8")
+            assert report_md.replace(specs_line, "", 1) == (folder / "report.md").read_text(encoding="utf-8")
         previous = sha

@@ -1,6 +1,6 @@
 """File path -> prefix.
 
-Every foundation file gets a prefix: upper-case ASCII letters, at least
+Every spec file gets a prefix: upper-case ASCII letters, at least
 three, unique across the whole corpus and over time. The nodes of the
 file are numbered under it (`TYP-1`, `TYP-2`, ...) and the file itself
 is cited by the bare prefix (`TYP`).
@@ -118,7 +118,7 @@ def assign_prefixes(
     """Give every path in `paths` its prefix.
 
     Args:
-        paths: foundation file paths of this run.
+        paths: spec file paths of this run.
         previous: path -> prefix of the files in the previous JSONL.
         retired: prefixes of files that vanished in earlier runs; never
             reused.

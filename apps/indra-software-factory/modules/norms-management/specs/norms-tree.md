@@ -2,16 +2,16 @@
 
 **Audience:** Whoever builds the layer 2 generator, and the agents that read its output
 
-**Scope:** How layer 2 represents foundation as a tree, gives each node an ID, and writes an annotated copy of each foundation file
+**Scope:** How layer 2 represents the specs as a tree, gives each node an ID, and writes an annotated copy of each spec file
 
-Layer 2 represents foundation as one tree. Each node that holds information has an ID. The generator writes a copy of each foundation file with those IDs annotated in it. Agents search that copy, reason over it, and cite its IDs in the code they write, so that the code can be traced back to the specification.
+Layer 2 represents the specs as one tree. Each node that holds information has an ID. The generator writes a copy of each spec file with those IDs annotated in it. Agents search that copy, reason over it, and cite its IDs in the code they write, so that the code can be traced back to the specification.
 
 This document holds the requirements R1–R34 and the examples E1–E24: one example for each element (E1–E20), and four for rules that the elements do not show (E21–E24). The examples are requirements too, and serve as test cases for the generator.
 
 Two companion documents complete it, with requirement and example numbers that follow on from these:
 
 - [norms-annotation-cases.md](norms-annotation-cases.md): where IDs go in special cases, such as items whose first block is not a paragraph, tabs, empty items, definitions next to text, short or long table rows, and unclosed blocks (R35–R52, E25–E68).
-- [norms-versions.md](norms-versions.md): how nodes are followed from one version of foundation to the next, how numbers and prefixes are given and never reused, the statuses, the JSONL, the output files, the change report and `verify` (R53–R64, E69–E89).
+- [norms-versions.md](norms-versions.md): how nodes are followed from one version of the specs to the next, how numbers and prefixes are given and never reused, the statuses, the JSONL, the output files, the change report and `verify` (R53–R64, E69–E89).
 
 Everything that affects the generator's output or its data is in these three documents. The decisions of the user that the requirements cite (U1–U7) are recorded, with their reasons, in [Decisions of the user](#decisions-of-the-user).
 
@@ -19,12 +19,12 @@ Everything that affects the generator's output or its data is in these three doc
 
 A requirement's number is its name. It never changes, since code, tests and the other documents cite it. The requirements are grouped by subject, so one added later sits in its group, not at its rank: R31 and R33 are in The tree in layer 2, and R32 and R34 in Storage and process.
 
-### Foundation
+### The specs
 
-- **R1. A tree.** Authors think of foundation as a tree, like a book with chapters, with folders above the files. The whole tree is: folders → Markdown files → headings (`#` to `######`, ATX or setext) → elements (paragraph, list, table, code, quote) → nested elements (items, sub-items, rows, cells). The shape of items and tables is given by R33.
+- **R1. A tree.** Authors think of the specs as a tree, like a book with chapters, with folders above the files. The whole tree is: folders → Markdown files → headings (`#` to `######`, ATX or setext) → elements (paragraph, list, table, code, quote) → nested elements (items, sub-items, rows, cells). The shape of items and tables is given by R33.
 - **R2. Freedom.** Within that tree, authors write as they wish: folders, files, headings and elements in any arrangement. The generator follows what is written; it asks nothing of the authors.
-- **R3. GFM.** Foundation is written in GitHub Flavored Markdown, GFM Spec 0.29: the Markdown that Claude writes and that Claude Code and GitHub display. Authors already know it: they build sections, tables, lists and code blocks with it.
-  - Foundation files are UTF-8. GFM sets no encoding, but the Markdown Claude writes is UTF-8, the JSONL stores text as UTF-8 strings, and the markers are UTF-8.
+- **R3. GFM.** The specs are written in GitHub Flavored Markdown, GFM Spec 0.29: the Markdown that Claude writes and that Claude Code and GitHub display. Authors already know it: they build sections, tables, lists and code blocks with it.
+  - Spec files are UTF-8. GFM sets no encoding, but the Markdown Claude writes is UTF-8, the JSONL stores text as UTF-8 strings, and the markers are UTF-8.
   - Line endings may be LF, CRLF or a lone CR. GFM accepts all three (R52).
 
 ### The tree in layer 2
@@ -111,9 +111,9 @@ A requirement's number is its name. It never changes, since code, tests and the 
   - For an ATX heading with a closing sequence, it goes right after the content. The blanks before the sequence stay after the ID (`# a  ##` → `# a ⟬TYP-2⟭  ##`, E2b).
   - An empty ATX heading has no content to end. Without a closing sequence, its ID goes at the end of its line, after any trailing spaces or tabs (`#   ` → `#    ⟬TYP-1⟭`, R51). With one, it goes right after the opening `#`s, and the blanks before the sequence stay after the ID (`# #` → `# ⟬TYP-1⟭ #`, `#  ##` → `# ⟬TYP-1⟭  ##`, E2b).
   - The exceptions are R24's.
-- **R19. Delimiters `⟬` and `⟭`** (U+27EC and U+27ED, MATHEMATICAL LEFT and RIGHT WHITE TORTOISE SHELL BRACKET). They appear nowhere in foundation, in Clean, in the Lean 4 core, in Mathlib or in `clean-formal-pilot`, and Lean gives them no meaning.
-  - The generator refuses a foundation file that holds `⟬` or `⟭` (R34). Its markers would not be IDs, and a search for an ID could find foundation's own text.
-- **R20. The agent comes first.** The overriding criterion is that the norms corpus is optimal for an agent to search and reason over. Where another criterion conflicts, such as readability for people or line numbers matching foundation, this one wins. Layer 2 is not for people to read: people read foundation.
+- **R19. Delimiters `⟬` and `⟭`** (U+27EC and U+27ED, MATHEMATICAL LEFT and RIGHT WHITE TORTOISE SHELL BRACKET). They appear nowhere in the specs, in Clean, in the Lean 4 core, in Mathlib or in `clean-formal-pilot`, and Lean gives them no meaning.
+  - The generator refuses a spec file that holds `⟬` or `⟭` (R34). Its markers would not be IDs, and a search for an ID could find the specs' own text.
+- **R20. The agent comes first.** The overriding criterion is that the norms corpus is optimal for an agent to search and reason over. Where another criterion conflicts, such as readability for people or line numbers matching the specs, this one wins. Layer 2 is not for people to read: people read the specs.
 - **R24. Hybrid annotation.** If a node's ID can go at the end of the node, it goes there. If it cannot, the node is framed: `⟬ID begin⟭` on a line of its own before it, `⟬ID end⟭` on a line of its own after it.
   - A heading has its ID at the end of its text, also when its text runs over several lines (E3b). It is framed when the ID there would change it, as when a setext heading's text would become a definition or a list item.
   - A paragraph of one line has its ID at its end (E17), unless the ID there would change how it renders. Then it is framed, as `[x]:`, which would become a definition (E17b).
@@ -141,7 +141,7 @@ A requirement's number is its name. It never changes, since code, tests and the 
   A search for an ID must include the end of the marker, so that `TYP-3` does not also find `TYP-30`: `grep "⟬TYP-3[⟭ ]"`.
 - **R26. Every code block is framed,** fenced or indented, whatever its language. Nothing is written inside a code block, not even on its opening line, so the Clean examples stay intact byte for byte.
   - An unclosed block is framed like any other: a fenced code block never closed, or an HTML block of types 1-5 without its closing sequence.
-  - Nothing else is inserted (no closing fence, no closing tag), since foundation is never corrected.
+  - Nothing else is inserted (no closing fence, no closing tag), since the specs are never corrected.
   - Such a block runs to the end of its container, so for a parser its end marker falls inside it, and so do the end markers of the containers that close there (a section, a quote, a list). So may the blank lines R30 adds next to those markers. This is the one accepted exception (U1, R48), and `verify` tolerates exactly those end markers and blank lines at the end of the unclosed block (R64, E61).
 - **R27. One child, one ID.** A block quote, list or section whose single child covers its whole content has one ID: the child's.
   - Examples are a quote of one paragraph, a list of one item, and a section with only its heading.
@@ -153,7 +153,7 @@ A requirement's number is its name. It never changes, since code, tests and the 
   - The file is never collapsed: it has a prefix, not a number (R14, R29, E19).
 - **R28. The approved examples are requirements,** and serve as test cases for the generator: E1–E24 here, E25–E68 in norms-annotation-cases.md and E69–E89 in norms-versions.md. Every annotated example is the generator's exact output.
   - An annotated example of this file and of norms-annotation-cases.md is numbered as on a first run, with the prefix `TYP`, and is shown without the file marker (R29), unless its prose says it is shown with it (E19, E23).
-  - An example heading may hold several pairs of a foundation text and its annotated copy. The first pair is cited by the heading's number, the later ones by that number and a letter: the second pair of E2 is E2b, the third of E18 is E18c.
+  - An example heading may hold several pairs of a spec text and its annotated copy. The first pair is cited by the heading's number, the later ones by that number and a letter: the second pair of E2 is E2b, the third of E18 is E18c.
 - **R29. The file is marked once,** with `⟬TYP⟭` on its first line and no end: it extends to the end of the file. Every marker matches `⟬[A-Z]+(-[0-9]+)?( begin| end)?⟭`.
   - The file marker goes after a BOM when the file has one.
   - A blank first line is reused as the marker's blank line (E23).
@@ -178,23 +178,23 @@ A requirement's number is its name. It never changes, since code, tests and the 
   - `to_review` and `changed_since` describe one version's change only, from version N-1 to N (R60, U3). Layer 3 learns what changed for it by comparing the norm hash of each of its citations with the tree hash of its node (R31, ORC-25).
   - "For a retired ID, its last text" is the node's whole text, with its children's text put back, so a retired section shows what it said (R63).
 - **R22. For now, a person tells the implementation repositories that a new version exists.**
-- **R23. The JSONL is the only source of truth for the IDs; foundation, for the content.** The tree is stored as JSONL, one line per node, and holds the IDs and their history (R61). Foundation is the single source of truth for what the files say (U6). The annotated file is generated from foundation at the pinned commit and the JSONL, by writing each ID in at its place. It is never read as input. The first run is the same process with an empty JSONL.
-  - The annotated file is the foundation file with bytes inserted. Nothing of foundation is moved or removed, so columns are not realigned.
+- **R23. The JSONL is the only source of truth for the IDs; the specs, for the content.** The tree is stored as JSONL, one line per node, and holds the IDs and their history (R61). The specs are the single source of truth for what the files say (U6). The annotated file is generated from the specs at the pinned commit and the JSONL, by writing each ID in at its place. It is never read as input. The first run is the same process with an empty JSONL.
+  - The annotated file is the spec file with bytes inserted. Nothing of the specs is moved or removed, so columns are not realigned.
   - The insertions are: markers; the blank before an inline ID; blank lines where R30 needs one; `>` prefixes and item indentation on marker lines (R30); the ` |` of a row's ID: after the ID of a row with a closing pipe (` ⟬ID⟭ |`), before the ID of a row without one (` | ⟬ID⟭`), and for each empty cell added to a short row (R45); a leading `|` (R46); the line break and indentation that move the rest of an item's marker line (R35, R37); and the blanks and blank line of an empty item's ID (R39).
   - The JSONL records the insertions as one record per offset, in ascending order of offset. A record holds everything inserted at its offset, joined in the order it appears in the annotated file: at offset 0, the file marker and a begin marker are one record (R61).
-  - Removing exactly those gives back the foundation file byte for byte, which `verify` checks (R64).
-- **R32. A viewer.** A viewer of foundation with its layer 2 references will be an app in this repository.
+  - Removing exactly those gives back the spec file byte for byte, which `verify` checks (R64).
+- **R32. A viewer.** A viewer of the specs with their layer 2 references will be an app in this repository.
 - **R34. Refused input.** `build` writes nothing and exits with status 2 (R62 lists every exit status) in each of these cases:
-  - a foundation file is not UTF-8. It names the file, the first bad byte and its offset: `norms-gen: specs/a.md: not UTF-8 (byte 0xff at offset 3); foundation files must be UTF-8 (R34)`;
-  - a file holds `⟬` or `⟭`. It names the file, the first delimiter it holds and its offset: `norms-gen: specs/a.md: holds the delimiter ⟭ at offset 4; foundation never holds ⟬ or ⟭ (R19, R34)`;
+  - a spec file is not UTF-8. It names the file, the first bad byte and its offset: `norms-gen: specs/a.md: not UTF-8 (byte 0xff at offset 3); spec files must be UTF-8 (R34)`;
+  - a file holds `⟬` or `⟭`. It names the file, the first delimiter it holds and its offset: `norms-gen: specs/a.md: holds the delimiter ⟭ at offset 4; the specs never hold ⟬ or ⟭ (R19, R34)`;
   - the path of a selected file (R62) is not UTF-8 (it names the path, its bad bytes written as `\xff`); an excluded path is ignored whatever it holds. A path that is not UTF-8 and also holds a control character is refused as not UTF-8, with its control characters written as in the next case, so the message stays on one line: `norms-gen: specs/a\xff\x0ab.md: path not UTF-8`;
   - the path of a selected file holds a control character, one of Unicode category Cc (U+0000 to U+001F, U+007F to U+009F), such as a tab or a line break: a line break would split an entry heading of the report (R63) and a problem line of verify (R62). It names the path, each such character written as `\x0a`: `norms-gen: specs/a\x0ab.md: path holds a control character`;
-  - the repository holds no selected `.md` file at the commit (R62), as with a `--foundation` that names the wrong repository, which would otherwise retire every ID and prefix for good. It names the commit's full object name: `norms-gen: no .md file to build at <commit>; is --foundation right?`;
+  - the repository holds no selected `.md` file at the commit (R62), as with a `--specs` that names the wrong repository, which would otherwise retire every ID and prefix for good. It names the commit's full object name: `norms-gen: no .md file to build at <commit>; is --specs right?`;
   - the previous JSONL cannot be read: it names the file and the line, then the name of the error and its message as Python's `json` module or the reader gives them (`<path>:1: JSONDecodeError: Expecting value: line 1 column 1 (char 0)`), or, for a JSONL that is not UTF-8, the file and Python's message, which names the first bad byte and its offset (`<path>: not UTF-8: 'utf-8' codec can't decode byte 0xff in position 2: invalid start byte`), or, for one that cannot be opened, as a folder at its path, a file without read permission, a symbolic link there that leads nowhere or loops, or a file in place of `data/`, the file and the system's reason (`<path>: cannot be opened: Is a directory`). Only a JSONL of which nothing at all is at its path is absent, which makes a first run (R23): a broken link is not, so a build never renumbers every ID because the JSONL's link is broken. A line cannot be read when it is not a JSON object (a line nested deeper than the reader can follow included, R61), has an unknown `type`, lacks a required field, or has a field of the wrong type or form, such as a prefix `ab` or `SUB` followed by a line break (R61). An empty line, or one of only whitespace, is skipped, and a line may end in a carriage return (R61);
   - the previous JSONL can be read but is not consistent: an ID stored twice, active or retired, two `file` lines with one prefix, a retired prefix that a `file` line holds, or an active node whose file has no `file` line. The build would write duplicate IDs or prefixes, or give a retired prefix again (R9, R14, R58). It names the file and every problem, joined by `; `, as verify words them (R64): `<path>: not consistent: SPA-1 is stored twice (active in specs/a.md, active in specs/b.md)`;
   - an output path is in the way (R62): `specs-repo-annotated/` under the output folder is a file (`<path>: not a folder`), `data/` or `specs-repo-annotated/` is a symbolic link (`<path>: a symbolic link; a build never writes outside the output folder through a link`), or `data/report.md`, `data/report.json` or `data/tree.jsonl.tmp` is a folder or a symbolic link (`<path>: a folder`, or the same link message). Writing there would crash half way or write outside the output folder through a link, and a folder there is not the generator's to remove. It is checked after the previous JSONL is read and before anything is written, so a file at `data/`, or a link there that leads to a file or loops, is the JSONL that cannot be opened of the bullet above, not an output in the way, and a link at `data/` that leads to a folder, or nowhere (no JSONL is then found), gets the link message;
-  - two selected paths, a path and a folder of another one, or two folders of them, differ only in case or Unicode normalization (`specs/A.md` and `specs/a.md`, `specs/X.md/b.md` and `specs/x.md`, `specs/A/x.md` and `specs/a/y.md`). On a file system that ignores case or normalization, as macOS and Windows do by default, two copies would be one file and overwrite each other, a copy and a folder would take one name, and two folders would be one, so the folder tree of foundation would not be kept (R62, E20). It names the two names that differ, each a path or a folder, the first in path order first, and says which of the three it is: `norms-gen: specs/A and specs/a differ only in case or Unicode normalization; on a file system that ignores both, their copies would share one folder, and the folder tree would not be kept (R34)`. For two paths it ends `their copies would be one file and overwrite each other (R34)`, and for a path and a folder `a copy and a folder of copies would take one name (R34)`, naming the folder (`specs/X.md and specs/x.md`). Two names that are equal once each is put in Unicode NFD, case-folded with Python's `str.casefold()`, and put in NFD again, count as such a pair;
-  - git fails: the foundation path is not a git repository, or `--commit` does not name a commit of it. The message is the git command, without `git -C <path>`, then `: ` and git's own message, as for a path that is not a git repository: `git rev-parse --verify --quiet HEAD^{commit}: fatal: not a git repository (or any of the parent directories): .git`. For a commit git does not know (`--commit nope`), git gives no message, and the generator writes `'nope' is not a commit of <path>`.
+  - two selected paths, a path and a folder of another one, or two folders of them, differ only in case or Unicode normalization (`specs/A.md` and `specs/a.md`, `specs/X.md/b.md` and `specs/x.md`, `specs/A/x.md` and `specs/a/y.md`). On a file system that ignores case or normalization, as macOS and Windows do by default, two copies would be one file and overwrite each other, a copy and a folder would take one name, and two folders would be one, so the folder tree of the specs would not be kept (R62, E20). It names the two names that differ, each a path or a folder, the first in path order first, and says which of the three it is: `norms-gen: specs/A and specs/a differ only in case or Unicode normalization; on a file system that ignores both, their copies would share one folder, and the folder tree would not be kept (R34)`. For two paths it ends `their copies would be one file and overwrite each other (R34)`, and for a path and a folder `a copy and a folder of copies would take one name (R34)`, naming the folder (`specs/X.md and specs/x.md`). Two names that are equal once each is put in Unicode NFD, case-folded with Python's `str.casefold()`, and put in NFD again, count as such a pair;
+  - git fails: the specs path is not a git repository, or `--commit` does not name a commit of it. The message is the git command, without `git -C <path>`, then `: ` and git's own message, as for a path that is not a git repository: `git rev-parse --verify --quiet HEAD^{commit}: fatal: not a git repository (or any of the parent directories): .git`. For a commit git does not know (`--commit nope`), git gives no message, and the generator writes `'nope' is not a commit of <path>`.
 
   `verify`'s side is R64.
 
@@ -203,7 +203,7 @@ A requirement's number is its name. It never changes, since code, tests and the 
 The user took these decisions where the generator had to choose between two readings. The requirements cite them as U1–U6.
 
 - **U1. Unclosed blocks are not corrected.** An unclosed fenced code block, or an HTML block of types 1-5 without its closing sequence, is framed like any other block, and nothing else is inserted.
-  - Why: foundation's content is never corrected. A closing fence or tag would change foundation's code.
+  - Why: the content of the specs is never corrected. A closing fence or tag would change the code of the specs.
   - The cost: for a parser, the block's end marker, those of the containers that close with it, and the blank lines next to them fall inside the block. This is accepted, and `verify` tolerates exactly those end markers and blank lines (R26, R48, R64).
 - **U2. Marker lines keep their blank lines, even inside a list.** A tight list that holds a framed node then renders loose.
   - Why: the blank lines make the frames easy to read for the agent (R20), and a list's tightness holds no information.
@@ -220,14 +220,14 @@ The user took these decisions where the generator had to choose between two read
   - A header cell's ID identifies its column wherever the column is (R13, E74).
   - The limit: a hash covers exact bytes (R16). In a row without a pipe at one end, a column moved to or from that end changes its cells' padding, so those bytes changed and the cells are `edited` (R13).
 - **U6. `specs-repo-annotated/` belongs to the generator.** After every build, `specs-repo-annotated/` holds exactly this build's copies, annotated and plain, and the folders that hold them, and nothing else. Everything else under it is removed: a file that is no copy, a folder that holds no copy (with everything in it), a symbolic link wherever it stands, a folder at the path of a copy, a file at the path of a folder of copies, and the copies left by a build whose JSONL was lost. A symbolic link is removed itself and never followed, so nothing outside the output folder is touched. `verify` reports each such path as a problem.
-  - Why: `specs-repo-annotated/` is derived from foundation, and only the generator writes there. Foundation is the single source of truth: anything else written there skips the process, and is not kept.
+  - Why: `specs-repo-annotated/` is derived from the specs, and only the generator writes there. The specs are the single source of truth: anything else written there skips the process, and is not kept.
   - Details: R62, R64.
 - **U7. Everything of the generator is in the plugin `norms-management`.** Everything developed for the generator lives in the folder `apps/indra-software-factory/modules/norms-management/` of the repository `jpchauny/claude-plugins`, and nowhere else: these specs (`specs/`), the code (`src/`), the tests and their fixtures (`tests/`), the documents of its development (`docs/`), the use cases that run it (`use-cases/`), and the files of its package (`pyproject.toml`, `uv.lock`). A project's norms repository holds only the output of a build (R62), never a part of the generator, and no other folder of `jpchauny/claude-plugins` holds one either.
   - Why: one generator serves every project, so it has one place, and every project uses the same version of it. A plugin is installed as its own folder and nothing else of the repository, so a part of the generator outside `apps/indra-software-factory/modules/norms-management/` would be missing wherever the plugin is installed.
 
 ## Elements
 
-The elements follow the GFM Spec 0.29 in its order, with its extensions, then the three levels that are not GFM, then four examples of rules (E21–E24). Each example shows the foundation text and its annotated copy.
+The elements follow the GFM Spec 0.29 in its order, with its extensions, then the three levels that are not GFM, then four examples of rules (E21–E24). Each example shows the spec text and its annotated copy.
 
 Some examples hold bytes that do not show, such as a tab. The prose under each example says where they are.
 
@@ -843,7 +843,7 @@ Clean has a small set of built-in types. ⟬TYP-3⟭
 
 ### E20. Folder (not GFM)
 
-Not annotated, and has no ID (R14): a folder is identified by its path, such as `specs/language/`. The annotated files of layer 2 keep the folder tree of foundation.
+Not annotated, and has no ID (R14): a folder is identified by its path, such as `specs/language/`. The annotated files of layer 2 keep the folder tree of the specs.
 
 ### E21. A container with a thematic break (R27)
 

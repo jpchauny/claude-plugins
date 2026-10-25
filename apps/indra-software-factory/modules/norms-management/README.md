@@ -25,7 +25,7 @@ repository, with [uv](https://docs.astral.sh/uv/):
 
 ```sh
 uvx --from "git+https://github.com/jpchauny/claude-plugins#subdirectory=apps/indra-software-factory/modules/norms-management" \
-    norms-gen build --foundation <layer 1 repository>
+    norms-gen build --specs <layer 1 repository>
 ```
 
 ## Develop

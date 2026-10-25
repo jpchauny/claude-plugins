@@ -3,7 +3,7 @@
 `block_structure(source)` parses `source` with cmark-gfm (cmark.render_xml)
 and returns its blocks as nested tuples, so that two sources can be
 compared block by block: verify.py compares the annotated file with the
-foundation file, annotate.py checks the whole annotated file,
+spec file, annotate.py checks the whole annotated file,
 and tree.py and annotate.py probe whether one insertion would change how
 a source parses.
 
@@ -97,7 +97,7 @@ def _clean_text(text: str) -> str:
 
     The line breaks stay: an ID that took a line of its own in a
     paragraph or heading (an empty item's ID above a setext heading)
-    leaves an empty line, which the foundation text never has.
+    leaves an empty line, which the spec text never has.
 
     Spec: R39, R64 (E42)
     """

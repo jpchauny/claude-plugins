@@ -28,8 +28,8 @@ anywhere else, and never ask for its path (ORC-22).
 ## 2. Build, verify, report
 
 ```sh
-uv run --frozen --project "${CLAUDE_PLUGIN_ROOT}" norms-gen build --foundation <layer 1> [--commit <SHA>]
-uv run --frozen --project "${CLAUDE_PLUGIN_ROOT}" norms-gen verify --foundation <layer 1>
+uv run --frozen --project "${CLAUDE_PLUGIN_ROOT}" norms-gen build --specs <layer 1> [--commit <SHA>]
+uv run --frozen --project "${CLAUDE_PLUGIN_ROOT}" norms-gen verify --specs <layer 1>
 ```
 
 `build` reads layer 1 through git at the commit (default `HEAD`), never from

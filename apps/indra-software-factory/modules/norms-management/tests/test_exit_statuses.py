@@ -18,19 +18,19 @@ import pytest
 
 from norms_generator import cli
 from norms_generator.cli import main
-from test_cli import Foundation
+from test_cli import SpecsRepo
 
 
-def _build(f: Foundation, out: Path, *extra: str) -> int:
-    return main(["build", "--foundation", str(f.root), "--out", str(out), *extra])
+def _build(f: SpecsRepo, out: Path, *extra: str) -> int:
+    return main(["build", "--specs", str(f.root), "--out", str(out), *extra])
 
 
-def _verify(f: Foundation, out: Path) -> int:
-    return main(["verify", "--foundation", str(f.root), "--out", str(out)])
+def _verify(f: SpecsRepo, out: Path) -> int:
+    return main(["verify", "--specs", str(f.root), "--out", str(out)])
 
 
-def _one_file(tmp_path: Path) -> tuple[Foundation, Path]:
-    f = Foundation(tmp_path / "foundation")
+def _one_file(tmp_path: Path) -> tuple[SpecsRepo, Path]:
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nText.\n")
     f.commit()
     return f, tmp_path / "norms"
@@ -103,7 +103,7 @@ def test_a_refusal_exits_with_2_and_writes_nothing_r34_r62(
 
     Spec: R34, R62
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("CLAUDE.md", "# Instructions for agents\n")  # R62: excluded, so no .md file to build
     f.commit()
     out = tmp_path / "norms"
@@ -113,7 +113,7 @@ def test_a_refusal_exits_with_2_and_writes_nothing_r34_r62(
 
 
 def test_a_usage_error_exits_with_2_r62(capsys: pytest.CaptureFixture[str]) -> None:
-    """A usage error, as a missing --foundation or an unknown command, exits with status 2.
+    """A usage error, as a missing --specs or an unknown command, exits with status 2.
 
     Spec: R62
     """
@@ -204,7 +204,7 @@ def test_the_installed_command_exits_with_4_on_an_unexpected_error_r62(tmp_path:
         "def boom(*a, **k):\n"
         "    raise ValueError('bad value')\n"
         "cli.build = boom\n"
-        f"sys.exit(cli.main(['build', '--foundation', {str(f.root)!r}, '--out', {str(out)!r}]))\n"
+        f"sys.exit(cli.main(['build', '--specs', {str(f.root)!r}, '--out', {str(out)!r}]))\n"
     )
     done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60)
     assert done.returncode == 4

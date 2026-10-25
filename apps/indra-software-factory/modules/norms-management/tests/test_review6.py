@@ -12,7 +12,7 @@ import pytest
 
 from norms_generator.store import Status, Store, StoreError, read_store
 from norms_generator.tree import build_tree
-from test_cli import Foundation, main
+from test_cli import SpecsRepo, main
 from test_store import by_id, parsed, run
 
 # --- a column moved with its delimiter cell changes no hash -------------------
@@ -94,19 +94,19 @@ def test_a_file_and_a_folder_of_one_name_replace_each_other_r62(tmp_path: Path, 
 
     Spec: R34, R62, U6
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     out = tmp_path / "norms"
     f.write("specs/keep.md", "Keep.\n")
     f.write(before, "Before.\n")
     f.commit()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     f.git("rm", "-q", "-r", before)
     f.write(after, "After.\n")
     f.commit()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     assert (out / "specs-repo-annotated" / after).is_file()
     assert sorted(p.relative_to(out / "specs-repo-annotated").as_posix() for p in (out / "specs-repo-annotated").rglob("*.md") if p.is_file()) == sorted(["specs/keep.md", after])
-    assert main(["verify", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["verify", "--specs", str(f.root), "--out", str(out)]) == 0
 
 
 def test_verify_reports_a_folder_in_place_of_an_annotated_copy_r64(
@@ -116,19 +116,19 @@ def test_verify_reports_a_folder_in_place_of_an_annotated_copy_r64(
 
     Spec: R34, R62, R64, U6
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     out = tmp_path / "norms"
     f.write("specs/x.md", "X.\n")
     f.commit()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     copy = out / "specs-repo-annotated" / "specs" / "x.md"
     copy.unlink()
     copy.mkdir()
     capsys.readouterr()
-    assert main(["verify", "--foundation", str(f.root), "--out", str(out)]) == 1
+    assert main(["verify", "--specs", str(f.root), "--out", str(out)]) == 1
     assert "no annotated file" in capsys.readouterr().err
     # and build clears the way
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     assert copy.is_file()
 
 
@@ -141,7 +141,7 @@ def test_a_lone_cr_does_not_split_lines_r61(tmp_path: Path) -> None:
     Spec: R61
     """
     path = tmp_path / "t.jsonl"
-    path.write_bytes(b'{"type":"meta","foundation_commit":"x"}\r{"type":"file","path":"a.md","prefix":"AAA"}\r')
+    path.write_bytes(b'{"type":"meta","specs_commit":"x"}\r{"type":"file","path":"a.md","prefix":"AAA"}\r')
     with pytest.raises(StoreError, match=r"t\.jsonl:1:"):
         read_store(path)
 
@@ -152,8 +152,8 @@ def test_a_cr_inside_a_line_is_json_whitespace_r61(tmp_path: Path) -> None:
     Spec: R61
     """
     path = tmp_path / "t.jsonl"
-    path.write_bytes(b'{"type":\r"meta","foundation_commit":"x"}\r\n')
-    assert read_store(path).foundation_commit == "x"
+    path.write_bytes(b'{"type":\r"meta","specs_commit":"x"}\r\n')
+    assert read_store(path).specs_commit == "x"
 
 
 def test_a_lone_surrogate_is_refused_and_the_jsonl_kept_r61(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -161,11 +161,11 @@ def test_a_lone_surrogate_is_refused_and_the_jsonl_kept_r61(tmp_path: Path, caps
 
     Spec: R34, R61, R64
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     out = tmp_path / "norms"
     f.write("specs/a.md", "A.\n")
     f.commit()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     path = out / "data" / "tree.jsonl"
     lines = path.read_text(encoding="utf-8").splitlines()
     lines.append(
@@ -181,9 +181,9 @@ def test_a_lone_surrogate_is_refused_and_the_jsonl_kept_r61(tmp_path: Path, caps
     with pytest.raises(StoreError, match=r"tree\.jsonl:\d+: .*not valid Unicode"):
         read_store(path)
     capsys.readouterr()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     assert path.read_bytes() == saved
-    assert main(["verify", "--foundation", str(f.root), "--out", str(out)]) == 1
+    assert main(["verify", "--specs", str(f.root), "--out", str(out)]) == 1
     assert "not valid Unicode" in capsys.readouterr().err
 
 
@@ -195,14 +195,14 @@ def test_report_prints_crlf_as_it_is_r62(tmp_path: Path, capfdbinary: pytest.Cap
 
     Spec: R62
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     out = tmp_path / "norms"
     f.write("specs/a.md", "# A\r\n\r\nabcdef\r\nghijkl\r\n")
     f.commit()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     f.write("specs/a.md", "# A\r\n\r\nabcdef\r\nghijkm\r\n")
     f.commit()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     report = (out / "data" / "report.md").read_bytes()
     assert b"\r" in report
     capfdbinary.readouterr()

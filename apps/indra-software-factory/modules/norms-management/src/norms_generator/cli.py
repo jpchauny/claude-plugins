@@ -1,25 +1,25 @@
 """Command line of the layer 2 generator: `norms-gen build | verify | report`.
 
-    norms-gen build  --foundation REPO [--commit SHA] [--out DIR]
-    norms-gen verify --foundation REPO [--out DIR]
+    norms-gen build  --specs REPO [--commit SHA] [--out DIR]
+    norms-gen verify --specs REPO [--out DIR]
     norms-gen report [--out DIR] [--json]
 
-Foundation is read through git, never from its working tree: every
+The specs are read through git, never from its working tree: every
 regular file of the repository at the commit, in any folder, but the
 excluded paths (excluded()), with its exact bytes, line endings included
 (`git ls-tree`, `git cat-file blob`). Its `.md` files are annotated; every
 other file is a plain copy, written byte for byte. Paths are relative
-to the foundation repository's root (`specs/language/type-system.md`),
+to the specs repository's root (`specs/language/type-system.md`),
 the same every run, so that a path present in both keeps its prefix.
 
 Output, under `--out` (default: the git repository of the working directory):
 
     data/tree.jsonl       the norms tree, the only source of truth for the
-                          IDs and their history (foundation's is the content)
+                          IDs and their history (the specs' is the content)
     data/report.md        what changed since the previous version, by ID
     data/report.json      the same, as JSON Lines
     specs-repo-annotated/<path>
-                          each foundation file with its IDs, and each plain
+                          each spec file with its IDs, and each plain
                           copy, at the same relative path: the folder tree
                           is kept
 
@@ -49,10 +49,10 @@ pinned to, when it holds a file line, keeps the `to_review` and
 version, which describe the step from the previous version, not the
 rebuild.
 
-`verify` re-reads foundation at the commit pinned in the JSONL, checks
+`verify` re-reads the specs at the commit pinned in the JSONL, checks
 the JSONL itself (each ID stored once, file prefixes unique, no retired
 prefix in use), runs verify.check_file() on every file, checks every
-plain copy against foundation, and names every path under
+plain copy against the specs, and names every path under
 specs-repo-annotated/ that is no copy of them, a copy with more than one
 link, and a specs-repo-annotated/ that is a link or a file.
 It exits with 1 when it finds a problem, a JSONL it cannot read
@@ -156,7 +156,7 @@ def generator_version() -> str:
         return "0"
 
 
-# --- foundation through git -------------------------------------------------
+# --- the specs through git -------------------------------------------------
 
 
 class OutputError(RuntimeError):
@@ -174,14 +174,14 @@ class BuildStopped(RuntimeError):
 
 
 class GitError(RuntimeError):
-    """A git command on the foundation repository failed.
+    """A git command on the specs repository failed.
 
     Spec: R34
     """
 
 
-class FoundationError(RuntimeError):
-    """Foundation at the commit cannot be built: no Markdown file, or a file or path refused.
+class SpecsError(RuntimeError):
+    """The specs at the commit cannot be built: no Markdown file, or a file or path refused.
 
     Spec: R34
     """
@@ -248,7 +248,7 @@ def list_selected(repo: Path, commit: str) -> tuple[dict[str, str], dict[str, st
     Every regular file of the repository (modes 100644 and 100755), in any
     folder, but the excluded paths; symbolic links and submodules are
     left out. A selected path that is not UTF-8, or that holds a control
-    character, is refused (FoundationError); an excluded path is ignored,
+    character, is refused (SpecsError); an excluded path is ignored,
     whatever it holds.
 
     Spec: R34, R62
@@ -271,9 +271,9 @@ def list_selected(repo: Path, commit: str) -> tuple[dict[str, str], dict[str, st
             # R34: a path is cited in the JSONL, the report and specs-repo-annotated/;
             # its control characters escaped too: a line break would split the message
             name = escape_controls(path_bytes.decode("utf-8", errors="backslashreplace"))
-            raise FoundationError(f"{name}: path not UTF-8") from None
+            raise SpecsError(f"{name}: path not UTF-8") from None
         if has_control(path):  # R34: a line break would split a report heading or a message line
-            raise FoundationError(f"{escape_controls(path)}: path holds a control character")
+            raise SpecsError(f"{escape_controls(path)}: path holds a control character")
         (markdown if path.endswith(".md") else others)[path] = sha
     return dict(sorted(markdown.items())), dict(sorted(others.items()))
 
@@ -287,7 +287,7 @@ def _fold(path: str) -> str:
 
 
 def check_paths(paths: list[str]) -> None:
-    """Raise FoundationError when two paths, or folders of them, differ only in case or normalization.
+    """Raise SpecsError when two paths, or folders of them, differ only in case or normalization.
 
     Their copies would be one file, or one folder, on such a
     file system: one copy would overwrite the other, and the folder tree
@@ -309,7 +309,7 @@ def check_paths(paths: list[str]) -> None:
                     what = "a copy and a folder of copies would take one name"
                 else:
                     what = "their copies would share one folder, and the folder tree would not be kept"
-                raise FoundationError(
+                raise SpecsError(
                     f"{first} and {name} differ only in case or Unicode normalization; "
                     f"on a file system that ignores both, {what} (R34)"
                 )
@@ -319,27 +319,27 @@ _DELIMITERS = ("⟬".encode(), "⟭".encode())
 
 
 def check_source(path: str, source: bytes) -> None:
-    """Raise FoundationError, naming the file, unless `source` is UTF-8 without ⟬ or ⟭.
+    """Raise SpecsError, naming the file, unless `source` is UTF-8 without ⟬ or ⟭.
 
-    Foundation files are UTF-8, and the delimiters appear nowhere in
-    foundation: a file holding one would give markers that are not IDs,
-    and a search for an ID could find foundation's own text.
+    Spec files are UTF-8, and the delimiters appear nowhere in
+    the specs: a file holding one would give markers that are not IDs,
+    and a search for an ID could find the specs' own text.
 
     Spec: R3, R19, R34
     """
     try:
         source.decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise FoundationError(
+        raise SpecsError(
             f"{path}: not UTF-8 (byte 0x{source[exc.start]:02x} at offset {exc.start}); "
-            "foundation files must be UTF-8 (R34)"
+            "spec files must be UTF-8 (R34)"
         ) from None
     found = [(source.find(d), d) for d in _DELIMITERS if d in source]
     if found:
         offset, delimiter = min(found)
-        raise FoundationError(
+        raise SpecsError(
             f"{path}: holds the delimiter {delimiter.decode()} at offset {offset}; "
-            "foundation never holds ⟬ or ⟭ (R19, R34)"
+            "the specs never hold ⟬ or ⟭ (R19, R34)"
         )
 
 
@@ -515,20 +515,20 @@ def _is_copy(root: Path, rel: str) -> bool:
 
 
 def _report_text(changes_md: str, old_commit: str, new_commit: str) -> str:
-    """report_markdown() with the two foundation versions under its title.
+    """report_markdown() with the two versions of the specs under its title.
 
     Spec: R63
     """
     head, _, rest = changes_md.partition("\n")
     since = f"`{old_commit}`" if old_commit else "nothing (first run)"
-    return f"{head}\n\nFoundation {since} -> `{new_commit}`.\n{rest}"
+    return f"{head}\n\nSpecs {since} -> `{new_commit}`.\n{rest}"
 
 
 # --- commands -----------------------------------------------------------------
 
 
-def build(foundation: Path, commit: str, out: Path) -> Store:
-    """Build layer 2 from `foundation` at `commit` into `out`; return the new store.
+def build(specs: Path, commit: str, out: Path) -> Store:
+    """Build layer 2 from `specs` at `commit` into `out`; return the new store.
 
     The new trees are matched against the previous JSONL, their files
     take prefixes and their nodes IDs, and the nodes get their statuses
@@ -536,13 +536,13 @@ def build(foundation: Path, commit: str, out: Path) -> Store:
 
     Spec: R9, R10, R14, R53, R54, R55, R56, R57, R58, R59, R60
     """
-    sha = resolve_commit(foundation, commit)
-    blobs, plain_blobs = list_selected(foundation, sha)
+    sha = resolve_commit(specs, commit)
+    blobs, plain_blobs = list_selected(specs, sha)
     if not blobs:  # R34: the wrong repository would retire every ID and prefix for good
-        raise FoundationError(f"no .md file to build at {sha}; is --foundation right?")
+        raise SpecsError(f"no .md file to build at {sha}; is --specs right?")
     check_paths(list(blobs) + list(plain_blobs))
-    sources = {path: read_blob(foundation, blob) for path, blob in blobs.items()}
-    plain = {path: read_blob(foundation, blob) for path, blob in plain_blobs.items()}  # R62: copied byte for byte
+    sources = {path: read_blob(specs, blob) for path, blob in blobs.items()}
+    plain = {path: read_blob(specs, blob) for path, blob in plain_blobs.items()}  # R62: copied byte for byte
     for path, src in sources.items():
         check_source(path, src)
     trees: dict[str, TreeNode] = {path: build_tree(src, path) for path, src in sources.items()}
@@ -566,14 +566,14 @@ def build(foundation: Path, commit: str, out: Path) -> Store:
         prefixes,
         previous,
         changes,
-        foundation_commit=sha,
+        specs_commit=sha,
         generator_version=generator_version(),
         sha256s={path: hashlib.sha256(src).hexdigest() for path, src in sources.items()},
         insertions=insertions,
     )
     # R61: a copy line records each plain copy's path and sha256
     store.copies = {path: hashlib.sha256(data).hexdigest() for path, data in plain.items()}
-    rebuild = bool(previous.files) and previous.foundation_commit == sha
+    rebuild = bool(previous.files) and previous.specs_commit == sha
     if rebuild:  # R60, U3: same version again, keep its flags
         old = {n.id: n for n in previous.nodes}
         unchanged = {c.id for c in changes if c.status is Status.UNCHANGED}
@@ -619,12 +619,12 @@ def _write_outputs(
     # R62: kept only as files of their own, no hard link
     keep_report = rebuild and not changed and _own_file(out / REPORT_MD) and _own_file(out / REPORT_JSON)
     if not keep_report:
-        md = _report_text(report_markdown(changes), previous.foundation_commit, sha)
+        md = _report_text(report_markdown(changes), previous.specs_commit, sha)
         _write_if_changed(out / REPORT_MD, md.encode("utf-8"))
         _write_if_changed(out / REPORT_JSON, report_json(changes).encode("utf-8"))
 
 
-def verify(foundation: Path, out: Path) -> list[str]:
+def verify(specs: Path, out: Path) -> list[str]:
     """Problems found in the layer 2 under `out`, worded as the spec lists them; empty when it is sound.
 
     Spec: R34, R64, U6
@@ -638,9 +638,9 @@ def verify(foundation: Path, out: Path) -> list[str]:
         return [f"cannot read the JSONL: {exc}"]
     problems: list[str] = []
     try:
-        commit = resolve_commit(foundation, store.foundation_commit)
+        commit = resolve_commit(specs, store.specs_commit)
     except GitError as exc:
-        return [f"pinned commit {store.foundation_commit!r} not in {foundation}: {exc}"]
+        return [f"pinned commit {store.specs_commit!r} not in {specs}: {exc}"]
     by_file: dict[str, list[StoredNode]] = {path: [] for path in store.files}
     problems += _check_store(store) + _check_node_files(store)
     for node in store.active():
@@ -648,9 +648,9 @@ def verify(foundation: Path, out: Path) -> list[str]:
             by_file[node.file].append(node)
     for path, stored in sorted(store.files.items()):
         try:
-            source = read_file(foundation, commit, path)
+            source = read_file(specs, commit, path)
         except GitError as exc:
-            problems.append(f"{path}: not in foundation at {commit}: {exc}")
+            problems.append(f"{path}: not in the specs at {commit}: {exc}")
             continue
         annotated_path = out / ANNOTATED / path
         try:
@@ -666,22 +666,22 @@ def verify(foundation: Path, out: Path) -> list[str]:
             problems.append(f"{path}: annotated file at {annotated_path} has {links} links; build writes it anew (U6)")
         problems += check_file(path, source, annotated_bytes, stored, by_file[path])
     for path, digest in sorted(store.copies.items()):  # R64: each plain copy, as a file
-        problems += _check_plain_copy(foundation, commit, out, path, digest)
+        problems += _check_plain_copy(specs, commit, out, path, digest)
     return problems + _foreign_paths(out / ANNOTATED, list(store.files) + list(store.copies))  # U6: what build did not write
 
 
-def _check_plain_copy(foundation: Path, commit: str, out: Path, path: str, digest: str) -> list[str]:
-    """verify's problems for one plain copy: in foundation, a file of one name, foundation's bytes.
+def _check_plain_copy(specs: Path, commit: str, out: Path, path: str, digest: str) -> list[str]:
+    """verify's problems for one plain copy: in the specs, a file of one name, the bytes of the spec file.
 
     Its `sha256` is the whole of its content: the JSONL's must be
-    foundation's, and the copy's.
+    the specs', and the copy's.
 
     Spec: R64
     """
     try:
-        source = read_file(foundation, commit, path)
+        source = read_file(specs, commit, path)
     except GitError as exc:
-        return [f"{path}: not in foundation at {commit}: {exc}"]
+        return [f"{path}: not in the specs at {commit}: {exc}"]
     copy_path = out / ANNOTATED / path
     try:
         if not _is_copy(out / ANNOTATED, path):  # a folder or a symbolic link is not a copy
@@ -694,10 +694,10 @@ def _check_plain_copy(foundation: Path, commit: str, out: Path, path: str, diges
     if links > 1:  # R64, U6: another name could write the copy
         problems.append(f"{path}: copy at {copy_path} has {links} links; build writes it anew (U6)")
     source_digest = hashlib.sha256(source).hexdigest()
-    if source_digest != digest:  # R61: foundation is the version the JSONL recorded
+    if source_digest != digest:  # R61: the specs are the version the JSONL recorded
         problems.append(f"{path}: sha256 {source_digest} differs from the JSONL's {digest}")
     if hashlib.sha256(data).hexdigest() != digest:
-        problems.append(f"{path}: copy at {copy_path} differs from foundation")
+        problems.append(f"{path}: copy at {copy_path} differs from the specs")
     return problems
 
 
@@ -744,16 +744,16 @@ def _parser() -> argparse.ArgumentParser:
 
     Spec: R62
     """
-    parser = argparse.ArgumentParser(prog="norms-gen", description="Layer 2 generator: the norms tree of foundation.")
+    parser = argparse.ArgumentParser(prog="norms-gen", description="Layer 2 generator: the norms tree of the specs.")
     commands = parser.add_subparsers(dest="command", required=True)
 
     b = commands.add_parser("build", help="build data/tree.jsonl, specs-repo-annotated/ and the report")
-    b.add_argument("--foundation", required=True, type=Path, help="path of the foundation git repository")
-    b.add_argument("--commit", default="HEAD", help="foundation commit to build (default HEAD)")
+    b.add_argument("--specs", required=True, type=Path, help="path of the specs git repository")
+    b.add_argument("--commit", default="HEAD", help="specs commit to build (default HEAD)")
     b.add_argument("--out", type=Path, default=None, help="output folder (default: the git repository of the working directory)")
 
-    v = commands.add_parser("verify", help="check the output against foundation at the pinned commit")
-    v.add_argument("--foundation", required=True, type=Path, help="path of the foundation git repository")
+    v = commands.add_parser("verify", help="check the output against the specs at the pinned commit")
+    v.add_argument("--specs", required=True, type=Path, help="path of the specs git repository")
     v.add_argument("--out", type=Path, default=None, help="output folder (default: the git repository of the working directory)")
 
     r = commands.add_parser("report", help="print the last report")
@@ -778,7 +778,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.out = default_out()
     try:
         return _run(args)
-    except (GitError, FoundationError, StoreError, OutputError) as exc:  # R34: a refusal, nothing written
+    except (GitError, SpecsError, StoreError, OutputError) as exc:  # R34: a refusal, nothing written
         print(f"norms-gen: {exc}", file=sys.stderr)
         return EXIT_REFUSED
     except BuildStopped as exc:  # R62: the system stopped build part way
@@ -797,15 +797,15 @@ def _run(args: argparse.Namespace) -> int:
     Spec: R62, R64
     """
     if args.command == "build":
-        store = build(args.foundation, args.commit, args.out)
+        store = build(args.specs, args.commit, args.out)
         active = len(store.active())
         _say(
             f"built {len(store.files)} files, {active} active nodes, "
-            f"{len(store.nodes) - active} retired, at {store.foundation_commit}"
+            f"{len(store.nodes) - active} retired, at {store.specs_commit}"
         )
         return EXIT_OK
     if args.command == "verify":
-        problems = verify(args.foundation, args.out)
+        problems = verify(args.specs, args.out)
         for problem in problems:
             print(problem, file=sys.stderr)
         if problems:  # R64: verify found a problem

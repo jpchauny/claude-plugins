@@ -1,4 +1,4 @@
-"""Norms tree + IDs -> annotated copy of a foundation file.
+"""Norms tree + IDs -> annotated copy of a spec file.
 
 `annotate(source, root)` writes each node's ID into the source by pure
 insertion and returns the annotated bytes with the list of
@@ -117,7 +117,7 @@ def annotate_text(
 
 
 def strip(annotated: bytes, insertions: list[Insertion]) -> bytes:
-    """Remove `insertions` from `annotated`: the foundation file again.
+    """Remove `insertions` from `annotated`: the spec file again.
 
     Spec: R23
     """

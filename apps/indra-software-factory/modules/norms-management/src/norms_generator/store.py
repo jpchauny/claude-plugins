@@ -1,7 +1,7 @@
 """JSONL store of the norms tree and matching against the previous run.
 
 The JSONL is the only source of truth for the IDs and their history, as
-foundation is for the content: it holds every ID ever given, with its
+the specs are for the content: it holds every ID ever given, with its
 node's place and text. This module reads and writes it, gives IDs to
 the nodes of a new tree by matching it against the previous JSONL, and
 reports what changed between two versions.
@@ -9,7 +9,7 @@ reports what changed between two versions.
 JSONL format, one JSON object per line, keys sorted,
 `ensure_ascii=False`:
 
-    {"type": "meta", "foundation_commit": ..., "generator_version": ...,
+    {"type": "meta", "specs_commit": ..., "generator_version": ...,
      "retired_prefixes": [...]}
     {"type": "file", "path": ..., "prefix": ..., "sha256": ...,
      "insertions": [[offset, text], ...]}
@@ -27,7 +27,7 @@ changed in this run, however it was paired. A container whose own text
 holds no information (a file, section, list or block quote: only blank
 lines, `>` prefixes and thematic breaks) is not edited when only that
 text changed: a child came or went, and its status is `child_changed`.
-`changed_since` is the foundation commit of the previous version when the
+`changed_since` is the specs commit of the previous version when the
 node's tree hash changed in this run (it, or something below it, changed:
 whoever cited it must check). Both describe one version, the step from
 the previous version to this one: the next version computes them again
@@ -135,14 +135,14 @@ _ID_RE = re.compile(r"^([A-Z]+)-([0-9]+)$")
 
 @dataclass
 class StoredFile:
-    """One `file` line: a foundation file and what the annotation added.
+    """One `file` line: a spec file and what the annotation added.
 
     Spec: R61
     """
 
     path: str
     prefix: str
-    sha256: str = ""  # of the foundation file's bytes
+    sha256: str = ""  # of the spec file's bytes
     insertions: list[Insertion] = field(default_factory=list)
 
 
@@ -174,7 +174,7 @@ class Store:
     Spec: R23, R61
     """
 
-    foundation_commit: str = ""
+    specs_commit: str = ""
     generator_version: str = ""
     retired_prefix_list: list[str] = field(default_factory=list)
     files: dict[str, StoredFile] = field(default_factory=dict)
@@ -286,7 +286,7 @@ def _number_of(node_id: str) -> int:
 
 
 def _text(data: bytes) -> str:
-    """Foundation bytes as `str`: foundation files are UTF-8.
+    """The specs bytes as `str`: spec files are UTF-8.
 
     Spec: R3
     """
@@ -320,7 +320,7 @@ def store_lines(store: Store) -> list[str]:
         _dumps(
             {
                 "type": "meta",
-                "foundation_commit": store.foundation_commit,
+                "specs_commit": store.specs_commit,
                 "generator_version": store.generator_version,
                 "retired_prefixes": sorted(set(store.retired_prefix_list)),
             }
@@ -560,13 +560,13 @@ def escape_controls(text: str) -> str:
 
 
 def _is_path(v: Any, markdown: bool = True) -> bool:
-    """A foundation path as git lists it: relative, `/`-separated, a `.md` name (a file line) or another (a copy line).
+    """A spec path as git lists it: relative, `/`-separated, a `.md` name (a file line) or another (a copy line).
 
     No part is empty, `.` or `..`, and none holds a NUL, so the path stays
     under specs-repo-annotated/: build removes the annotated copy of a vanished
     file's path, which must never reach outside the output folder.
     Nor does it hold another control character, which build refuses in
-    a foundation path: a line break would split a heading of the
+    a spec path: a line break would split a heading of the
     report or a line of verify's output.
 
     Spec: R34, R61, R62
@@ -601,7 +601,7 @@ def _read_line(store: Store, obj: dict[str, Any]) -> None:
     kind = obj.get("type")
     # R61: a second meta line, or a second file or copy line for one path, replaces the first
     if kind == "meta":
-        store.foundation_commit = _field(obj, "foundation_commit", _is_str, "")
+        store.specs_commit = _field(obj, "specs_commit", _is_str, "")
         store.generator_version = _field(obj, "generator_version", _is_str, "")
         store.retired_prefix_list = list(
             _field(obj, "retired_prefixes", lambda v: isinstance(v, list) and all(map(_is_prefix, v)), [])
@@ -1432,7 +1432,7 @@ def assign_ids(
     """Set `id` on every node of `new_trees` and return the change records.
 
     Args:
-        new_trees: path -> root (kind FILE) of each foundation file, with
+        new_trees: path -> root (kind FILE) of each spec file, with
             own text and both hashes set (tree.py).
         previous_store: the previous JSONL; `Store()` on the first run.
         prefixes: path -> prefix of every path in `new_trees`
@@ -1469,7 +1469,7 @@ def build_store(
     previous: Store,
     changes: list[Change],
     *,
-    foundation_commit: str = "",
+    specs_commit: str = "",
     generator_version: str = "",
     sha256s: dict[str, str] | None = None,
     insertions: dict[str, list[Insertion]] | None = None,
@@ -1487,7 +1487,7 @@ def build_store(
     sha256s = sha256s or {}
     insertions = insertions or {}
     by_id = {c.id: c for c in changes}
-    store = Store(foundation_commit=foundation_commit, generator_version=generator_version)
+    store = Store(specs_commit=specs_commit, generator_version=generator_version)
     for path in sorted(new_trees):
         store.files[path] = StoredFile(path, prefixes[path], sha256s.get(path, ""), list(insertions.get(path, [])))
     current_prefixes = set(prefixes.values())
@@ -1513,7 +1513,7 @@ def build_store(
                     own_hash=node.own_hash,
                     tree_hash=node.tree_hash,
                     to_review=edited,  # R60: to review when edited in this step
-                    changed_since=previous.foundation_commit if tree_changed else None,  # R60: its tree changed in this step
+                    changed_since=previous.specs_commit if tree_changed else None,  # R60: its tree changed in this step
                 )
             )
     active_ids = {n.id for n in store.nodes}
@@ -1535,7 +1535,7 @@ def build_store(
                 to_review=False,
                 # R60: retired in this step, changed since the previous version; retired
                 # earlier, nothing changed in this step (nothing carried over)
-                changed_since=None if old.status == "retired" else previous.foundation_commit,
+                changed_since=None if old.status == "retired" else previous.specs_commit,
             )
         )
     return store

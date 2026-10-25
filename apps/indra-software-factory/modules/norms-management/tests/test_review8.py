@@ -15,23 +15,23 @@ from pathlib import Path
 
 import pytest
 
-from norms_generator.cli import FoundationError, check_paths, main
+from norms_generator.cli import SpecsError, check_paths, main
 from norms_generator.store import Store, StoreError, read_store
-from test_cli import Foundation
+from test_cli import SpecsRepo
 from test_review5 import _add_blob
 from test_store import parsed, run
 
 
-def _build(f: Foundation, out: Path) -> int:
-    return main(["build", "--foundation", str(f.root), "--out", str(out)])
+def _build(f: SpecsRepo, out: Path) -> int:
+    return main(["build", "--specs", str(f.root), "--out", str(out)])
 
 
-def _verify(f: Foundation, out: Path) -> int:
-    return main(["verify", "--foundation", str(f.root), "--out", str(out)])
+def _verify(f: SpecsRepo, out: Path) -> int:
+    return main(["verify", "--specs", str(f.root), "--out", str(out)])
 
 
-def _one_file(tmp_path: Path) -> tuple[Foundation, Path]:
-    f = Foundation(tmp_path / "foundation")
+def _one_file(tmp_path: Path) -> tuple[SpecsRepo, Path]:
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nText.\n")
     f.commit()
     out = tmp_path / "norms"
@@ -57,7 +57,7 @@ def test_the_case_refusal_names_the_two_names_and_a_true_reason_r34(
 
     Spec: R34
     """
-    with pytest.raises(FoundationError) as info:
+    with pytest.raises(SpecsError) as info:
         check_paths(paths)
     message = str(info.value)
     assert message.startswith(f"{named} differ only in case or Unicode normalization; ")
@@ -76,7 +76,7 @@ def test_a_md_path_holding_a_control_character_is_refused_r34(
 
     Spec: R34, R61
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     _add_blob(f, name, b"# A\n")
     f.git("commit", "-q", "-m", "c")
     out = tmp_path / "norms"
@@ -109,7 +109,7 @@ def test_a_folder_at_the_jsonl_path_is_refused_by_build_and_reported_by_verify_r
 
     Spec: R34, R64
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n")
     f.commit()
     out = tmp_path / "norms"

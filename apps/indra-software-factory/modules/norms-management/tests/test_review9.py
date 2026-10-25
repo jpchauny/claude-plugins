@@ -16,20 +16,20 @@ from pathlib import Path
 import pytest
 
 from norms_generator.cli import main
-from test_cli import Foundation
+from test_cli import SpecsRepo
 from test_review5 import _add_blob
 
 
-def _build(f: Foundation, out: Path) -> int:
-    return main(["build", "--foundation", str(f.root), "--out", str(out)])
+def _build(f: SpecsRepo, out: Path) -> int:
+    return main(["build", "--specs", str(f.root), "--out", str(out)])
 
 
-def _verify(f: Foundation, out: Path) -> int:
-    return main(["verify", "--foundation", str(f.root), "--out", str(out)])
+def _verify(f: SpecsRepo, out: Path) -> int:
+    return main(["verify", "--specs", str(f.root), "--out", str(out)])
 
 
-def _one_file(tmp_path: Path) -> tuple[Foundation, Path]:
-    f = Foundation(tmp_path / "foundation")
+def _one_file(tmp_path: Path) -> tuple[SpecsRepo, Path]:
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nText.\n")
     f.commit()
     out = tmp_path / "norms"
@@ -63,7 +63,7 @@ def test_a_path_not_utf8_with_a_line_break_is_named_on_one_line_r34(
 
     Spec: R34
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nx\n")
     f.git("add", "-A")
     _add_blob(f, b"specs/a\xff\nb.md", b"y\n")
@@ -209,7 +209,7 @@ def test_removing_a_vanished_copy_does_not_follow_a_link_inside_annotated_r62(tm
 
     Spec: R62, U6
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/old/c.md", "# C\n")
     f.write("specs/b.md", "# B\n")
     f.commit()
@@ -234,7 +234,7 @@ def test_removing_a_vanished_copy_removes_a_link_at_its_path_only_r62(tmp_path: 
 
     Spec: R62
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/x/c.md", "# C\n")
     f.write("specs/b.md", "# B\n")
     f.commit()

@@ -34,7 +34,7 @@ from norms_generator.store import (
 from norms_generator.structure import block_structure
 from norms_generator.tree import build_tree, walk
 from norms_generator.verify import check_file
-from test_cli import Foundation, main, snapshot
+from test_cli import SpecsRepo, main, snapshot
 
 CASES: list[bytes] = [
     # R43: definitions on lazy lines: a second definition, a lazy line that completes one (E48, E49)
@@ -116,7 +116,7 @@ def _step(files: dict[str, bytes], previous: Store, commit: str) -> tuple[Store,
     renames = detect_renames(trees, previous)
     prefixes = assign_prefixes(sorted(trees), previous.prefixes(), previous.retired_prefixes(), renames)
     changes = assign_ids(trees, previous, prefixes)
-    return build_store(trees, prefixes, previous, changes, foundation_commit=commit), {c.id: c.status for c in changes}
+    return build_store(trees, prefixes, previous, changes, specs_commit=commit), {c.id: c.status for c in changes}
 
 
 # --- the indentation of a block's first line is its own ------------------------
@@ -460,11 +460,11 @@ def test_rebuild_of_a_childless_quote_is_byte_identical(tmp_path: Path) -> None:
 
     Spec: R56, R62
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/t.md", "Intro.\n\n> ***\n\n# Notes\n\nText.\n")
     f.commit()
     out = tmp_path / "norms"
-    args = ["build", "--foundation", str(f.root), "--out", str(out)]
+    args = ["build", "--specs", str(f.root), "--out", str(out)]
     assert main(args) == 0
     before = snapshot(out)
     assert main(args) == 0
@@ -474,13 +474,13 @@ def test_rebuild_of_a_childless_quote_is_byte_identical(tmp_path: Path) -> None:
 # --- verify of the JSONL, delimiters, a corrupt JSONL ---------------------------------------------
 
 
-def _built(tmp_path: Path) -> tuple[Foundation, Path]:
-    f = Foundation(tmp_path / "foundation")
+def _built(tmp_path: Path) -> tuple[SpecsRepo, Path]:
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/lang/alpha.md", "# Alpha\n\nOne.\n\n- a\n- b\n")
     f.write("specs/lang/beta.md", "# Beta\n\nTwo.\n")
     f.commit()
     out = tmp_path / "norms"
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     return f, out
 
 
@@ -491,8 +491,8 @@ def _edit_jsonl(out: Path, edit) -> None:
     path.write_text("".join(json.dumps(o, ensure_ascii=False) + "\n" for o in lines), encoding="utf-8")
 
 
-def _verify(f: Foundation, out: Path, capsys: pytest.CaptureFixture[str]) -> tuple[int, str]:
-    code = main(["verify", "--foundation", str(f.root), "--out", str(out)])
+def _verify(f: SpecsRepo, out: Path, capsys: pytest.CaptureFixture[str]) -> tuple[int, str]:
+    code = main(["verify", "--specs", str(f.root), "--out", str(out)])
     return code, capsys.readouterr().err
 
 
@@ -534,15 +534,15 @@ def test_verify_sees_an_id_stored_twice_and_a_retired_prefix_in_use_r64(
 
 
 def test_build_refuses_a_file_holding_a_delimiter_r19(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """A foundation file holding a delimiter is refused, naming its offset.
+    """A spec file holding a delimiter is refused, naming its offset.
 
     Spec: R19, R34, R64
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/t.md", "See ⟬TYP-1⟭ here.\n\nNext.\n")
     f.commit()
     out = tmp_path / "norms"
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     err = capsys.readouterr().err
     assert "specs/t.md" in err and "offset 4" in err
     assert not out.exists()
@@ -557,7 +557,7 @@ def test_a_corrupt_jsonl_is_a_problem_not_a_crash_r34(tmp_path: Path, capsys: py
     (out / "data" / "tree.jsonl").write_text("{not json\n", encoding="utf-8")
     code, err = _verify(f, out, capsys)
     assert code == 1 and "tree.jsonl:1" in err
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     assert "tree.jsonl:1" in capsys.readouterr().err
     with pytest.raises(StoreError):
         read_store(out / "data" / "tree.jsonl")
@@ -582,7 +582,7 @@ def test_an_unreadable_jsonl_line_is_refused_with_its_line_r34(
     """
     f, out = _built(tmp_path)
     _edit_jsonl(out, lambda lines: [edit(o) for o in lines])
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     assert "tree.jsonl:" in capsys.readouterr().err
     code, err = _verify(f, out, capsys)
     assert code == 1 and "tree.jsonl:" in err
@@ -601,7 +601,7 @@ def test_optional_jsonl_fields_take_their_defaults_r61(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     store = read_store(path)
-    assert store.foundation_commit == "" and store.files["specs/x.md"].sha256 == ""
+    assert store.specs_commit == "" and store.files["specs/x.md"].sha256 == ""
     node = store.nodes[0]
     assert (node.parent, node.status, node.to_review, node.changed_since) == (None, "active", False, None)
 
@@ -612,7 +612,7 @@ def test_an_unknown_commit_has_a_message_r34(tmp_path: Path, capsys: pytest.Capt
     Spec: R34, R64
     """
     f, out = _built(tmp_path)
-    assert main(["build", "--foundation", str(f.root), "--commit", "nope", "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--commit", "nope", "--out", str(out)]) == 2
     assert "'nope' is not a commit of" in capsys.readouterr().err
 
 

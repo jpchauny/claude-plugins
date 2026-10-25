@@ -14,7 +14,7 @@ import pytest
 from norms_generator.model import Kind
 from norms_generator.prefixes import candidates
 from norms_generator.store import Store, StoreError, _SimilarPairs, read_store
-from test_cli import Foundation, main
+from test_cli import SpecsRepo, main
 from test_review4 import _built, _edit_jsonl
 from test_store import parsed, run, text_ids
 
@@ -110,14 +110,14 @@ def test_a_prefix_or_id_with_a_final_line_break_is_refused_r61(
     _edit_jsonl(out, lambda lines: [edit(o) for o in lines])
     with pytest.raises(StoreError):
         read_store(out / "data" / "tree.jsonl")
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     assert "tree.jsonl:" in capsys.readouterr().err
 
 
 # --- a .md path that is not UTF-8 is refused ----------------------------------
 
 
-def _add_blob(f: Foundation, path: bytes, data: bytes) -> None:
+def _add_blob(f: SpecsRepo, path: bytes, data: bytes) -> None:
     sha = subprocess.run(
         ["git", "-C", str(f.root), "hash-object", "-w", "--stdin"], input=data, capture_output=True, check=True
     ).stdout.strip()
@@ -132,13 +132,13 @@ def test_a_md_path_not_utf8_is_refused_naming_it_r34(tmp_path: Path, capsys: pyt
 
     Spec: R34
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nx\n")
     f.git("add", "-A")
     _add_blob(f, b"specs/x\xff.md", b"y\n")
     f.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "c")
     out = tmp_path / "norms"
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     assert "specs/x\\xff.md: path not UTF-8" in capsys.readouterr().err
     assert not out.exists()
 
@@ -148,13 +148,13 @@ def test_an_excluded_path_not_utf8_is_ignored_r34(tmp_path: Path) -> None:
 
     Spec: R34, R62
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nx\n")
     f.git("add", "-A")
     _add_blob(f, b".tool/x\xff.txt", b"y\n")
     f.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "c")
     out = tmp_path / "norms"
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 0
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 0
     assert sorted(read_store(out / "data" / "tree.jsonl").files) == ["specs/a.md"]
 
 
@@ -163,12 +163,12 @@ def test_a_selected_path_not_utf8_is_refused_whatever_its_name_r34(tmp_path: Pat
 
     Spec: R34, R62
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nx\n")
     f.git("add", "-A")
     _add_blob(f, b"specs/x\xff.txt", b"y\n")
     f.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "c")
     out = tmp_path / "norms"
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     assert capsys.readouterr().err == "norms-gen: specs/x\\xff.txt: path not UTF-8\n"
     assert not out.exists()

@@ -18,21 +18,21 @@ import pytest
 from norms_generator.cli import main
 from norms_generator.store import Status, Store, StoreError, read_store
 from norms_generator.tree import build_tree
-from test_cli import Foundation
+from test_cli import SpecsRepo
 from test_review5 import _add_blob
 from test_store import by_id, parsed, run
 
 
-def _build(f: Foundation, out: Path, *extra: str) -> int:
-    return main(["build", "--foundation", str(f.root), "--out", str(out), *extra])
+def _build(f: SpecsRepo, out: Path, *extra: str) -> int:
+    return main(["build", "--specs", str(f.root), "--out", str(out), *extra])
 
 
-def _verify(f: Foundation, out: Path) -> int:
-    return main(["verify", "--foundation", str(f.root), "--out", str(out)])
+def _verify(f: SpecsRepo, out: Path) -> int:
+    return main(["verify", "--specs", str(f.root), "--out", str(out)])
 
 
-def _two_files(tmp_path: Path) -> tuple[Foundation, Path]:
-    f = Foundation(tmp_path / "foundation")
+def _two_files(tmp_path: Path) -> tuple[SpecsRepo, Path]:
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "alpha\n\nbeta\n")
     f.write("specs/b.md", "gamma\n")
     f.commit()
@@ -180,8 +180,8 @@ def test_a_line_of_unicode_white_space_is_skipped_r61(tmp_path: Path, blank: str
     Spec: R61
     """
     p = tmp_path / "tree.jsonl"
-    p.write_text('{"type":"meta","foundation_commit":"c1"}\n' + blank + "\n")
-    assert read_store(p).foundation_commit == "c1"
+    p.write_text('{"type":"meta","specs_commit":"c1"}\n' + blank + "\n")
+    assert read_store(p).specs_commit == "c1"
 
 
 # --- an ID's number starts at 1 -----------------------------------------------
@@ -221,7 +221,7 @@ def test_paths_one_file_system_folds_into_one_are_refused_r34(
 
     Spec: R34
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     _add_blob(f, first, b"# alpha\n")
     _add_blob(f, second, b"# beta\n")
     f.git("commit", "-q", "-m", "c")
@@ -237,11 +237,11 @@ def test_paths_that_differ_only_in_unicode_normalization_are_refused_r34() -> No
     Spec: R34
     """
     # git on macOS stores such paths precomposed, so they are checked directly
-    from norms_generator.cli import FoundationError, check_paths
+    from norms_generator.cli import SpecsError, check_paths
 
     nfc, nfd = (unicodedata.normalize(form, "specs/é.md") for form in ("NFC", "NFD"))
     assert nfc != nfd
-    with pytest.raises(FoundationError, match="differ only in case or Unicode normalization"):
+    with pytest.raises(SpecsError, match="differ only in case or Unicode normalization"):
         check_paths([nfc, nfd])
     check_paths(["specs/a.md", "specs/b.md", "specs/a/b.md"])
 
@@ -301,16 +301,16 @@ def test_the_meta_line_holds_the_full_sha_and_the_package_version_r61(tmp_path: 
 
     Spec: R60, R61, R63
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "alpha\n")
     sha = f.commit()
     out = tmp_path / "norms"
     assert _build(f, out, "--commit", sha[:7]) == 0
     meta = _lines(out)[0]
-    assert meta["foundation_commit"] == sha and len(sha) == 40
+    assert meta["specs_commit"] == sha and len(sha) == 40
     assert meta["generator_version"] == metadata.version("norms-generator")
     report = (out / "data/report.md").read_text()
-    assert f"Foundation nothing (first run) -> `{sha}`." in report
+    assert f"Specs nothing (first run) -> `{sha}`." in report
     before = _snapshot(out)
     assert _build(f, out, "--commit", "main") == 0  # the same commit by another name: a rebuild
     assert _snapshot(out) == before
@@ -321,15 +321,15 @@ def test_a_short_sha_in_the_meta_line_is_not_a_rebuild_r60(tmp_path: Path) -> No
 
     Spec: R60, R61, R64
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "alpha\n")
     sha = f.commit()
     out = tmp_path / "norms"
     assert _build(f, out) == 0
-    _edit_store(out, lambda lines: lines[0].update(foundation_commit=sha[:7]))
+    _edit_store(out, lambda lines: lines[0].update(specs_commit=sha[:7]))
     assert _verify(f, out) == 0  # verify resolves the pinned commit
     assert _build(f, out) == 0
-    assert f"Foundation `{sha[:7]}` -> `{sha}`." in (out / "data/report.md").read_text()
+    assert f"Specs `{sha[:7]}` -> `{sha}`." in (out / "data/report.md").read_text()
 
 
 # --- report.json's encoding and values ----------------------------------------
@@ -340,7 +340,7 @@ def test_report_json_lines_and_values_r63(tmp_path: Path) -> None:
 
     Spec: R63
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# Types\n\nNumbers are always signed.\n\nGone ä.\n")
     f.commit()
     out = tmp_path / "norms"
@@ -378,7 +378,7 @@ def test_stray_files_under_annotated_are_reported_then_removed_u6(
 
     Spec: R62, R64, U6
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "alpha\n")
     f.commit()
     out = tmp_path / "norms"
@@ -399,8 +399,8 @@ def test_stray_files_under_annotated_are_reported_then_removed_u6(
 # --- the whole repository, the excluded paths, the plain copies --------------------
 
 
-def _whole_repository(tmp_path: Path) -> tuple[Foundation, Path]:
-    f = Foundation(tmp_path / "foundation")
+def _whole_repository(tmp_path: Path) -> tuple[SpecsRepo, Path]:
+    f = SpecsRepo(tmp_path / "specs")
     f.write("README.md", "top\n")
     f.write("specs/a.md", "alpha\n")
     f.write("docs/guide.md", "guide\n")
@@ -474,7 +474,7 @@ def test_verify_checks_each_plain_copy_r64(tmp_path: Path, capsys: pytest.Captur
     assert _verify(f, out) == 1
     err = capsys.readouterr().err
     assert f"specs/img/d.png: no copy at {folder / 'specs/img/d.png'}\n" in err
-    assert f"specs/notes.txt: copy at {folder / 'specs/notes.txt'} differs from foundation\n" in err
+    assert f"specs/notes.txt: copy at {folder / 'specs/notes.txt'} differs from the specs\n" in err
     assert f"{folder / 'specs/img/stray.png'}: not a copy of a JSONL file; build removes it (U6)\n" in err
     assert _build(f, out) == 0
     assert _verify(f, out) == 0

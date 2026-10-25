@@ -1,4 +1,4 @@
-"""AST of one foundation file -> its norms tree (specs/norms-tree.md).
+"""AST of one spec file -> its norms tree (specs/norms-tree.md).
 
 `build_tree(source, path)` parses a file with cmark-gfm (cmark.py) and
 returns its tree as `TreeNode`s (model.py), the root of kind FILE:
@@ -255,9 +255,9 @@ def _cells(source: bytes, start: int, end: int) -> list[tuple[int, int]]:
 
 
 def build_tree(source: bytes, path: str = "") -> TreeNode:
-    """Return the norms tree of one foundation file, root of kind FILE.
+    """Return the norms tree of one spec file, root of kind FILE.
 
-    `path` is the file's path in foundation; it is not stored in the
+    `path` is the file's path in the specs; it is not stored in the
     tree (store.py keys trees by path) and only names the file in errors.
 
     Spec: R5

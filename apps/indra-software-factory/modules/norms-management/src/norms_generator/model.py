@@ -1,7 +1,7 @@
 """Shared data model of the layer 2 generator (specs/norms-tree.md).
 
 Every module works on these types. Offsets are byte offsets into the
-UTF-8 source of the foundation file, whatever its line endings; lines are
+UTF-8 source of the spec file, whatever its line endings; lines are
 1-based like cmark's.
 
 Modules (each cites the rules it implements):
@@ -18,7 +18,7 @@ Modules (each cites the rules it implements):
     structure.py block structure of a source, annotations ignored: what
                  verify.py compares, what tree.py/annotate.py probe and
                  the final check.
-    verify.py    checks of an annotated file against foundation and the
+    verify.py    checks of an annotated file against the specs and the
                  JSONL, used by `norms-gen verify`.
     cli.py       `norms-gen build`, `verify`, `report`.
 
@@ -108,7 +108,7 @@ class TreeNode:
 
 @dataclass
 class Insertion:
-    """Bytes added at one offset of the foundation file.
+    """Bytes added at one offset of the spec file.
 
     Spec: R23
     """

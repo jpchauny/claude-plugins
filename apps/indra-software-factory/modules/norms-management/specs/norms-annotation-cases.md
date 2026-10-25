@@ -4,7 +4,7 @@
 
 **Scope:** Where the generator puts IDs in the special cases of GFM: items, link reference definitions, tables, block quotes, unclosed blocks, tabs, and the cases where only a wider frame keeps the file
 
-specs/norms-tree.md gives the general rule: an ID goes at the end of its node, or the node is framed (R24), and the annotated file keeps the blocks of the foundation file. This document holds the cases where that rule needs more: the ones where an ID at the end, or a marker line, would change how the file parses. It holds the requirements R35–R52, each followed by its examples E25–E68. The examples are requirements too, and serve as test cases for the generator (R28). Each one shows a foundation text and its annotated copy, numbered as on a first run, without the file marker (R29). Every annotated example is the generator's exact output: removing its insertions gives back the input byte for byte (R23), and it parses to the same blocks as the input (R64). Following nodes across versions is in specs/norms-versions.md.
+specs/norms-tree.md gives the general rule: an ID goes at the end of its node, or the node is framed (R24), and the annotated file keeps the blocks of the spec file. This document holds the cases where that rule needs more: the ones where an ID at the end, or a marker line, would change how the file parses. It holds the requirements R35–R52, each followed by its examples E25–E68. The examples are requirements too, and serve as test cases for the generator (R28). Each one shows a spec text and its annotated copy, numbered as on a first run, without the file marker (R29). Every annotated example is the generator's exact output: removing its insertions gives back the input byte for byte (R23), and it parses to the same blocks as the input (R64). Following nodes across versions is in specs/norms-versions.md.
 
 Some examples hold bytes that do not show: a tab, or a space at the end of a line. The prose under each example says where they are.
 
@@ -856,7 +856,7 @@ The second line's second `>` is inside the quote, so it is a line of the HTML bl
 
 - **R48. Unclosed blocks.**
   - A fenced code block never closed, or an HTML block of types 1-5 without its closing sequence (`<!--` with no `-->`, `<pre>` with no `</pre>`), runs to the end of its container, blank lines included.
-  - It is framed, and nothing else is inserted: no closing fence, no closing tag. Foundation is never corrected.
+  - It is framed, and nothing else is inserted: no closing fence, no closing tag. The specs are never corrected.
   - Its span runs to the end of its code, trailing blank lines included.
   - For a parser, its end marker, the end markers of the containers that close there, and the blank lines next to them (R30), fall inside it. This is the one accepted exception (R26 in specs/norms-tree.md, U1), and verify tolerates exactly those end markers and blank lines (R64 in specs/norms-versions.md, E61, E62).
 

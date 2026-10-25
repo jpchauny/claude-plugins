@@ -123,7 +123,7 @@ Positions
     Detecting setext vs ATX: a heading is ATX when its first byte starts
     "#{1,6}" followed by a blank or the end of the line; "#5 bolts\\n==="
     is setext. A paragraph followed by "---" with no blank line is a
-    setext heading (foundation has one, by accident or not:
+    setext heading (the specs have one, by accident or not:
     specs/components/framework/libraries/server.md line 187).
 
 Note: D1, D2

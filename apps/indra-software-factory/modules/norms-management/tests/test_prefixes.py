@@ -12,15 +12,15 @@ import pytest
 
 from norms_generator.prefixes import assign_prefixes, candidates
 
-FOUNDATION = Path("/Users/jpchauny/Documents/Clean Language/clean-language-foundation")
+SPECS_REPO = Path("/Users/jpchauny/Documents/Clean Language/clean-language-foundation")
 MARKER_PREFIX = re.compile(r"^[A-Z]{3,}$")
 
 
-def foundation_paths() -> list[str]:
-    root = FOUNDATION / "specs"
+def spec_paths() -> list[str]:
+    root = SPECS_REPO / "specs"
     if not root.is_dir():
-        pytest.skip("foundation repository not found")
-    return sorted(str(p.relative_to(FOUNDATION)) for p in root.rglob("*.md"))
+        pytest.skip("specs repository not found")
+    return sorted(str(p.relative_to(SPECS_REPO)) for p in root.rglob("*.md"))
 
 
 def test_type_system_is_typ() -> None:
@@ -33,12 +33,12 @@ def test_type_system_is_typ() -> None:
     }
 
 
-def test_real_foundation_unique_and_stable() -> None:
-    """Every foundation file gets a unique prefix of 3+ upper-case letters, in any order, and a rerun keeps them.
+def test_real_specs_unique_and_stable() -> None:
+    """Every spec file gets a unique prefix of 3+ upper-case letters, in any order, and a rerun keeps them.
 
     Spec: R10, R14, R58
     """
-    paths = foundation_paths()
+    paths = spec_paths()
     assert len(paths) >= 100
     first = assign_prefixes(paths, {}, set(), {})
     assert set(first) == set(paths)
@@ -97,7 +97,7 @@ def test_adding_a_file_changes_no_other_prefix() -> None:
 
     Spec: R10
     """
-    paths = foundation_paths()
+    paths = spec_paths()
     first = assign_prefixes(paths, {}, set(), {})
     more = assign_prefixes(paths + ["specs/language/types/types.md"], first, set(), {})
     assert {p: more[p] for p in paths} == first

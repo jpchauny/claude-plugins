@@ -18,20 +18,20 @@ from pathlib import Path
 import pytest
 
 from norms_generator.cli import main
-from test_cli import Foundation
+from test_cli import SpecsRepo
 
 
-def _build(f: Foundation, out: Path) -> int:
-    return main(["build", "--foundation", str(f.root), "--out", str(out)])
+def _build(f: SpecsRepo, out: Path) -> int:
+    return main(["build", "--specs", str(f.root), "--out", str(out)])
 
 
-def _verify(f: Foundation, out: Path) -> int:
-    return main(["verify", "--foundation", str(f.root), "--out", str(out)])
+def _verify(f: SpecsRepo, out: Path) -> int:
+    return main(["verify", "--specs", str(f.root), "--out", str(out)])
 
 
-def _built(tmp_path: Path) -> tuple[Foundation, Path]:
-    """A foundation of `specs/a.md` and `specs/sub/b.md`, built once."""
-    f = Foundation(tmp_path / "foundation")
+def _built(tmp_path: Path) -> tuple[SpecsRepo, Path]:
+    """The specs of `specs/a.md` and `specs/sub/b.md`, built once."""
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nText.\n")
     f.write("specs/sub/b.md", "# B\n")
     f.commit()
@@ -83,8 +83,8 @@ def test_build_never_writes_through_a_hard_link_at_an_output_path_r62(tmp_path: 
     assert _verify(f, out) == 0
 
 
-def test_build_never_writes_into_foundation_s_working_tree_through_a_hard_link_r62(tmp_path: Path) -> None:
-    """A copy hard-linked to foundation's own working-tree file: foundation stays clean.
+def test_build_never_writes_into_the_specs_working_tree_through_a_hard_link_r62(tmp_path: Path) -> None:
+    """A copy hard-linked to the specs' own working-tree file: the specs stays clean.
 
     Spec: R62, U6
     """
@@ -190,8 +190,8 @@ def test_verify_reports_the_problems_of_a_copy_nested_too_deeply_r64(
     assert _verify(f, out) == 1
     err = capsys.readouterr().err
     assert "unexpected error" not in err
-    assert "specs/a.md: stripping the insertions does not give back foundation\n" in err
-    assert "specs/a.md: the annotated file does not parse to foundation's blocks\n" in err
+    assert "specs/a.md: stripping the insertions does not give back the spec file\n" in err
+    assert "specs/a.md: the annotated file does not parse to the blocks of the specs\n" in err
     assert "specs/sub/b.md" not in err  # the other file is checked, and sound
 
 

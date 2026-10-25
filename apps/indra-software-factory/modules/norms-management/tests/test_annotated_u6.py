@@ -14,24 +14,24 @@ from pathlib import Path
 import pytest
 
 from norms_generator.cli import main
-from test_cli import Foundation
+from test_cli import SpecsRepo
 
 
-def _build(f: Foundation, out: Path) -> int:
-    return main(["build", "--foundation", str(f.root), "--out", str(out)])
+def _build(f: SpecsRepo, out: Path) -> int:
+    return main(["build", "--specs", str(f.root), "--out", str(out)])
 
 
-def _verify(f: Foundation, out: Path) -> int:
-    return main(["verify", "--foundation", str(f.root), "--out", str(out)])
+def _verify(f: SpecsRepo, out: Path) -> int:
+    return main(["verify", "--specs", str(f.root), "--out", str(out)])
 
 
 def _foreign(path: Path) -> str:
     return f"{path}: not a copy of a JSONL file; build removes it (U6)"
 
 
-def _built(tmp_path: Path) -> tuple[Foundation, Path, Path]:
-    """A foundation of `specs/a.md` and `specs/sub/b.md`, built once; its specs-repo-annotated/ and the files under it."""
-    f = Foundation(tmp_path / "foundation")
+def _built(tmp_path: Path) -> tuple[SpecsRepo, Path, Path]:
+    """The specs of `specs/a.md` and `specs/sub/b.md`, built once; its specs-repo-annotated/ and the files under it."""
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nText.\n")
     f.write("specs/sub/b.md", "# B\n")
     f.commit()
@@ -47,7 +47,7 @@ def _tree(ann: Path) -> list[str]:
 _CLEAN = ["specs", "specs/a.md", "specs/sub", "specs/sub/b.md"]
 
 
-def _rebuilt_clean(f: Foundation, out: Path, ann: Path, snapshot: dict[str, bytes]) -> None:
+def _rebuilt_clean(f: SpecsRepo, out: Path, ann: Path, snapshot: dict[str, bytes]) -> None:
     """A rebuild of the same commit leaves exactly the copies, byte for byte as they were.
 
     Spec: R62, U6
@@ -208,7 +208,7 @@ def test_a_name_that_differs_only_in_case_is_foreign_u6(tmp_path: Path, capsys: 
 
 
 def test_the_copies_a_lost_jsonl_left_are_removed_u6(tmp_path: Path) -> None:
-    """With the JSONL lost, the copies of files foundation no longer holds are removed all the same.
+    """With the JSONL lost, the copies of files the specs no longer hold are removed all the same.
 
     Spec: R62, U6
     """
@@ -236,7 +236,7 @@ def test_a_rebuild_of_the_same_commit_also_cleans_and_keeps_the_reports_u6(tmp_p
 
 
 def test_nothing_outside_the_output_folder_is_touched_u6(tmp_path: Path) -> None:
-    """A sibling of the output folder, and the foundation, are left as they were.
+    """A sibling of the output folder, and the specs, are left as they were.
 
     Spec: R62, U6
     """

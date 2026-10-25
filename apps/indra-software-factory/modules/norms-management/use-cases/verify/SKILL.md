@@ -12,7 +12,7 @@ This checks it, from the norms repository of the project.
 1. Find layer 1 as the `build` skill of this plugin does.
 2. Run:
    ```sh
-   uv run --frozen --project "${CLAUDE_PLUGIN_ROOT}" norms-gen verify --foundation <layer 1>
+   uv run --frozen --project "${CLAUDE_PLUGIN_ROOT}" norms-gen verify --specs <layer 1>
    ```
 3. Exit 0: say it verifies, in one line. Otherwise show the problems as the
    generator prints them, and change nothing: the fix is a new `build`, or a

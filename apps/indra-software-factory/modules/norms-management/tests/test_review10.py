@@ -16,21 +16,21 @@ from pathlib import Path
 import pytest
 
 from norms_generator.cli import main
-from test_cli import Foundation
+from test_cli import SpecsRepo
 
 needs_permissions = pytest.mark.skipif(os.geteuid() == 0, reason="root reads and searches anything")
 
 
-def _build(f: Foundation, out: Path) -> int:
-    return main(["build", "--foundation", str(f.root), "--out", str(out)])
+def _build(f: SpecsRepo, out: Path) -> int:
+    return main(["build", "--specs", str(f.root), "--out", str(out)])
 
 
-def _verify(f: Foundation, out: Path) -> int:
-    return main(["verify", "--foundation", str(f.root), "--out", str(out)])
+def _verify(f: SpecsRepo, out: Path) -> int:
+    return main(["verify", "--specs", str(f.root), "--out", str(out)])
 
 
-def _one_file(tmp_path: Path) -> tuple[Foundation, Path]:
-    f = Foundation(tmp_path / "foundation")
+def _one_file(tmp_path: Path) -> tuple[SpecsRepo, Path]:
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n\nText.\n")
     f.commit()
     out = tmp_path / "norms"
@@ -133,7 +133,7 @@ def test_verify_takes_a_broken_data_link_as_no_jsonl_r64(tmp_path: Path, capsys:
 
     Spec: R62, R64
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n")
     f.commit()
     out = tmp_path / "norms"
@@ -236,7 +236,7 @@ def test_a_file_at_data_is_a_jsonl_that_cannot_be_opened_r34(
 
     Spec: R34
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n")
     f.commit()
     out = tmp_path / "norms"
@@ -256,7 +256,7 @@ def test_a_jsonl_without_file_lines_gives_no_rebuild_r60(tmp_path: Path) -> None
 
     Spec: R60
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("specs/a.md", "# A\n")
     f.commit()
     sha = subprocess.run(
@@ -264,7 +264,7 @@ def test_a_jsonl_without_file_lines_gives_no_rebuild_r60(tmp_path: Path) -> None
     ).stdout.strip()
     out = tmp_path / "norms"
     (out / "data").mkdir(parents=True)
-    meta = {"foundation_commit": sha, "generator_version": "0.1.0", "retired_prefixes": ["XYZ"], "type": "meta"}
+    meta = {"specs_commit": sha, "generator_version": "0.1.0", "retired_prefixes": ["XYZ"], "type": "meta"}
     node = {
         "changed_since": "deadbeef", "end": 0, "file": "specs/old.md", "id": "XYZ-1", "kind": "paragraph",
         "own_hash": "", "own_text": "", "parent": "XYZ", "start": 0, "status": "retired", "to_review": False,
@@ -278,25 +278,25 @@ def test_a_jsonl_without_file_lines_gives_no_rebuild_r60(tmp_path: Path) -> None
     assert retired and retired[0]["changed_since"] is None
 
 
-# --- the not-in-foundation problem holds the git command --------------------------
+# --- the not-in-the-specs problem holds the git command --------------------------
 
 
-def test_not_in_foundation_is_worded_as_r34_words_git_r64(
+def test_not_in_the_specs_is_worded_as_r34_words_git_r64(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The not-in-foundation problem holds the git command, worded as a refusal words git's.
+    """The not-in-the-specs problem holds the git command, worded as a refusal words git's.
 
     Spec: R34, R64
     """
     f, out = _one_file(tmp_path)
     store = out / "data" / "tree.jsonl"
     store.write_text(store.read_text().replace('"specs/a.md"', '"specs/b.md"'))
-    sha = json.loads(store.read_text().splitlines()[0])["foundation_commit"]
+    sha = json.loads(store.read_text().splitlines()[0])["specs_commit"]
     capsys.readouterr()
     assert _verify(f, out) == 1
     err = capsys.readouterr().err
     assert (
-        f"specs/b.md: not in foundation at {sha}: git cat-file blob {sha}:specs/b.md: "
+        f"specs/b.md: not in the specs at {sha}: git cat-file blob {sha}:specs/b.md: "
         f"fatal: path 'specs/b.md' does not exist in '{sha}'\n"
     ) in err
 
@@ -309,16 +309,16 @@ def test_refusal_messages_are_worded_as_r34_says(tmp_path: Path, capsys: pytest.
 
     Spec: R34
     """
-    f = Foundation(tmp_path / "foundation")
+    f = SpecsRepo(tmp_path / "specs")
     f.write("AGENTS.md", "# Agents\n")
     f.commit()
     out = tmp_path / "norms"
     capsys.readouterr()
-    assert main(["build", "--foundation", str(f.root), "--out", str(out)]) == 2
+    assert main(["build", "--specs", str(f.root), "--out", str(out)]) == 2
     sha = subprocess.run(
         ["git", "-C", str(f.root), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
     ).stdout.strip()
-    assert capsys.readouterr().err == f"norms-gen: no .md file to build at {sha}; is --foundation right?\n"
+    assert capsys.readouterr().err == f"norms-gen: no .md file to build at {sha}; is --specs right?\n"
     f.write("specs/a.md", "# A\n")
     f.commit()
 
@@ -326,14 +326,14 @@ def test_refusal_messages_are_worded_as_r34_says(tmp_path: Path, capsys: pytest.
     f.commit()
     assert _build(f, out) == 2
     assert capsys.readouterr().err == (
-        "norms-gen: specs/a.md: not UTF-8 (byte 0xff at offset 3); foundation files must be UTF-8 (R34)\n"
+        "norms-gen: specs/a.md: not UTF-8 (byte 0xff at offset 3); spec files must be UTF-8 (R34)\n"
     )
 
     f.write("specs/a.md", "# A ⟭\n")
     f.commit()
     assert _build(f, out) == 2
     assert capsys.readouterr().err == (
-        "norms-gen: specs/a.md: holds the delimiter ⟭ at offset 4; foundation never holds ⟬ or ⟭ (R19, R34)\n"
+        "norms-gen: specs/a.md: holds the delimiter ⟭ at offset 4; the specs never hold ⟬ or ⟭ (R19, R34)\n"
     )
 
     f.write("specs/a.md", "# A\n")

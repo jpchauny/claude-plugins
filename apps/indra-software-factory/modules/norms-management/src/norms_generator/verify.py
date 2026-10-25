@@ -1,11 +1,11 @@
-"""Checks of one annotated file against foundation and the JSONL.
+"""Checks of one annotated file against the specs and the JSONL.
 
 `check_file()` returns the problems found in one file, as messages; an
 empty list means the file is sound. It checks, in order:
 
-    sha256      the foundation bytes are the ones the JSONL recorded
+    sha256      the bytes of the spec file are the ones the JSONL recorded
     strip       removing the recorded insertions from the annotated file
-                gives back the foundation file byte for byte
+                gives back the spec file byte for byte
     insertions  the inserted bytes are only markers, spaces, line
                 endings, ">" and "|", never a tab
     utf-8       the annotated file decodes as UTF-8
@@ -15,13 +15,13 @@ empty list means the file is sound. It checks, in order:
                 frames nest
     ids         the IDs in the file are exactly the active JSONL nodes
                 of that file, the file's prefix included
-    tree        the norms tree rebuilt from foundation has the stored
+    tree        the norms tree rebuilt from the specs has the stored
                 nodes, in pre-order: same kind, span, hashes and parent
-    places      annotating foundation again with the stored IDs gives
+    places      annotating the specs again with the stored IDs gives
                 the annotated file and the recorded insertions byte for
                 byte: each ID sits at its own node
     structure   cmark-gfm parses the annotated file to the same blocks
-                as the foundation file, markers aside; an annotated file
+                as the spec file, markers aside; an annotated file
                 nested deeper than the parser follows does not
 
 Structure is compared with structure.block_structure(), on cmark-gfm's
@@ -65,17 +65,17 @@ def check_file(
     """
     problems: list[str] = []
     digest = hashlib.sha256(source).hexdigest()
-    if digest != stored.sha256:  # R61: foundation is the version the JSONL recorded
+    if digest != stored.sha256:  # R61: the specs are the version the JSONL recorded
         problems.append(f"{path}: sha256 {digest} differs from the JSONL's {stored.sha256}")
     try:
-        if strip(annotated, stored.insertions) != source:  # R23: stripping gives back foundation
-            problems.append(f"{path}: stripping the insertions does not give back foundation")
+        if strip(annotated, stored.insertions) != source:  # R23: stripping gives back the spec file
+            problems.append(f"{path}: stripping the insertions does not give back the spec file")
     except ValueError as exc:
         problems.append(f"{path}: {exc}")
     problems += [f"{path}: {p}" for p in _check_insertions(stored.insertions)]
     try:
         text = annotated.decode("utf-8")
-    except UnicodeDecodeError as exc:  # R3: annotated files are UTF-8, as foundation is
+    except UnicodeDecodeError as exc:  # R3: annotated files are UTF-8, as the specs are
         return problems + [f"{path}: annotated file is not UTF-8: {exc}"]
     problems += [f"{path}: {p}" for p in _check_markers(text, stored.prefix, nodes)]
     tree_problems = _check_tree(source, nodes)
@@ -85,10 +85,10 @@ def check_file(
     expected = block_structure(source)
     try:
         found = block_structure(annotated)
-    except RecursionError:  # R64: nested deeper than the parser follows, as foundation never is
+    except RecursionError:  # R64: nested deeper than the parser follows, as the specs never are
         found = None
-    if found != expected:  # R64: same blocks as foundation
-        problems.append(f"{path}: the annotated file does not parse to foundation's blocks")
+    if found != expected:  # R64: same blocks as the specs
+        problems.append(f"{path}: the annotated file does not parse to the blocks of the specs")
     return problems
 
 
@@ -188,7 +188,7 @@ def _check_places(source: bytes, annotated: bytes, stored: StoredFile, nodes: li
         return [f"cannot annotate again with the stored IDs: {exc}"]
     problems: list[str] = []
     if expected != annotated:
-        problems.append("the annotated file differs from foundation annotated with the stored IDs")
+        problems.append("the annotated file differs from the specs annotated with the stored IDs")
     if [(i.offset, i.text) for i in insertions] != [(i.offset, i.text) for i in stored.insertions]:  # R61: as stored
         problems.append("the recorded insertions differ from those of the stored IDs")
     return problems
