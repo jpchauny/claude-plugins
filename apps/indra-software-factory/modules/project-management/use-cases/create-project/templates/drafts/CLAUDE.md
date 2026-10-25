@@ -13,7 +13,7 @@ from it, and no layer reads it
 
 - Keep each draft spec at the path it will have, as a spec, in layer 1.
 - A draft spec is here, or it is a spec in layer 1, never both: promoting it adds it to layer 1 as a spec and removes it from here. It is moved, never copied.
-- Every change reaches `main` by a pull request a person approves ([LAY-2](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-2--people-work-in-layers-0-and-1)).
+- No change is made without a person's approval: the agent shows the whole diff, and the person approves the command that commits and pushes it to `main`. There is no pull request ([LAY-2](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-2--people-work-in-layers-0-and-1)).
 
 ## Issues
 
