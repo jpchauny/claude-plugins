@@ -2,7 +2,7 @@
 
 **Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `norms-management`
 
-**Scope:** Layer 2: the norms and every specification derived from them
+**Scope:** Layer 2: the norms and the derived norms
 
 The module `norms-management` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md).
 

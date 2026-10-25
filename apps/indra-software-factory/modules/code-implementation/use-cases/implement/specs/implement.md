@@ -4,7 +4,7 @@
 
 **Audience:** The people who ask for code to be built from the norms of a project; whoever builds the skill `implement` of the plugin `code-implementation`
 
-**Scope:** The use case that implements a task that the user gives, in the code repository, from the norms of the norms repository alone, with every piece of code and every test citing the norms it comes from and the version of each. How the code is reviewed when a cited norm changes is not here: it is open question 2. How the norms are annotated with IDs is in the specs of `norms-management`. This spec cites [LAY-3](../../../../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated) (how layer 2 is derived), [LAY-4](../../../../../specs/layers.md#lay-4--layer-3-reads-layer-2-never-layer-1) (layer 3 reads layer 2, never layer 1), [LAY-5](../../../../../specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first) (an inconsistency goes back to layer 1) and [ORC-20](../../../../project-management/specs/module.md#where-the-repositories-are) (where the repositories of a project are)
+**Scope:** The use case that implements a task that the user gives, in the code repository, from the norms and the derived norms of the norms repository alone, with every piece of code and every test citing the norms it comes from and the version of each. How the code is reviewed when a cited norm changes is not here: it is open question 2. How the norms are annotated with IDs is in the specs of `norms-management`. This spec cites [LAY-3](../../../../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated) (how layer 2 is derived), [LAY-4](../../../../../specs/layers.md#lay-4--layer-3-reads-layer-2-never-layer-1) (layer 3 reads layer 2, never layer 1), [LAY-5](../../../../../specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first) (an inconsistency goes back to layer 1) and [ORC-20](../../../../project-management/specs/module.md#where-the-repositories-are) (where the repositories of a project are)
 
 A use case of the module `code-implementation`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
@@ -14,18 +14,18 @@ A use case of the module `code-implementation`, specified in [module.md](../../.
 |---|---|
 | Skill | The skill `implement` of the plugin `code-implementation`, invoked as `/code-implementation:implement`; the actor of every rule that names no other. |
 | Task | What the user asks to implement, in their own words, such as "the export of invoices to CSV". |
-| Layer | One of the four layers of a project, each in its own repositories ([layers.md](../../../../../specs/layers.md)): 0, the drafts; 1, the specs; 2, the norms; 3, the code. |
+| Layer | One of the four layers of a project, each in its own repositories ([layers.md](../../../../../specs/layers.md)): 0, the draft specs; 1, the specs; 2, the norms and the derived norms; 3, the code. |
 | Specs repository | The repository `<project>-specs`: layer 1, written by people, which the skill never reads. |
 | Code repository | The repository where the skill runs and writes: an entry of `project.json` with `layer` 3 ([ORC-20, ORC-21](../../../../project-management/specs/module.md#where-the-repositories-are)). |
 | Norms repository | The entry of `project.json` with `layer` 2 ([ORC-20](../../../../project-management/specs/module.md#where-the-repositories-are)), which the skill only reads. |
 | Norms generator | The command `norms-gen` of the plugin `norms-management`, which writes `specs-repo-annotated/` and `data/tree.jsonl` in the norms repository. |
-| Derived specification | A specification of the norms repository that a project's own generator derives from the annotated specs, such as a grammar or a semantics ([LAY-3](../../../../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)). |
+| Derived norm | A norm of the norms repository that a project's own generator derives from the norms, such as a rule of a grammar or of a semantics ([LAY-3](../../../../../specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)). |
 | Issue | A GitHub issue of the specs repository, which reports an inconsistency of the norms ([LAY-5](../../../../../specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)). |
 | Norm | A node of `specs-repo-annotated/` in the norms repository, with its norm ID, such as `SYN-3`. |
-| Norm ID | The ID of a norm, such as `SYN-3`, as the norms generator gives it. The skill reads the IDs from `data/tree.jsonl`, the only source of truth for them ([R23](../../../../norms-management/specs/norms-tree.md#storage-and-process)), and not from the markers of the annotated specs, which take several forms ([R24](../../../../norms-management/specs/norms-tree.md#annotations)). |
+| Norm ID | The ID of a norm, such as `SYN-3`, as the norms generator gives it. The skill reads the IDs from `data/tree.jsonl`, the only source of truth for them ([R23](../../../../norms-management/specs/norms-tree.md#storage-and-process)), and not from the markers of `specs-repo-annotated/`, which take several forms ([R24](../../../../norms-management/specs/norms-tree.md#annotations)). |
 | Norms of the task | The norms that the task needs, which the skill selects and the user confirms (IMP-4). |
 | Norm hash | The first 8 hex digits, in lower case, of the `tree_hash` of a norm in `data/tree.jsonl` of the norms repository ([R31](../../../../norms-management/specs/norms-tree.md#the-tree-in-layer-2), [R61](../../../../norms-management/specs/norms-versions.md#data-and-outputs)), such as `5a627175`. When and why it changes is R31's. Each citation holds the norm hash of the version it was written for, so the code repository pins no single version of layer 2. |
-| Citation | One line of comment in code or in a test, `<norm ID>@<norm hash>: <reason>` after the comment mark of the language, where `<reason>` says in a few words what of the norm the code does or the test checks, such as `# INV-7@5a627175: one row per invoice` in Python or `// INV-7@5a627175: one row per invoice` in Rust and JavaScript. It names a norm that the code implements or the test checks, the version of the norm that it was written for, and why. A derived specification cites its norms with the same citation (LAY-3). |
+| Citation | One line of comment in code or in a test, `<norm ID>@<norm hash>: <reason>` after the comment mark of the language, where `<reason>` says in a few words what of the norm the code does or the test checks, such as `# INV-7@5a627175: one row per invoice` in Python or `// INV-7@5a627175: one row per invoice` in Rust and JavaScript. It names a norm that the code implements or the test checks, the version of the norm that it was written for, and why. A derived norm cites its norms with the same citation (LAY-3). |
 
 ## Implement a task
 
@@ -84,7 +84,7 @@ Feature: Implement a task
       When the skill implements a task
       Then it reads the norms repository and the code repository only
       And it never reads another repository of layer 3 of the project
-      And in the norms repository it reads every file, "specs-repo-annotated/" and every specification derived from the norms (LAY-3)
+      And in the norms repository it reads every file, "specs-repo-annotated/" and every derived norm (LAY-3)
       And it never reads the repository "billing-specs" (LAY-4)
       And it writes only in the code repository
 
@@ -161,7 +161,7 @@ Feature: Implement a task
         | INV-2  | a whole class, and no one method of it | on the line just above that class    |
         | CFG-1  | a whole file                           | at the top of that file              |
 
-  Rule: IMP-13 Code built from a part of a derived specification cites the norms that part cites
+  Rule: IMP-13 Code built from a derived norm cites the norms that derived norm cites
 
     Scenario: A function built from a rule of the grammar
       Given the rule "expr" of the grammar of the norms repository holds the citation "SYN-3@abcd1234: binary operators"

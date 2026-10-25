@@ -5,8 +5,8 @@
 **Scope:** What the app is, how it is used, and its modules. The app is one of the marketplace, listed in [marketplace.md](../../../specs/marketplace.md); each module specifies its own use cases
 
 Indra Software Factory is an app of Claude Code plugins for working in four
-layers: drafts and specifications written by people, norms generated from them, code
-built from the norms by agents. A person installs each module where APP-6
+layers: draft specs and specs written by people, norms and derived norms
+generated from them, code built from the norms and the derived norms by agents. A person installs each module where APP-6
 says, and then invokes its use cases.
 
 Every module obeys the rules of the four layers, LAY-1 to LAY-6, in
@@ -25,10 +25,10 @@ Every module obeys the rules of the four layers, LAY-1 to LAY-6, in
 | Module | Responsibility | Specs |
 |---|---|---|
 | `project-management` | The repositories of a project: their creation and their life cycle | [module.md](../modules/project-management/specs/module.md) |
-| `specs-management` | Layers 0 and 1: the AI recommends how to improve the specs that the authors write | [module.md](../modules/specs-management/specs/module.md) |
-| `norms-management` | Layer 2: the norms and every specification derived from them | [module.md](../modules/norms-management/specs/module.md) |
-| `code-implementation` | Layer 3: code built from the norms, and its traceability to norm IDs | [module.md](../modules/code-implementation/specs/module.md) |
-| `drift-management` | A drift between specs and code, sent back to layer 1 | [module.md](../modules/drift-management/specs/module.md) |
+| `specs-management` | Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write | [module.md](../modules/specs-management/specs/module.md) |
+| `norms-management` | Layer 2: the norms and the derived norms | [module.md](../modules/norms-management/specs/module.md) |
+| `code-implementation` | Layer 3: code built from the norms and the derived norms, and its traceability to norm IDs | [module.md](../modules/code-implementation/specs/module.md) |
+| `drift-management` | A drift between the norms and the code, sent back to layer 1 | [module.md](../modules/drift-management/specs/module.md) |
 | `workflow-orchestration` | The flow across the modules: what starts a run, the order of the steps, the hand-offs, and how each step runs in its repository | [module.md](../modules/workflow-orchestration/specs/module.md) |
 | `utilities` | Tools usable in any layer: exploring, the issue tree, explanations, a recap of the session | not yet specified |
 

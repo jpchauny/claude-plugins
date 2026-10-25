@@ -1,6 +1,6 @@
 {
   "name": "jpchauny-plugins",
-  "description": "Indra Software Factory: an app of Claude Code plugins for working in four layers - drafts and specifications (people), norms (generated), code (agents). Each module is a plugin, installed on its own in the repository of its layer",
+  "description": "Indra Software Factory: an app of Claude Code plugins for working in four layers - draft specs and specs (people), norms and derived norms (generated), code (agents). Each module is a plugin, installed on its own in the repository of its layer",
   "owner": {
     "name": "Jean Pierre Chauny"
   },
@@ -23,12 +23,12 @@
     {
       "name": "norms-management",
       "source": "./apps/indra-software-factory/modules/norms-management",
-      "description": "Module norms-management, layer 2: the norms and every specification derived from them; the norms generator (/norms-management:build, /norms-management:verify)"
+      "description": "Module norms-management, layer 2: the norms and the derived norms; the norms generator (/norms-management:build, /norms-management:verify)"
     },
     {
       "name": "code-implementation",
       "source": "./apps/indra-software-factory/modules/code-implementation",
-      "description": "Module code-implementation, layer 3: code built from the norms, and its traceability to norm IDs"
+      "description": "Module code-implementation, layer 3: code built from the norms and the derived norms, and its traceability to norm IDs"
     },
     {
       "name": "drift-management",

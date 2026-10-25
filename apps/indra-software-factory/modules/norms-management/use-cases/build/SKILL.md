@@ -6,7 +6,7 @@ argument-hint: "[--commit SHA]"
 
 # build
 
-Brings the annotated specs of layer 2 up to date with one commit of layer 1
+Brings the norms of layer 2 up to date with one commit of layer 1
 ([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)).
 Run it from the norms repository of the project: the output goes to the root
 of the git repository of the working directory.

@@ -11,7 +11,7 @@ The module `drift-management` of the app Indra Software Factory, listed in [app.
 | Term | Meaning |
 |---|---|
 | Run | One pass of the flow from specs to code, for one commit of layer 1. |
-| Drift | A place where layer 2 cannot be implemented as it stands, because the specification is wrong, missing or contradictory. |
+| Drift | A place where layer 2 cannot be implemented as it stands, because a norm or a derived norm is wrong, missing or contradictory. |
 
 ## Report a drift
 

@@ -1,8 +1,8 @@
 # Indra Software Factory
 
 A Claude Code app, published as the plugin marketplace `jpchauny-plugins`, for
-working in four layers: drafts and specifications written by people, norms generated
-from them, code built from the norms by agents.
+working in four layers: draft specs and specs written by people, norms and
+derived norms generated from them, code built from the norms and the derived norms by agents.
 
 The repository is a marketplace of apps, built from specs at four levels:
 marketplace, app, module and use case, each with its folder `specs/`. The

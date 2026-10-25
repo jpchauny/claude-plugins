@@ -2,7 +2,7 @@
 
 **Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `code-implementation`
 
-**Scope:** Layer 3: code built from the norms, and its traceability to norm IDs. What every use case of the module does before it implements anything is here; how a task is implemented is in [implement.md](../use-cases/implement/specs/implement.md)
+**Scope:** Layer 3: code built from the norms and the derived norms, and its traceability to norm IDs. What every use case of the module does before it implements anything is here; how a task is implemented is in [implement.md](../use-cases/implement/specs/implement.md)
 
 The module `code-implementation` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md). The terms citation, norm, norm ID, norm hash, code repository and norms repository are those of [implement.md](../use-cases/implement/specs/implement.md#terms).
 

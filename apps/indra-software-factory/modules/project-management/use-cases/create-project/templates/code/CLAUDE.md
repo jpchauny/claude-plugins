@@ -10,7 +10,7 @@ alone ([LAY-4](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-s
 ## Working here
 
 - Never write code that is not in layer 2. Code and tests cite the norm IDs they implement or check.
-- When the specification is wrong, missing or contradictory, do not work around it: open an issue in `{{owner}}/{{project}}-specs` ([LAY-5](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
+- When a norm or a derived norm is wrong, missing or contradictory, do not work around it: open an issue in `{{owner}}/{{project}}-specs` ([LAY-5](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-5--an-inconsistency-is-fixed-in-layer-1-first)).
 - Open this repository alone in its VS Code window: a folder added to the same workspace becomes readable and writable from the session.
 
 ## Issues
