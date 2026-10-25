@@ -137,7 +137,7 @@ Each build reads foundation at one commit and the JSONL of the previous build, a
   - Its sections are, in order, each only when it has an entry: `Edited (to review)`, `Changed below`, `Retired`, `New` and `Moved`. Each entry is headed `### <ID> (<kind>, <file>)`, with `<old file> -> <new file>` when the path of its file changed. That is a path, not a move: an edited paragraph of a renamed file is headed `(paragraph, specs/p.md -> specs/q.md)`, but has no `Moved:` line, since it has not moved (R59).
   - Within a section, entries come in the order of the change records: first the IDs of the new tree, in pre-order over all files, the files in path order; then the IDs retired in this step, in the previous JSONL's order. `data/report.json` lists its lines in that same order.
   - An entry's lines come in this order, each only when it applies: where it moved from, its changed children, `Children reordered.`, and then its texts.
-  - A moved entry gives its old and new parent (`Parent TYP-1 -> TYP-5.`). An entry of another status that also moved says so (`Moved: parent TYP-1 -> TYP-5.`). A file has no parent, so a moved file gives its old and new path instead (`File specs/type-system.md -> specs/language/types.md.`, E78), and a file of another status that also moved says so with a lower-case `file` (`Moved: file specs/drafts/quote.md -> specs/later/quote.md.`, the `child_changed` file of E82's v4).
+  - A moved entry gives its old and new parent (`Parent TYP-1 -> TYP-5.`). An entry of another status that also moved says so (`Moved: parent TYP-1 -> TYP-5.`). A file has no parent, so a moved file gives its old and new path instead (`File specs/type-system.md -> specs/language/types.md.`, E78), and a file of another status that also moved says so with a lower-case `file` (`Moved: file specs/notes/quote.md -> specs/later/quote.md.`, the `child_changed` file of E82's v4).
   - An edited entry gives its changed children, if any, then its similarity, then its old and new own text. Only a node paired by similar text has a similarity (R55). A table or row paired by its children (R56), or a file edited by its BOM, has none, and its entry has no `Similarity` line (E88).
   - A `Changed below` entry gives its changed children and `Children reordered.`, each when it applies, both when both do. When neither applies, as for a container whose tree hash changed while none of its children did, it gives its old and new own text (E86).
   - A retired entry gives its whole last text. A new entry gives only its own text, with its children's text cut out: a new file's entry may show only a line ending, and a new section's only its blank lines.
@@ -1180,7 +1180,7 @@ A. ⟬TYP-3⟭
 ⟬TYP-1 end⟭
 ```
 
-v1, `specs/drafts/placeholder.md`:
+v1, `specs/notes/placeholder.md`:
 
 ```markdown
 ```
@@ -1220,11 +1220,11 @@ v2, `specs/later/placeholder.md`:
 
 Statuses at v2:
 
-- `PLA` (file): `moved`, from `specs/drafts/placeholder.md`, `changed_since` null.
+- `PLA` (file): `moved`, from `specs/notes/placeholder.md`, `changed_since` null.
 
 The file has no content nodes, so it is paired with the new file without content nodes whose file node has the same own text, here the empty text. It keeps `PLA`, and its node is moved. Its annotated copy holds only its marker (R29).
 
-v3 adds `specs/drafts/quote.md`, which holds only a quote without children. The quote is not a content node, so the file has no content nodes either.
+v3 adds `specs/notes/quote.md`, which holds only a quote without children. The quote is not a content node, so the file has no content nodes either.
 
 v3, `specs/type-system.md`:
 
@@ -1246,7 +1246,7 @@ A. ⟬TYP-3⟭
 ⟬TYP-1 end⟭
 ```
 
-v3, `specs/drafts/quote.md`:
+v3, `specs/notes/quote.md`:
 
 ```markdown
 >
@@ -1285,14 +1285,14 @@ unchanged: 5, moved: 0, edited: 0, child_changed: 0, new: 2, retired: 0
 
 ## New
 
-### QUO (file, specs/drafts/quote.md)
+### QUO (file, specs/notes/quote.md)
 
 ```text
 
 
 ```
 
-### QUO-1 (block_quote, specs/drafts/quote.md)
+### QUO-1 (block_quote, specs/notes/quote.md)
 
 ```text
 >
@@ -1350,7 +1350,7 @@ v4, `specs/later/quote.md`:
 
 Statuses at v4:
 
-- `QUO` (file): `child_changed`, moved from `specs/drafts/quote.md`, changed children `QUO-2`, `QUO-1`, `changed_since` `c3`.
+- `QUO` (file): `child_changed`, moved from `specs/notes/quote.md`, changed children `QUO-2`, `QUO-1`, `changed_since` `c3`.
 - `QUO-2` (block_quote): `new`, `changed_since` null.
 - `QUO-1` (block_quote): `retired`, `changed_since` `c3`.
 

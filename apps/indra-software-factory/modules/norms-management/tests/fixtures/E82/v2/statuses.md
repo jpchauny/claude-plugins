@@ -1,1 +1,1 @@
-- `PLA` (file): `moved`, from `specs/drafts/placeholder.md`, `changed_since` null.
+- `PLA` (file): `moved`, from `specs/notes/placeholder.md`, `changed_since` null.
