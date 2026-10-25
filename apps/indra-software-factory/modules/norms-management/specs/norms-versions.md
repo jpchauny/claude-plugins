@@ -84,7 +84,7 @@ Each build reads foundation at one commit and the JSONL of the previous build, a
   - A rebuild changed nothing when every ID's status is `unchanged`, whatever else differs, such as the generator version in the meta line or the insertions of a newer generator. It keeps both reports as they are. Its JSONL and copies are written as this build makes them.
   - When either report is missing, a rebuild that changed nothing writes both again, from the stored version to the same one (``Foundation `c2` -> `c2`.``): every count but `unchanged` is 0, and `data/report.json` is empty.
   - A rebuild that changes an ID's status, as a newer generator may, computes the flags of the IDs it changes as any step does, against that same commit: an ID it retires has as `changed_since` the commit itself. Its report is written again, from the stored version to the new one (``Foundation `c2` -> `c2`.``), so it no longer shows the changes of the step that first built that commit, while the JSONL may still flag them.
-  - Layer 3 learns what changed since the version it pinned by comparing that version's tree hashes with the new ones (R21, R31). Example: E84.
+  - Layer 3 learns what changed by comparing the norm hash of each of its citations with the tree hash of its node (R21, R31, ORC-25). Example: E84.
 
 ### Data and outputs
 

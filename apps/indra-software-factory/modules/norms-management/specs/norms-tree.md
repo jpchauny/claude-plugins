@@ -87,7 +87,7 @@ A requirement's number is its name. It never changes, since code, tests and the 
     - an unclosed block runs to the end of its container (R48).
   - The spans are stored as `start` and `end` (R61). They are byte offsets, and `end` is exclusive: the span is the bytes from `start` up to, but not including, `end`. For `ab` followed by a line ending, the paragraph's span is 0 to 2.
 - **R17. The parser is `cmark-gfm`,** the GFM implementation that GitHub uses, as bundled in the Python package `cmarkgfm` and reached through its C API. The extensions table, strikethrough, autolink, tagfilter and tasklist are attached. Footnotes are not used: they are not in GFM Spec 0.29. The generator is written in Python.
-- **R31. Two hashes per node.** Each node has two SHA-256 hashes: **own**, over its own text, and **tree**, over its own hash and the tree hashes of its children. Code cites only an ID; layer 3 learns that a cited node changed by comparing its tree hash between two versions of layer 2. The own hash lets the generator follow a node that moved (R7).
+- **R31. Two hashes per node.** Each node has two SHA-256 hashes: **own**, over its own text, and **tree**, over its own hash and the tree hashes of its children. Code cites a node by its ID and its norm hash, the first 8 hex digits of its tree hash ([IMP-6](../../code-implementation/use-cases/implement/specs/implement.md)); layer 3 learns that a cited node changed when its tree hash no longer starts with the norm hash of the citation ([ORC-25](../../code-implementation/specs/module.md#implement-the-changed-norms)). The own hash lets the generator follow a node that moved (R7).
   - **Own text** is the exact bytes of the node's span with its children's spans cut out. List markers, `>` prefixes, pipes and indentation are included (R16).
   - **Own hash** is SHA-256 over the own text. For a table, whose own text holds its delimiter row, the delimiter row's cells (the bytes between its pipes, padding included) are first put in sorted byte order, each in the place of one of them, the pipes kept: `|---|:---|` and `|:---|---|` give one own hash. So moving a column with its delimiter cell changes no hash (U5), unless the move changes its padding at an end without a pipe (R13). The own text keeps the delimiter row as it is.
   - **Tree hash** is SHA-256 over the own hash, followed by the children's tree hashes. They are in source order for a numbered list, and sorted for every other container (R13).
@@ -172,10 +172,10 @@ A requirement's number is its name. It never changes, since code, tests and the 
 ### Storage and process
 
 - **R21. The process.**
-  - **A. First implementation:** an agent searches the annotated files of norms, picks the nodes to implement, cites their IDs in the code, and pins the version of norms it used.
-  - **B. A change:** an agent takes the cited IDs that changed or were retired, finds each in the code and in norms, compares the old text with the new, and decides whether to implement it again. Then the repository moves to the new version.
+  - **A. First implementation:** an agent searches the annotated files of norms, picks the nodes to implement, cites their IDs in the code, each with its norm hash (IMP-6).
+  - **B. A change:** an agent takes the citations that ORC-25 finds changed, retired or unknown, finds each in the code and in norms, compares the old text with the new, and decides whether to implement it again. Each citation of a norm implemented again takes its new norm hash.
   - Each version of norms is published with a report of what changed, by ID: the old text and the new, the child that changed inside a cited container, and, for a retired ID, its last text (R63).
-  - `to_review` and `changed_since` describe one version's change only, from version N-1 to N (R60, U3). Layer 3 learns what changed for it by comparing the tree hashes of the version it pinned with the new one (R31).
+  - `to_review` and `changed_since` describe one version's change only, from version N-1 to N (R60, U3). Layer 3 learns what changed for it by comparing the norm hash of each of its citations with the tree hash of its node (R31, ORC-25).
   - "For a retired ID, its last text" is the node's whole text, with its children's text put back, so a retired section shows what it said (R63).
 - **R22. For now, a person tells the implementation repositories that a new version exists.**
 - **R23. The JSONL is the only source of truth for the IDs; foundation, for the content.** The tree is stored as JSONL, one line per node, and holds the IDs and their history (R61). Foundation is the single source of truth for what the files say (U6). The annotated file is generated from foundation at the pinned commit and the JSONL, by writing each ID in at its place. It is never read as input. The first run is the same process with an empty JSONL.
@@ -209,7 +209,7 @@ The user took these decisions where the generator had to choose between two read
   - Why: the blank lines make the frames easy to read for the agent (R20), and a list's tightness holds no information.
   - The structure check ignores list tightness (R30, R64, E13).
 - **U3. `to_review` and `changed_since` belong to one version.** They describe the step from version N-1 to version N only. Nothing is carried over from earlier steps.
-  - Why: each version of norms is published with its own report. A repository that skipped versions compares the tree hashes of the version it pinned with the new ones, which is exact (R21, R31).
+  - Why: each version of norms is published with its own report. A repository that skipped versions compares the norm hash of each of its citations with the tree hash of its node now, which is exact (R21, R31, ORC-25).
   - Details: R60, E84.
 - **U4. The ordinal belongs to the item's own text.** Inserting or removing an item renumbers the later ones, and they are `edited` and to review.
   - Why: a numbered list is a sequence, and renumbering it changes it.
