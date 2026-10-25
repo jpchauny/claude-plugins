@@ -4,8 +4,8 @@
 
 **Scope:** What the app is, how it is used, and its modules. The app is one of the marketplace, listed in [marketplace.md](../../../specs/marketplace.md); each module specifies its own use cases
 
-Indra Software Factory is an app of Claude Code plugins for working in three
-layers: specifications written by people, norms generated from them, code
+Indra Software Factory is an app of Claude Code plugins for working in four
+layers: drafts and specifications written by people, norms generated from them, code
 built from the norms by agents. A person installs each module where APP-6
 says, and then invokes its use cases.
 
@@ -24,7 +24,7 @@ Every module obeys the rules of the four layers, LAY-1 to LAY-6, in
 
 | Module | Responsibility | Specs |
 |---|---|---|
-| `project-management` | The three repositories of a project: their creation and their life cycle | [module.md](../modules/project-management/specs/module.md) |
+| `project-management` | The repositories of a project: their creation and their life cycle | [module.md](../modules/project-management/specs/module.md) |
 | `specs-management` | Layers 0 and 1: the AI recommends how to improve the specs that the authors write | [module.md](../modules/specs-management/specs/module.md) |
 | `norms-management` | Layer 2: the norms and every specification derived from them | [module.md](../modules/norms-management/specs/module.md) |
 | `code-implementation` | Layer 3: code built from the norms, and its traceability to norm IDs | [module.md](../modules/code-implementation/specs/module.md) |

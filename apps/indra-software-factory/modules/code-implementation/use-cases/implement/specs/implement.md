@@ -14,7 +14,7 @@ A use case of the module `code-implementation`, specified in [module.md](../../.
 |---|---|
 | Skill | The skill `implement` of the plugin `code-implementation`, invoked as `/code-implementation:implement`; the actor of every rule that names no other. |
 | Task | What the user asks to implement, in their own words, such as "the export of invoices to CSV". |
-| Layer | One of the three layers of a project, each in its own repository ([layers.md](../../../../../specs/layers.md)): 1, the specs; 2, the norms; 3, the code. |
+| Layer | One of the four layers of a project, each in its own repositories ([layers.md](../../../../../specs/layers.md)): 0, the drafts; 1, the specs; 2, the norms; 3, the code. |
 | Specs repository | The repository `<project>-specs`: layer 1, written by people, which the skill never reads. |
 | Code repository | The repository where the skill runs and writes: an entry of `project.json` with `layer` 3 ([ORC-20, ORC-21](../../../../project-management/specs/module.md#where-the-repositories-are)). |
 | Norms repository | The entry of `project.json` with `layer` 2 ([ORC-20](../../../../project-management/specs/module.md#where-the-repositories-are)), which the skill only reads. |
