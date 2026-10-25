@@ -1,32 +1,61 @@
 # Layers
 
-Every project is specified and built in three layers, each in its own
-repository.
+Every project is specified and built in four layers, each in its own
+repositories.
 
-| Layer | Repository | Holds | Written by | Plugin |
+| Layer | Recommended name | Holds | Written by | Plugin |
 |---|---|---|---|---|
+| 0. Drafts | `<project>-drafts` | The specs not yet ready to be the source of truth, in plain prose | People | `specs-management` |
 | 1. Specs | `<project>-specs` | The specification, in plain prose | People | `specs-management` |
 | 2. Norms | `<project>-norms` | The specs annotated with stable norm IDs, and every specification derived from them | Generated from layer 1 only | `norms-management` |
-| 3. Code | `<project>-code` | Code and tests | Agents | `code-implementation` |
+| 3. Code | `<project>-code`, or one `<project>-code-<component>` per component | Code and tests | Agents | `code-implementation` |
 
 Each plugin is a module of the app Indra Software Factory, listed in
 [app.md](app.md). The module `utilities` holds tools usable in any of the
-three layers; `project-management`, `workflow-orchestration` and
-`drift-management` work across the three repositories.
+four layers; `project-management`, `workflow-orchestration` and
+`drift-management` work across the repositories of a project.
 
 ## Rules
 
-### LAY-1 — Every project has three layers, in three repositories
+### LAY-1 — Every project has four layers, each in its own repositories
 
-A project always has the three layers, and each lives in its own repository,
-named `<project>-specs`, `<project>-norms` and `<project>-code`. There is no
-variant with fewer.
+A project always has the four layers. There is no variant with fewer.
 
-### LAY-2 — People work in layer 1
+Layers 0, 1 and 2 live each in one repository. Layer 3 lives in one
+repository, or in one repository per component. A component is a part of the
+project that is built, versioned and released on its own, such as a compiler
+or a server. A project uses one of the two forms, never both. Every repository
+of layer 3 reads the same layer 2.
 
-Layer 1 is the only layer people write, and the only source of truth. It
-changes only by a pull request that a person approves. It has no required
-structure: any folders, any files, at any depth.
+Which repositories belong to a project, the layer of each, and where each is,
+are written in the file `project.json` of the project
+([ORC-20](../modules/project-management/specs/module.md#where-the-repositories-are)), not in the names of the repositories. The names in the
+table above are recommended, not required.
+
+Layer 0 holds the specs that are not yet ready to be the source of truth,
+because they are incomplete or not yet reviewed. Nothing is derived from it,
+and no layer reads it. A spec is in layer 0 or in layer 1, never in both:
+promoting it adds it to layer 1 and removes it from layer 0, and demoting it
+does the reverse. It is moved, never copied.
+
+### LAY-2 — People work in layers 0 and 1
+
+Layers 0 and 1 are the only layers people write. Layer 1 is the only source
+of truth. Neither has a required structure: any folders, any files, at any
+depth.
+
+A person may ask an agent to write a change in layer 0 or 1. The agent never
+changes either layer without the person's approval:
+
+1. The agent shows the whole diff of the change.
+2. The agent commits the change and pushes it to the default branch in one
+   command.
+3. The person approves that command before it runs. The repository's
+   `.claude/settings.json` makes every command that commits or pushes ask the
+   person, through a rule `ask` of its permissions, which Claude Code applies
+   in every permission mode.
+
+There is no pull request: the approval of the command is the review.
 
 ### LAY-3 — Layer 2 is derived from layer 1 only, and only what changed is regenerated
 
@@ -66,8 +95,8 @@ never writes layer 2.
 When implementing shows that the specification is wrong, missing or
 contradictory, layer 3 does not work around it:
 
-1. Layer 3 opens an issue in `<project>-specs`.
-2. A person fixes layer 1, by pull request.
+1. Layer 3 opens an issue in the repository of layer 1.
+2. A person fixes layer 1, as LAY-2 says.
 3. Layer 2 is regenerated from the new commit.
 4. Layer 3 takes the regenerated layer 2 and implements again what changed.
 

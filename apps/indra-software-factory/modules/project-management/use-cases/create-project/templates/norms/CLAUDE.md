@@ -7,11 +7,7 @@ norm IDs, and every specification derived from it. It is derived from
 layer 1 only, regenerated only where layer 1 changed, and never edited by hand
 ([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-3--layer-2-is-derived-from-layer-1-only-and-only-what-changed-is-regenerated)).
 
-| Layer | Repository |
-|---|---|
-| 1. Specs | `{{owner}}/{{project}}-specs`, the only source |
-| 2. Norms | `{{owner}}/{{project}}-norms` (this one) |
-| 3. Code | `{{owner}}/{{project}}-code`, built from this one |
+{{repositories}}
 
 ## Working here
 

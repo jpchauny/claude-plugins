@@ -2,7 +2,7 @@
 
 **Audience:** The people who start a project; whoever builds the skill `create-project` of the plugin `project-management`
 
-**Scope:** The use case that creates the three repositories of a new project
+**Scope:** The use case that creates the repositories of the four layers of a new project, and its `project.json`
 
 A use case of the module `project-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
@@ -11,7 +11,8 @@ A use case of the module `project-management`, specified in [module.md](../../..
 | Term | Meaning |
 |---|---|
 | Skill | The skill `create-project` of the plugin `project-management`; the actor of every requirement that names no other. |
-| Project | The three repositories `<project>-specs`, `<project>-norms` and `<project>-code`, which `/project-management:create-project` creates together. |
+| Project | The repositories of its four layers ([LAY-1](../../../../../specs/layers.md#lay-1--every-project-has-four-layers-each-in-its-own-repositories)), as its `project.json` lists them ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
+| Project folder | The folder that holds the repositories of a project ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
 
 ## Create a project
 
@@ -19,7 +20,7 @@ A use case of the module `project-management`, specified in [module.md](../../..
 Feature: Create a project
   In order to start each layer in its own repository, with the modules of its layer enabled
   As a person who starts a project
-  I want its three repositories created in one go
+  I want the repositories of its four layers created in one go
 
   Rule: ORC-1 The creation starts only when the user asks for it
 
@@ -28,7 +29,7 @@ Feature: Create a project
       Then the creation of a project starts
 
     Scenario: The user asks in words
-      When the user says they want to start a new project with its three repositories
+      When the user says they want to start a new project with its repositories
       Then the creation of a project starts
 
     Scenario: The user only talks about projects
@@ -40,16 +41,17 @@ Feature: Create a project
     Scenario: Nothing given
       When the creation starts with no project name
       Then the skill asks, in one numbered message, for:
-        | Question      | Default                            |
-        | Project name  | none                               |
-        | GitHub owner  | the account logged in to GitHub    |
-        | Visibility    | private                            |
-        | Local folder  | the current directory              |
+        | Question            | Default                                       |
+        | Project name        | none                                          |
+        | Components          | none: layer 3 is one repository               |
+        | GitHub owner        | the account logged in to GitHub               |
+        | Visibility          | private                                       |
+        | Project folder      | the folder "<project>" in the current directory |
 
     Scenario: The name given with the command
       When the user types "/project-management:create-project billing"
       Then the skill does not ask for the project name
-      And it asks for the owner, the visibility and the local folder
+      And it asks for the components, the owner, the visibility and the project folder
 
     Scenario: A name that is not lowercase-dash
       When the user gives the project name "Billing App"
@@ -69,11 +71,15 @@ Feature: Create a project
       Then the skill creates nothing
       And it says that "billing-norms" already exists
 
-    Scenario: A local folder already exists
-      Given the folder "billing-code" exists in the local folder
+    Scenario: The project folder already exists
+      Given the project folder "billing" exists
       When the user gives the project name "billing"
       Then the skill creates nothing
-      And it says that the folder "billing-code" already exists
+      And it says that the folder "billing" already exists
+
+    Scenario: A component that is not lowercase-dash
+      When the user gives the component "Web App"
+      Then the skill asks again for the components, in lowercase-dash
 
   Rule: ORC-4 Nothing is created before the user approves the plan
 
@@ -81,7 +87,7 @@ Feature: Create a project
       Given every check passed for the project "billing"
       When the skill shows the plan
       And the user approves it
-      Then the three repositories are created
+      Then the repositories of the plan are created
 
     Scenario: The user does not approve
       Given every check passed for the project "billing"
@@ -89,27 +95,49 @@ Feature: Create a project
       And the user does not approve it
       Then the skill creates nothing
 
-  Rule: ORC-5 Each repository starts with the modules of its layer enabled, as APP-6 says
+  Rule: ORC-5 Each repository starts with the modules of its layer enabled, as APP-6 says, and with the project's project.json
 
     Scenario Outline: The repository of one layer
-      Given the user approved the plan for the project "billing"
+      Given the user approved the plan for the project "billing", with no component
       When the project is created
-      Then the repository "billing-<layer>" exists on GitHub with the chosen owner and visibility
-      And it is cloned in the local folder, beside the other two
-      And its ".claude/settings.json" enables the plugins "utilities" and "<module>", and no other
-      And it holds a "CLAUDE.md" and a "README.md", pushed in its first commit
+      Then the repository "<repository>" exists on GitHub with the chosen owner and visibility
+      And it is cloned in the project folder, in the folder "<repository>"
+      And its ".claude/settings.json" enables the plugins "utilities" and "<module>", and no other plugin
+      And it holds a "CLAUDE.md", a "README.md" and the "project.json" of the project, pushed in its first commit
 
       Examples:
-        | layer | module              |
-        | specs | specs-management    |
-        | norms | norms-management    |
-        | code  | code-implementation |
+        | repository     | module              |
+        | billing-drafts | specs-management    |
+        | billing-specs  | specs-management    |
+        | billing-norms  | norms-management    |
+        | billing-code   | code-implementation |
+
+    Scenario: A project with components
+      Given the user approved the plan for the project "billing", with the components "api" and "web"
+      When the project is created
+      Then layer 3 is the repositories "billing-code-api" and "billing-code-web", and there is no "billing-code"
+      And each of them is created as the repository of one layer
+
+    Scenario Outline: The repositories that people write ask before every commit and push
+      Given the user approved the plan for the project "billing"
+      When the project is created
+      Then the ".claude/settings.json" of "<repository>" holds the rules "ask" "Bash(git commit *)", "Bash(git push *)", "Bash(git * commit *)" and "Bash(git * push *)" (LAY-2)
+
+      Examples:
+        | repository     |
+        | billing-drafts |
+        | billing-specs  |
+
+    Scenario: The project.json of the project
+      Given the user approved the plan for the project "billing", with the owner "acme"
+      When the project is created
+      Then every repository holds the same "project.json", with one entry per repository, its "owner" "acme", its "name", its "layer", its "component" when it has one, and its "path" equal to its "name" (ORC-20)
 
   Rule: ORC-19 A creation that fails halfway removes nothing and reports what exists
 
-    Scenario: GitHub refuses the third repository
+    Scenario: GitHub refuses a repository
       Given the user approved the plan for the project "billing"
-      And the repositories "billing-specs" and "billing-norms" were created
+      And the repositories "billing-drafts", "billing-specs" and "billing-norms" were created
       When GitHub refuses to create "billing-code"
       Then the skill removes nothing
       And it stops
@@ -119,6 +147,6 @@ Feature: Create a project
 
     Scenario: The project was created
       Given the project "billing" was created
-      Then the skill shows the URLs of the three repositories
+      Then the skill shows the URLs of every repository of the project
       And it says to open each repository alone, in its own editor window
 ```

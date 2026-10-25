@@ -4,13 +4,9 @@
 
 Layer 1 of `{{project}}`: its specification, in plain prose, written by
 people. The only source of truth of the project
-([LAY-2](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-2--people-work-in-layer-1)).
+([LAY-2](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-2--people-work-in-layers-0-and-1)).
 
-| Layer | Repository |
-|---|---|
-| 1. Specs | `{{owner}}/{{project}}-specs` (this one) |
-| 2. Norms | `{{owner}}/{{project}}-norms`, regenerated from this one |
-| 3. Code | `{{owner}}/{{project}}-code`, built from layer 2 |
+{{repositories}}
 
 ## Working here
 

@@ -1,8 +1,8 @@
 # specs-management
 
-Layer 1: tools for the people who write a project's specification, in
-`<project>-specs`. Nothing here restricts what people write; the tools only
-help ([LAY-2](../../specs/layers.md#lay-2--people-work-in-layer-1)).
+Layers 0 and 1: tools for the people who write a project's specification, in
+the repositories of layers 0 and 1. Nothing here restricts what people write; the tools only
+help ([LAY-2](../../specs/layers.md#lay-2--people-work-in-layers-0-and-1)).
 
 ## Guideline
 

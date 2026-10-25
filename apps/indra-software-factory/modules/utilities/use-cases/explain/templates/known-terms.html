@@ -1,0 +1,191 @@
+<title>Known terms</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: one narrow column, a header with the count, then the terms as rows of a glossary index */
+  :root {
+    --bg: #f6f7f6;
+    --surface: #ffffff;
+    --fg: #1b2420;
+    --muted: #5d6b64;
+    --line: #dde3df;
+    --accent: #1f6f5c;
+    --danger: #a3361f;
+    --font-body: "IBM Plex Sans", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121715;
+      --surface: #19201d;
+      --fg: #e3ebe7;
+      --muted: #93a39b;
+      --line: #2a3430;
+      --accent: #5cc4a8;
+      --danger: #f08a70;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121715;
+    --surface: #19201d;
+    --fg: #e3ebe7;
+    --muted: #93a39b;
+    --line: #2a3430;
+    --accent: #5cc4a8;
+    --danger: #f08a70;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  main {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding-block: 2.5rem 3rem;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 1.5rem;
+  }
+  header { display: grid; gap: 0.25rem; }
+  h1 {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .lede { margin: 0; color: var(--muted); max-width: 60ch; }
+  .count {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 0.9rem;
+    border-top: 1px solid var(--line);
+  }
+  li:first-child { border-top: 0; }
+  .term {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+  }
+  .date {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  button {
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--danger);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.2rem 0.6rem;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--danger); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .empty, .status { margin: 0; color: var(--muted); }
+  .status.error { color: var(--danger); }
+  code { font-family: var(--font-mono); font-size: 0.9em; }
+</style>
+
+<main>
+  <header>
+    <span class="count" id="count">Loading</span>
+    <h1>Known terms</h1>
+    <p class="lede">Terms that <code>/utilities:explain</code> no longer defines for you. To add one, say during an explanation "ya sé qué es SSH". To hear a term explained again, remove it here.</p>
+  </header>
+  <p class="empty" id="empty" hidden>No known terms yet. The first one you save during an explanation appears here.</p>
+  <ul id="list" hidden></ul>
+  <p class="status" id="status" hidden></p>
+</main>
+
+<script>
+  const listEl = document.getElementById("list");
+  const emptyEl = document.getElementById("empty");
+  const countEl = document.getElementById("count");
+  const statusEl = document.getElementById("status");
+
+  function showStatus(text, isError) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle("error", Boolean(isError));
+    statusEl.hidden = !text;
+  }
+
+  function render(docs, terms) {
+    const rows = docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((r) => typeof r.term === "string")
+      .sort((a, b) => a.term.localeCompare(b.term, undefined, { sensitivity: "base" }));
+    countEl.textContent = rows.length === 1 ? "1 term" : rows.length + " terms";
+    emptyEl.hidden = rows.length > 0;
+    listEl.hidden = rows.length === 0;
+    listEl.replaceChildren(...rows.map((r) => {
+      const li = document.createElement("li");
+      const term = document.createElement("span");
+      term.className = "term";
+      term.textContent = r.term;
+      const date = document.createElement("span");
+      date.className = "date";
+      date.textContent = typeof r.addedAt === "string" ? r.addedAt : "";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "Remove";
+      remove.setAttribute("aria-label", "Remove " + r.term);
+      remove.addEventListener("click", async () => {
+        remove.disabled = true;
+        try {
+          await terms.doc(r.id).delete();
+          showStatus("");
+        } catch (e) {
+          remove.disabled = false;
+          showStatus("Could not remove " + r.term + ": " + (e && e.message ? e.message : "unknown error") + ".", true);
+        }
+      });
+      li.append(term, date, remove);
+      return li;
+    }));
+  }
+
+  (async () => {
+    const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+    if (!db) {
+      countEl.textContent = "Unavailable";
+      showStatus("The list cannot be read here. Open this page signed in to claude.ai.", true);
+      return;
+    }
+    const terms = db.collection("terms");
+    terms.onSnapshot(
+      (snap) => render(snap.docs, terms),
+      (e) => showStatus("The list stopped updating: " + e.message + ". Reload the page.", true)
+    );
+  })();
+</script>

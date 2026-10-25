@@ -2,14 +2,10 @@
 
 ## What this repository is
 
-Layer 3 of `{{project}}`: its code and tests, built by agents from layer 2
+Layer 3 of `{{project}}`: code and tests, built by agents from layer 2
 alone ([LAY-4](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/layers.md#lay-4--layer-3-reads-layer-2-never-layer-1)).
 
-| Layer | Repository |
-|---|---|
-| 1. Specs | `{{owner}}/{{project}}-specs`: never read or written from here |
-| 2. Norms | `{{owner}}/{{project}}-norms`: read only |
-| 3. Code | `{{owner}}/{{project}}-code` (this one) |
+{{repositories}}
 
 ## Working here
 

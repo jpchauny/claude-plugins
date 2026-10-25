@@ -9,7 +9,7 @@ layers: specifications written by people, norms generated from them, code
 built from the norms by agents. A person installs each module where APP-6
 says, and then invokes its use cases.
 
-Every module obeys the rules of the three layers, LAY-1 to LAY-6, in
+Every module obeys the rules of the four layers, LAY-1 to LAY-6, in
 [layers.md](layers.md): they are the foundation of the app, not a module.
 
 ## Terms
@@ -25,7 +25,7 @@ Every module obeys the rules of the three layers, LAY-1 to LAY-6, in
 | Module | Responsibility | Specs |
 |---|---|---|
 | `project-management` | The three repositories of a project: their creation and their life cycle | [module.md](../modules/project-management/specs/module.md) |
-| `specs-management` | Layer 1: the AI recommends how to improve the specs that the authors write | [module.md](../modules/specs-management/specs/module.md) |
+| `specs-management` | Layers 0 and 1: the AI recommends how to improve the specs that the authors write | [module.md](../modules/specs-management/specs/module.md) |
 | `norms-management` | Layer 2: the norms and every specification derived from them | [module.md](../modules/norms-management/specs/module.md) |
 | `code-implementation` | Layer 3: code built from the norms, and its traceability to norm IDs | [module.md](../modules/code-implementation/specs/module.md) |
 | `drift-management` | A drift between specs and code, sent back to layer 1 | [module.md](../modules/drift-management/specs/module.md) |
@@ -43,14 +43,14 @@ of it, is in [development.md](../../../specs/development.md).
   | Module | Where |
   |---|---|
   | `project-management` | At user scope, once per person: its use case `create-project` runs before the repositories of a project exist. |
-  | `specs-management` | Enabled in the `.claude/settings.json` of `<project>-specs` only. |
-  | `norms-management` | Enabled in the `.claude/settings.json` of `<project>-norms` only. |
-  | `code-implementation` | Enabled in the `.claude/settings.json` of `<project>-code` only. |
-  | `utilities` | Enabled in the `.claude/settings.json` of each of the three repositories. |
+  | `specs-management` | Enabled in the `.claude/settings.json` of the repositories of layers 0 and 1 only. |
+  | `norms-management` | Enabled in the `.claude/settings.json` of the repository of layer 2 only. |
+  | `code-implementation` | Enabled in the `.claude/settings.json` of each repository of layer 3 only. |
+  | `utilities` | Enabled in the `.claude/settings.json` of each repository of the project. |
   | `workflow-orchestration`, `drift-management` | Not yet decided: open question 1. |
 
 - **APP-7.** A use case of one layer is not installed outside the repository of its layer (APP-6), so it cannot be invoked there.
 
 ## Open questions
 
-1. Where are `workflow-orchestration` and `drift-management` installed? Both work across the three repositories, and neither has a use case yet.
+1. Where are `workflow-orchestration` and `drift-management` installed? Both work across the repositories of a project, and neither has a use case yet.

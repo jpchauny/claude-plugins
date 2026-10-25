@@ -1,7 +1,7 @@
 # Indra Software Factory
 
 A Claude Code app, published as the plugin marketplace `jpchauny-plugins`, for
-working in three layers: specifications written by people, norms generated
+working in four layers: drafts and specifications written by people, norms generated
 from them, code built from the norms by agents.
 
 The repository is a marketplace of apps, built from specs at four levels:
@@ -34,7 +34,7 @@ claude plugin install project-management@jpchauny-plugins --scope user
 ```
 
 Then, in any session, `/project-management:create-project <name>`. It creates
-the three repositories, each enabling in its `.claude/settings.json`
+the repositories of the four layers, each enabling in its `.claude/settings.json`
 `utilities` and the module of its layer.
 
 ## Add the modules to an existing repository

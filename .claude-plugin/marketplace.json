@@ -1,6 +1,6 @@
 {
   "name": "jpchauny-plugins",
-  "description": "Indra Software Factory: an app of Claude Code plugins for working in three layers - specifications (people), norms (generated), code (agents). Each module is a plugin, installed on its own in the repository of its layer",
+  "description": "Indra Software Factory: an app of Claude Code plugins for working in four layers - drafts and specifications (people), norms (generated), code (agents). Each module is a plugin, installed on its own in the repository of its layer",
   "owner": {
     "name": "Jean Pierre Chauny"
   },
@@ -13,7 +13,7 @@
     {
       "name": "project-management",
       "source": "./apps/indra-software-factory/modules/project-management",
-      "description": "Module project-management: the three repositories of a project, their creation and their life cycle (/project-management:create-project)"
+      "description": "Module project-management: the repositories of a project, their creation and their life cycle (/project-management:create-project)"
     },
     {
       "name": "specs-management",
