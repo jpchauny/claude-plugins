@@ -40,7 +40,7 @@ This section states what promote and demote share. Promoting a spec moves it fro
 ### Rules
 
 - **ORC-35.** Promote and demote run only when the user asks for them (complete list): the user types `/specs-management:promote` or `/specs-management:demote`; the user asks in words to promote or to demote specs. The model must never start a move on its own.
-- **ORC-36.** A plain link `[<text>](<destination>)` becomes the absent link `[<text> (not specified yet)](absent:<destination>)`, and nothing else in it changes. Its meaning, for every reader of layer 1 (complete list of what it states): the link target is not in layer 1; what the target specifies is not specified; a reader must not infer it, implement it or look for it in another repository. The mark names no repository. Rationale: layer 1 must not depend on layer 0 (LAY-1), so the mark says that the spec is missing, not where its draft is.
+- **ORC-36.** A plain link `[<text>](<destination>)` becomes the absent link `[<text> (not specified yet)](absent:<destination>)`, and nothing else in it changes. Its meaning, in every layer, is [LAY-7](../../development-methodology/specs/layers.md#rules). The mark names no repository.
 - **ORC-37.** A move finds the repositories of layers 0 and 1 as [ORC-21](../../project-management/specs/module.md#where-the-repositories-are), ORC-22 and ORC-24 say. It runs from the repository of layer 0 or from that of layer 1, and from no other.
 - **ORC-38.** Valid input: one or more paths of the source. A path names a file, or a folder whose files at `HEAD` are all selected. The paths are relative to the root of the source; the working directory does not change them. When the user asks in words, the paths are those the request names. A path that is empty, is absolute, has a part `.` or `..`, or names the root of the repository is invalid.
 - **ORC-39.** Before it writes anything, the move tests these conditions, and when any holds it writes nothing and lists every one that holds, in this order (complete list):
@@ -102,4 +102,4 @@ This section states what promote and demote share. Promoting a spec moves it fro
   specs-management:<use case>: <layer>: not on its default branch <branch>
   specs-management:<use case>: <layer>: not at origin/<branch>
   ```
-- **ORC-58.** Open: how the norms generator writes an absent link into layer 2. A person must decide it before a project with an absent link in layer 1 generates layer 2.
+- **ORC-58.** The norms generator writes an absent link into layer 2 as it is, as every other byte of a spec, and its meaning there is that of [LAY-7](../../development-methodology/specs/layers.md#rules). Decision of the user, 2026-10-26: no rewriting of absent links in layer 2. Rationale: layer 2 stays a byte-for-byte copy of layer 1 apart from its norm IDs.

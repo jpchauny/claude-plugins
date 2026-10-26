@@ -116,6 +116,12 @@ Factory installed in its repository, as
   annotated, so it cannot be cited exactly; only layer 2 gives each norm a
   stable ID.
 
+- **LAY-7.** An absent link names a spec that is not in layer 1. It is a link of layer 1 whose destination starts with `absent:`, in the form that the promote and demote of `specs-management` write ([ORC-36](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/specs-management/specs/module.md#rules)). What its target would specify is not specified: no agent, of any layer, infers it, implements it, or looks for it in another repository, layer 0 included. The norms generator copies an absent link into layer 2 as it is, so the same holds in layers 2 and 3.
+
+  Rationale: layer 1 keeps only the specs that are reviewed, and a spec still
+  in layer 0 is not law (LAY-1). The mark says that the spec is missing, not
+  where its draft is.
+
 - **LAY-5.** An inconsistency is fixed in layer 1 first. When implementing shows that a norm or a derived norm is wrong, missing or contradictory, layer 3 does not work around it:
 
   1. Layer 3 opens an issue in the repository of layer 1.
