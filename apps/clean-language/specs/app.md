@@ -28,7 +28,7 @@ Factory, not to this app.
 | Module | Responsibility | Specs |
 |---|---|---|
 | `clean-examples` | Layers 0 and 1: the rules of how a Clean example is written, the audit of the examples of a layer, and the hook that refuses a malformed example as it is written | [module.md](../modules/clean-examples/specs/module.md) |
-| `clean-derived-norms` | Layer 2: the derived norms of Clean, each with its own generator, such as the grammar and the semantics | not yet specified |
+| `clean-derived-norms` | Layer 2: the derived norms of Clean, each with its own generator, such as the grammar and the semantics | [module.md](../modules/clean-derived-norms/specs/module.md) |
 
 ## Rules
 

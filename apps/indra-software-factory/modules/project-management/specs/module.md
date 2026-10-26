@@ -28,7 +28,10 @@ The module `project-management` of the app Indra Software Factory, listed in [ap
     - `owner` and `name`: the repository on GitHub, `<owner>/<name>`, unique in the list;
     - `layer`: `0`, `1`, `2` or `3`;
     - `component`: the component of a repository of layer 3, only when layer 3 has one repository per component;
-    - `path`: where the repository is, relative to the project folder, its parts separated by `/`, none of them empty, `.` or `..`.
+    - `path`: where the repository is, relative to the project folder, its parts separated by `/`, none of them empty, `.` or `..`;
+  - `derived_norms`: optional; the derived norms of the project, in the order they are generated, one entry per type, with
+    - `type`: the name of the folder of its output under `specs-derived/`, lower-case letters, digits and `-`, unique in the list;
+    - `use_case`: the use case that generates it, `/<module>:<use case>`, a use case of a module of some app of the marketplace ([NRM-1](../../norms-management/specs/module.md#derive-the-derived-norms)).
 
   The list holds exactly one entry of each of the layers 0, 1 and 2. Layer 3 is either one entry without `component`, or one or more entries each with a different `component` ([LAY-1](../../development-methodology/specs/layers.md#rules)). For example:
 

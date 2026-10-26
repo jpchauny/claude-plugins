@@ -1,0 +1,9 @@
+{
+  "name": "clean-derived-norms",
+  "version": "0.1.0",
+  "description": "Module clean-derived-norms of the app Clean Language, layer 2: the derived norms of Clean, one generator per type - the Lark grammar of Clean (/clean-derived-norms:derive-grammar) - run by /norms-management:build",
+  "author": {
+    "name": "Jean Pierre Chauny"
+  },
+  "skills": "./use-cases/"
+}
