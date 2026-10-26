@@ -14,7 +14,7 @@ developed in [specs/development.md](specs/development.md), and this app in
 |--------|----------|
 | `development-methodology` | None: it gives every session an index of the development methodology (the four layers, the flow, their terms) |
 | `project-management` | Create a project (`/project-management:create-project`) |
-| `specs-management` | Recommend improvements to the specs (`/specs-management:audit`) |
+| `specs-management` | Recommend improvements to the specs (`/specs-management:audit`); move specs between layers 0 and 1 (`/specs-management:promote`, `/specs-management:demote`) |
 | `norms-management` | Regenerate the norms (`/norms-management:build`, `/norms-management:verify`) |
 | `code-implementation` | Implement the changed norms (not yet built) |
 | `drift-management` | Report a drift (not yet built) |

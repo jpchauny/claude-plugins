@@ -32,7 +32,7 @@ every repository of a project.
 |---|---|---|
 | `development-methodology` | The development methodology: the four layers, the flow of a run across them, and their terms; an index of it in every session of every repository of a project | [module.md](../modules/development-methodology/specs/module.md) |
 | `project-management` | The repositories of a project: their creation and their life cycle | [module.md](../modules/project-management/specs/module.md) |
-| `specs-management` | Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write | [module.md](../modules/specs-management/specs/module.md) |
+| `specs-management` | Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write, and moves specs between the two layers | [module.md](../modules/specs-management/specs/module.md) |
 | `norms-management` | Layer 2: the norms and the derived norms | [module.md](../modules/norms-management/specs/module.md) |
 | `code-implementation` | Layer 3: code built from the norms and the derived norms, and its traceability to norm IDs | [module.md](../modules/code-implementation/specs/module.md) |
 | `drift-management` | A drift between the norms and the code, sent back to layer 1 | [module.md](../modules/drift-management/specs/module.md) |

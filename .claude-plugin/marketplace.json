@@ -23,7 +23,7 @@
     {
       "name": "specs-management",
       "source": "./apps/indra-software-factory/modules/specs-management",
-      "description": "Module specs-management, layer 1: the AI recommends how to improve the specs that the authors write (/specs-management:audit)"
+      "description": "Module specs-management, layers 0 and 1: the AI recommends how to improve the specs that the authors write (/specs-management:audit), and moves specs between layers 0 and 1 (/specs-management:promote, /specs-management:demote)"
     },
     {
       "name": "norms-management",

@@ -13,11 +13,19 @@ this module apply it.
 
 ## Tools
 
-None yet. Specified:
-
 - `/specs-management:audit`: audits the specs of a layer 1 repository against
   writing-specs.md and recommends rewrites, in the chat
-  ([specs/specs-audit.md](use-cases/audit/specs/audit.md)).
+  ([specs/audit.md](use-cases/audit/specs/audit.md)).
+- `/specs-management:promote <path>...`: moves draft specs from layer 0 to
+  layer 1, at the same path, and turns the absent links that point at them
+  back into plain links ([specs/promote.md](use-cases/promote/specs/promote.md)).
+- `/specs-management:demote <path>...`: moves specs from layer 1 back to
+  layer 0, and marks the links of layer 1 that point at them as absent links,
+  `[text (not specified yet)](absent:path)`
+  ([specs/demote.md](use-cases/demote/specs/demote.md)).
+
+Promote and demote share [scripts/move.py](scripts/move.py) and the rules of
+[specs/module.md](specs/module.md#move-specs-between-layers-0-and-1).
 
 Planned:
 
