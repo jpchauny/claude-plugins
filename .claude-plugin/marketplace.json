@@ -44,6 +44,11 @@
       "name": "workflow-orchestration",
       "source": "./apps/indra-software-factory/modules/workflow-orchestration",
       "description": "Module workflow-orchestration: runs the flow across the modules - what triggers a run, and how each step runs in its repository"
+    },
+    {
+      "name": "clean-examples",
+      "source": "./apps/clean-language/modules/clean-examples",
+      "description": "Module clean-examples of the app Clean Language, layers 0 and 1: the rules of how a Clean example is written, the audit of the examples of a layer (/clean-examples:audit), and a hook that refuses a malformed example as it is written"
     }
   ]
 }

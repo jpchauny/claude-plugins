@@ -1,0 +1,8 @@
+{
+  "name": "clean-examples",
+  "description": "Module clean-examples of the app Clean Language, layers 0 and 1: the rules of how a Clean example is written, the audit of the examples of a layer (/clean-examples:audit), and a hook that refuses a malformed example as it is written",
+  "author": {
+    "name": "Jean Pierre Chauny"
+  },
+  "skills": "./use-cases/"
+}

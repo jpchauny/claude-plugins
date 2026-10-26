@@ -21,6 +21,7 @@
   | App | Folder |
   |---|---|
   | Indra Software Factory | [apps/indra-software-factory/](../apps/indra-software-factory/specs/app.md) |
+  | Clean Language | [apps/clean-language/](../apps/clean-language/specs/app.md) |
 
 - **MKT-3.** `.claude-plugin/marketplace.json` lists every plugin of every app, one per module, with the folder of each.
 - **MKT-4.** A person adds the marketplace once:
