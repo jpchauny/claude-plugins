@@ -30,7 +30,6 @@ import difflib
 import hashlib
 import json
 import os
-import posixpath
 import re
 import shlex
 import subprocess
@@ -39,7 +38,9 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import layers  # noqa: E402
 import mdlinks  # noqa: E402
+from layers import has_scheme, link_target, owner_name  # noqa: E402,F401
 
 PART = 20000
 SUFFIX = " (not specified yet)"
@@ -104,48 +105,28 @@ def rev(repo, ref):
     return git(repo, "rev-parse", "--verify", "-q", ref, check=False).stdout.decode().strip()
 
 
-def owner_name(url):
-    m = re.search(r"[:/]([^/:]+)/([^/]+?)(?:\.git)?/?$", url.strip())
-    return f"{m.group(1)}/{m.group(2)}" if m else None
-
-
 # ---------------------------------------------------------------- repositories (ORC-37)
 
 def find_repos(repo, uc):
     """Return {0: path, 1: path}, the repositories of layers 0 and 1, as ORC-21, ORC-22 and ORC-24 say."""
+    def origin():
+        p = git(repo, "remote", "get-url", "origin", check=False)
+        return p.stdout.decode() if p.returncode == 0 else None
+
     try:
-        own = (repo / "project.json").read_bytes()
-        entries = json.loads(own)["repositories"]
-    except (OSError, ValueError, KeyError, TypeError):
-        raise Refused([f"specs-management:{uc}: project.json is missing or does not have the form of ORC-20"])
-    origin = git(repo, "remote", "get-url", "origin", check=False)
-    me = owner_name(origin.stdout.decode()) if origin.returncode == 0 else None
-    mine = [e for e in entries if f"{e.get('owner')}/{e.get('name')}" == me]
-    if not mine:
-        raise Refused([f"specs-management:{uc}: this repository is not in project.json"])
-    if mine[0].get("layer") not in (0, 1):
-        raise Refused([f"specs-management:{uc}: runs only from the repository of layer 0 or of layer 1"])
-    folder = repo
-    for _ in Path(mine[0]["path"]).parts:
-        folder = folder.parent
-    found = {}
-    for layer in (0, 1):
-        e = next((e for e in entries if e.get("layer") == layer), None)
-        if e is None:
-            raise Refused([f"specs-management:{uc}: project.json has no repository of layer {layer}"])
-        path = (folder / e["path"]).resolve()
-        if not (path / ".git").exists():
-            raise Refused([f"specs-management:{uc}: {e['owner']}/{e['name']} is not at {path}; "
-                           f"clone it: git clone https://github.com/{e['owner']}/{e['name']} {path}"])
-        found[layer] = path
-    try:
-        same = (found[1] / "project.json").read_bytes() == own
-    except OSError:
-        same = False
-    if not same:
-        raise Refused([f"specs-management:{uc}: project.json differs from the copy of layer 1; "
-                       "run /project-management:sync"])
-    return found
+        return layers.locate(repo, origin)[1]
+    except layers.NotFound as e:
+        i = e.info
+        line = {
+            "form": "project.json is missing or does not have the form of ORC-20",
+            "not_listed": "this repository is not in project.json",
+            "layer": "runs only from the repository of layer 0 or of layer 1",
+            "no_layer": f"project.json has no repository of layer {i.get('layer')}",
+            "missing": f"{i.get('owner')}/{i.get('name')} is not at {i.get('path')}; "
+                       f"clone it: git clone https://github.com/{i.get('owner')}/{i.get('name')} {i.get('path')}",
+            "differs": "project.json differs from the copy of layer 1; run /project-management:sync",
+        }[e.code]
+        raise Refused([f"specs-management:{uc}: {line}"])
 
 
 # ---------------------------------------------------------------- links (terms Link, Absent link, Link target)
@@ -158,16 +139,16 @@ def encode(text):
     return text.encode("utf-8", "surrogateescape")
 
 
-def has_scheme(dest):
-    return re.match(r"^[A-Za-z][A-Za-z0-9+.-]{1,31}:", dest) is not None
+def text_lines(data):
+    """The lines of `data` as git splits them, at each "\\n" only, each with its line end."""
+    return re.findall(r"[^\n]*\n|[^\n]+$", decode(data))
 
 
-def link_target(file, dest_path):
-    """The link target of a destination path, or None when it resolves outside the repository."""
-    joined = posixpath.normpath(posixpath.join(posixpath.dirname(file), dest_path))
-    if joined == ".." or joined.startswith("../") or joined.startswith("/"):
-        return None
-    return "" if joined == "." else joined.rstrip("/")
+def diff_lines(lines):
+    """The lines of a unified diff, each with its line end; a line that had none is followed by
+    git's marker, so that it never runs into the next line of the diff."""
+    for line in lines:
+        yield line if line.endswith("\n") else line + "\n\\ No newline at end of file\n"
 
 
 def split_dest(raw, angle):
@@ -395,7 +376,9 @@ def make_plan(uc, repo, paths):
     def command(layer):
         r = shlex.quote(str(repos[layer]))
         ps = " ".join(shlex.quote(p) for p in side_paths[layer])
-        return (f"git -C {r} commit -q -m {shlex.quote(message[layer])} -m {shlex.quote(chr(10).join(moved))}"
+        # --literal-pathspecs: a path with `*`, `?` or `[` names that file only, never another (ORC-69).
+        g = f"git --literal-pathspecs -C {r}"
+        return (f"{g} commit -q -m {shlex.quote(message[layer])} -m {shlex.quote(chr(10).join(moved))}"
                 f" -- {ps} && git -C {r} push -q origin HEAD:{branches[layer]}")
 
     def fingerprint(layer, *extra):
@@ -423,9 +406,9 @@ def render(uc, moved, writes, sl, tl, trees, content1, content_src, st, loose, m
         for p in sorted(writes[layer]):
             old = content_src[st[p][1]] if p in st and p in moved else content1[trees[1][p][1]]
             if writes[layer][p] != old:
-                a = decode(old).splitlines(keepends=True)
-                b = decode(writes[layer][p]).splitlines(keepends=True)
-                diffs.append("".join(difflib.unified_diff(a, b, f"a/{p}", f"b/{p}", n=0)))
+                a = text_lines(old)
+                b = text_lines(writes[layer][p])
+                diffs.append("".join(diff_lines(difflib.unified_diff(a, b, f"a/{p}", f"b/{p}", n=0))))
     out += ["", "Rewritten links:" if diffs else "Rewritten links: none"] + diffs
     if loose:
         out += ["", "Untracked files of layer 1 that link to a moved file:"]
@@ -439,6 +422,7 @@ def render(uc, moved, writes, sl, tl, trees, content1, content_src, st, loose, m
 # ---------------------------------------------------------------- apply and rollback
 
 def write_side(plan, side):
+    # --literal-pathspecs: a path with `*`, `?` or `[` names that file only, never another (ORC-69).
     r = Path(plan["repos"][side])
     writes = plan["writes"][side]
     if side == "target":
@@ -446,14 +430,14 @@ def write_side(plan, side):
             (r / p).parent.mkdir(parents=True, exist_ok=True)
             (r / p).write_bytes(data)
         if plan["paths"]["target"]:
-            git(r, "add", "--", *plan["paths"]["target"])
+            git(r, "--literal-pathspecs", "add", "--", *plan["paths"]["target"])
     else:
-        git(r, "rm", "-q", "--", *plan["moved"])
+        git(r, "--literal-pathspecs", "rm", "-q", "--", *plan["moved"])
         rest = [p for p in writes if p not in plan["moved"]]
         for p in rest:
             (r / p).write_bytes(writes[p])
         if rest:
-            git(r, "add", "--", *rest)
+            git(r, "--literal-pathspecs", "add", "--", *rest)
 
 
 def rollback(repo, paths):
@@ -462,7 +446,7 @@ def rollback(repo, paths):
     created = [p for p in paths if p not in head]
     kept = [p for p in paths if p in head]
     if created:
-        unstaged = git(repo, "rm", "-q", "--cached", "--ignore-unmatch", "--", *created, check=False)
+        unstaged = git(repo, "--literal-pathspecs", "rm", "-q", "--cached", "--ignore-unmatch", "--", *created, check=False)
         for p in created:
             f = repo / p
             if f.is_file() or f.is_symlink():
@@ -479,7 +463,7 @@ def rollback(repo, paths):
         for p in kept:
             (repo / p).parent.mkdir(parents=True, exist_ok=True)
             (repo / p).write_bytes(data[head[p][1]])
-        git(repo, "add", "--", *kept)
+        git(repo, "--literal-pathspecs", "add", "--", *kept)
 
 
 # ---------------------------------------------------------------- main
