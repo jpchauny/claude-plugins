@@ -91,8 +91,16 @@ def leading(line):
 def contents(lines):
     """Per line: its text without the markers and the indentation of its block quotes and list items, or None
     inside an HTML comment (CommonMark 5.1, 5.2, 4.6, adopted in part)."""
-    out, cols, in_html = [], [], False
+    out, cols, in_html, fence = [], [], False, None  # fence: the close pattern of the open fenced block
     for raw in lines:
+        if fence:
+            line = raw
+            while QUOTE.match(line):
+                line = QUOTE.sub("", line, count=1)
+            base = cols[-1] if cols else 0
+            out.append(line[base:] if leading(line) >= base else line.lstrip(" "))
+            fence = None if fence.match(out[-1]) else fence  # inside it, no HTML comment and no list item
+            continue
         if in_html:
             out.append(None)
             in_html = "-->" not in raw
@@ -117,6 +125,9 @@ def contents(lines):
                 line = " " * (base + width) + line[base + m.end():]
         base = cols[-1] if cols else 0
         out.append(line[base:] if leading(line) >= base else line.lstrip(" "))
+        m = FENCE_OPEN.match(out[-1])
+        if m and len(m.group(1)) <= 3 and not (m.group(2)[0] == "`" and "`" in m.group(3)):
+            fence = re.compile("^ {0,3}" + re.escape(m.group(2)[0]) + "{" + str(len(m.group(2))) + r",}[ \t]*$")
     return out
 
 

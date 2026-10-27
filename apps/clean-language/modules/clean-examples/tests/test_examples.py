@@ -217,6 +217,10 @@ class Markdown(unittest.TestCase):
         self.assertEqual(rules("<!--\n```clean\nstart:\n```\n### SYN011 — X\n-->\n"), [])
         self.assertEqual(ex.headings("<!--\n### SYN011 — X\n-->\n"), [])
 
+    def test_html_comment_inside_a_fenced_block_is_code(self):
+        self.assertEqual(rules("```html\n<!-- a -->\n<!--\n```\n\n```clean\nstart:\n```\n"), [(6, "CEX-2")])
+        self.assertEqual(rules("```text\n- item\n```\n```clean\nstart:\n```\n"), [(4, "CEX-2")])
+
     def test_list_items(self):
         self.assertEqual(rules("- item\n\n  ```clean\n  start:\n  ```\n"), [(3, "CEX-2")])
         self.assertEqual(rules("- ```clean\n  start:\n  ```\n"), [(1, "CEX-2")])
