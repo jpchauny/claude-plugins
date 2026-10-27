@@ -1,6 +1,6 @@
 {
   "name": "drift-management",
-  "description": "Module drift-management: a drift between specs and code, sent back to layer 1",
+  "description": "Module drift-management: a drift found while defining acceptance (layer 3) or implementing (layer 4), sent back to layer 1",
   "author": {
     "name": "Jean Pierre Chauny"
   }

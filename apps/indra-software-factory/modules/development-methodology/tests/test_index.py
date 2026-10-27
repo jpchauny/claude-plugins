@@ -62,12 +62,12 @@ class Base(unittest.TestCase):
     def expected(self, layer_lines, module_lines):
         r = self.root
         return ("Development methodology of Indra Software Factory (plugin development-methodology).\n"
-                "This repository is one repository of a project, in one of four layers:\n"
+                "This repository is one repository of a project, in one of five layers:\n"
                 + "".join(line + "\n" for line in layer_lines)
                 + "The modules of the app, each one a plugin, and where each is installed:\n"
                 + "".join(line + "\n" for line in module_lines)
                 + "Read for detail, before answering about the process:\n"
-                "- The four layers, their rules, their terms, and where each module is installed: %s/specs/layers.md\n"
+                "- The five layers, their rules, their terms, and where each module is installed: %s/specs/layers.md\n"
                 "- The flow across the layers (a run, its steps and hand-offs): %s/specs/flow.md\n"
                 "- What carries the methodology to every repository: %s/specs/module.md\n"
                 "- What each module of the app does: %s\n" % (r, r, r, APP_URL)).encode("utf-8")
@@ -113,10 +113,10 @@ class Index(Base):
     def test_cells_keep_their_characters(self):
         """MTH-6: each cell without the spaces around it, every other character as it is."""
         self.write_layers("| Layer | Recommended name | Holds | Written by |\n|---|---|---|---|\n"
-                          "|  3. Code  | `a`, or `b-<c>`  |  Code — and tests |Agents|\n\n" + MODULES_TABLE)
+                          "|  4. Code  | `a`, or `b-<c>`  |  Code — and tests |Agents|\n\n" + MODULES_TABLE)
         status, out, _ = run(self.script)
         self.assertEqual(status, 0)
-        self.assertIn("- 3. Code: Code — and tests; written by: Agents; repository: `a`, or `b-<c>`\n"
+        self.assertIn("- 4. Code: Code — and tests; written by: Agents; repository: `a`, or `b-<c>`\n"
                       .encode("utf-8"), out)
 
     def test_binding_example(self):
@@ -127,7 +127,7 @@ class Index(Base):
         lines = out.decode("utf-8").split("\n")
         self.assertEqual(lines[2], "- 0. Drafts: The draft specs, in plain prose; written by: People; "
                                    "repository: `<project>-drafts`")
-        self.assertEqual(lines[6], "The modules of the app, each one a plugin, and where each is installed:")
+        self.assertEqual(lines[7], "The modules of the app, each one a plugin, and where each is installed:")
 
     def test_no_rule_restated(self):
         """MTH-7: besides the rows of the two tables, only the fixed lines, the paths and the URL."""
@@ -135,7 +135,7 @@ class Index(Base):
         _, out, _ = run(self.script)
         lines = out.decode("utf-8").split("\n")
         self.assertEqual(lines[-1], "")
-        self.assertEqual(len(lines) - 1, 2 + 4 + 1 + 7 + 5)  # header, four layers, the seven rows of APP-6, the documents
+        self.assertEqual(len(lines) - 1, 2 + 5 + 1 + 8 + 5)  # header, five layers, the eight rows of APP-6, the documents
         self.assertNotRegex(out.decode("utf-8"), r"(LAY|ORC|MTH|FLW)-\d")
 
 

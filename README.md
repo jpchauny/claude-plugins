@@ -1,8 +1,10 @@
 # Indra Software Factory
 
 A Claude Code app, published as the plugin marketplace `jpchauny-plugins`, for
-working in four layers: draft specs and specs written by people, norms and
-derived norms generated from them, code built from the norms and the derived norms by agents.
+working in five layers: draft specs and specs written by people, norms and
+derived norms generated from them, acceptance areas and acceptance units that
+agents write from the norms and people approve, and code built from the norms
+and the derived norms by agents.
 
 The repository is a marketplace of apps, built from specs at four levels:
 marketplace, app, module and use case, each with its folder `specs/`. The
@@ -12,11 +14,12 @@ developed in [specs/development.md](specs/development.md), and this app in
 
 | Module (plugin) | Use cases |
 |--------|----------|
-| `development-methodology` | None: it gives every session an index of the development methodology (the four layers, the flow, their terms) |
+| `development-methodology` | None: it gives every session an index of the development methodology (the five layers, the flow, their terms) |
 | `project-management` | Create a project (`/project-management:create-project`) |
 | `specs-management` | Recommend improvements to the specs (`/specs-management:audit`); write draft specs from an interview (`/specs-management:write`); move specs between layers 0 and 1 (`/specs-management:promote`, `/specs-management:demote`) |
 | `norms-management` | Regenerate the norms (`/norms-management:build`, `/norms-management:verify`) |
-| `code-implementation` | Implement the changed norms (not yet built) |
+| `acceptance-management` | None yet: the acceptance areas, the acceptance units and their acceptance tests, and when a unit, an area and an increment are done; a hook that keeps layer 3 out of the code repositories |
+| `code-implementation` | Implement an acceptance unit (not yet built); a hook that keeps layer 4 from writing in the acceptance repository |
 | `drift-management` | Report a drift (not yet built) |
 | `workflow-orchestration` | Run the flow (not yet built) |
 | `utilities` | Explore (`/utilities:explore`); the issue tree (`/utilities:issue`, `/utilities:tree`, `/utilities:baseline`); explain one step at a time (`/utilities:explain`); recap the session (`/utilities:recap`) |
@@ -35,14 +38,14 @@ claude plugin install project-management@jpchauny-plugins --scope user
 ```
 
 Then, in any session, `/project-management:create-project <name>`. It creates
-the repositories of the four layers, each enabling in its `.claude/settings.json`
+the repositories of the five layers, each enabling in its `.claude/settings.json`
 `development-methodology`, `utilities` and the module of its layer.
 
 ## Add the modules to an existing repository
 
 In the repository (the commands write `.claude/settings.json`; commit it),
 with `<module>` the module of its layer: `specs-management`,
-`norms-management` or `code-implementation`:
+`norms-management`, `acceptance-management` or `code-implementation`:
 
 ```sh
 claude plugin marketplace add jpchauny/claude-plugins --scope project
@@ -50,6 +53,30 @@ claude plugin install development-methodology@jpchauny-plugins --scope project
 claude plugin install utilities@jpchauny-plugins --scope project
 claude plugin install <module>@jpchauny-plugins --scope project
 ```
+
+These commands only enable the plugins. `/project-management:create-project`
+also writes, in the `.claude/settings.json` of each repository, the rules of
+[ORC-5](apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md)
+that these commands do not write; add them by hand:
+
+- **`ask`** in the repositories of layers 0, 1 and 3: `Bash(git commit *)`,
+  `Bash(git push *)`, `Bash(git * commit *)` and `Bash(git * push *)`, since a
+  person approves every change there.
+- **`deny`** in the repositories of layers 3 and 4: the acceptance repository
+  denies `Read` and `Edit` of each code repository, and each code repository
+  denies `Edit` of the acceptance repository, as
+  `Read(//**/<repository>/**)` and `Edit(//**/<repository>/**)`.
+  `/project-management:sync` keeps them in step with `project.json`
+  ([SNC-1](apps/indra-software-factory/modules/project-management/use-cases/sync/specs/sync.md)).
+
+The hooks need nothing in the repository: they work as soon as their plugin is
+enabled, and read the paths of the other repositories from `project.json`.
+`acceptance-management` keeps layer 3 out of the code repositories
+([ACU-38](apps/indra-software-factory/modules/acceptance-management/specs/module.md)),
+and `code-implementation` keeps layer 4 from writing in the acceptance
+repository
+([CIM-1](apps/indra-software-factory/modules/code-implementation/specs/module.md));
+those clauses list the tools each one checks.
 
 
 ### How `utilities` works

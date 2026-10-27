@@ -87,11 +87,17 @@ Feature: Promote draft specs
       Then the skill writes nothing
       And it says "specs-management:promote: expected at least one path"
 
-    Scenario: Invoked from layer 2
-      Given the working directory is the repository of layer 2
+    Scenario Outline: Invoked from a layer other than 0 and 1
+      Given the working directory is a repository of layer <layer>
       When the user types "/specs-management:promote specs/a.md"
       Then the skill writes nothing
       And it says "specs-management:promote: runs only from the repository of layer 0 or of layer 1"
+
+      Examples:
+        | layer |
+        | 2     |
+        | 3     |
+        | 4     |
 
   Rule: ORC-52 The skill shows the move, commits only after the user's yes, and reports each commit
 

@@ -7,8 +7,16 @@ Reads project.json at the commit HEAD of the repository of layer 1 (ORC-29),
 finds the entry of that repository by its remote origin (ORC-21), and prints
 one JSON object: the source commit, the source bytes' path in a temporary
 file, and for each target its name, its absolute path and its state:
-"differs", "same" or "skipped" with a reason (ORC-32). Writes nothing in any
-repository.
+"differs", "same" or "skipped" with a reason (ORC-32). For each target of
+layer 3 or 4 it also compares the rules "deny" of its .claude/settings.json
+with those that ORC-5 writes for the source (SNC-1): it replaces the managed
+rules, those that name a repository of layer 3 or 4 of the source, of the
+target's project.json before the sync or of any version of it committed in
+the target, and keeps every other rule, and gives
+"settings_state": "differs", "same" or "skipped" with "settings_reason"; when
+it differs, "settings_file" is a temporary file with the whole new
+.claude/settings.json, its rules "deny" replaced and every other setting
+kept. Writes nothing in any repository.
 """
 
 import argparse
@@ -19,6 +27,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from deny_rules import deny_rules, managed, merged  # noqa: E402  (the module's shared code, DEV-7)
+
 
 def git(repo: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-C", str(repo), *args], capture_output=True)
@@ -27,6 +38,67 @@ def git(repo: Path, *args: str) -> subprocess.CompletedProcess:
 def owner_name(url: str) -> str | None:
     m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$", url.strip())
     return f"{m.group(1)}/{m.group(2)}" if m else None
+
+
+def temporary(data: bytes, suffix: str) -> str:
+    tmp = tempfile.NamedTemporaryFile(prefix="sync-", suffix=suffix, delete=False)
+    tmp.write(data)
+    tmp.close()
+    return tmp.name
+
+
+def repos_of(text: bytes | str) -> list[dict]:
+    """The repositories of one version of project.json, or none when it has
+    not the form of ORC-20."""
+    try:
+        repos = json.loads(text)["repositories"]
+        return [r for r in repos if isinstance(r, dict) and "path" in r]
+    except (ValueError, KeyError, TypeError):
+        return []
+
+
+def previous_repos(path: Path) -> list[dict]:
+    """The repositories of the project.json of the target before the sync and
+    of every version of it committed in the target (SNC-1), so that a rule
+    stays managed after a sync that wrote project.json but skipped the
+    settings."""
+    repos = []
+    try:
+        repos += repos_of((path / "project.json").read_bytes())
+    except OSError:
+        pass
+    log = git(path, "log", "--format=%H", "--", "project.json")
+    for commit in log.stdout.decode().split() if not log.returncode else []:
+        shown = git(path, "show", f"{commit}:project.json")
+        if not shown.returncode:
+            repos += repos_of(shown.stdout)
+    return repos
+
+
+def settings_plan(path: Path, repos: list[dict], entry: dict) -> dict:
+    """The rules "deny" of a target of layer 3 or 4, against the source (SNC-1)."""
+    settings = path / ".claude" / "settings.json"
+    if not settings.is_file():
+        return {"settings_state": "skipped", "settings_reason": "no .claude/settings.json"}
+    if git(path, "status", "--porcelain", "--", ".claude/settings.json").stdout.strip():
+        return {"settings_state": "skipped", "settings_reason": "uncommitted changes in .claude/settings.json"}
+    try:
+        data = json.loads(settings.read_text(encoding="utf-8"))
+        permissions = data.setdefault("permissions", {})
+        current = permissions.get("deny", [])
+        assert isinstance(permissions, dict) and isinstance(current, list)
+        assert all(isinstance(rule, str) for rule in current)
+    except (ValueError, AttributeError, AssertionError):
+        return {"settings_state": "skipped", "settings_reason": ".claude/settings.json is not a JSON object of Claude Code"}
+    wanted = merged(current, deny_rules(repos, entry), managed(repos, previous_repos(path)))
+    if wanted == current:
+        return {"settings_state": "same"}
+    if wanted:
+        permissions["deny"] = wanted
+    else:
+        permissions.pop("deny", None)
+    text = json.dumps(data, indent=2) + "\n"
+    return {"settings_state": "differs", "deny": wanted, "settings_file": temporary(text.encode("utf-8"), ".json")}
 
 
 def main(argv: list[str]) -> int:
@@ -61,9 +133,7 @@ def main(argv: list[str]) -> int:
     for _ in rel.parts:
         folder = folder.parent
 
-    tmp = tempfile.NamedTemporaryFile(prefix="project-", suffix=".json", delete=False)
-    tmp.write(source)
-    tmp.close()
+    source_file = temporary(source, ".json")
     commit = git(repo, "rev-parse", "HEAD").stdout.decode().strip()
 
     targets = []
@@ -85,8 +155,10 @@ def main(argv: list[str]) -> int:
                 current = path / "project.json"
                 same = current.is_file() and current.read_bytes() == source
                 t |= {"state": "same" if same else "differs", "branch": default}
+                if r["layer"] in (3, 4):
+                    t |= settings_plan(path, data["repositories"], r)
         targets.append(t)
-    print(json.dumps({"source_commit": commit, "source_file": tmp.name, "targets": targets}, indent=2))
+    print(json.dumps({"source_commit": commit, "source_file": source_file, "targets": targets}, indent=2))
     return 0
 
 

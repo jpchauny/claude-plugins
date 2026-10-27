@@ -1,0 +1,222 @@
+# The continuous integration of the acceptance repository of {{project}}:
+# the only run of the acceptance tests that is evidence (ACU-34).
+# Written by /project-management:create-project (CRP-1).
+#
+# It runs every hour, and on a push to the default branch that changes a file
+# outside records/. No code repository sends it any event, and none holds a
+# credential of this repository (ACU-13, level 3). In each run it reads the
+# reference commit of each code repository, and runs the acceptance tests only
+# as ACU-34 says: it obtains the product as "product" of acceptance.json says
+# (ACU-6), runs "test_command", and adds the result of each test to records/
+# (ACU-35). What it does exactly is in the docstring of acceptance_ci.py, in
+# the plugin acceptance-management, which it runs at its latest version
+# (LAY-6).
+#
+# The acceptance repository is checked out in acceptance/ and the plugin in
+# claude-plugins/, side by side, and the scratch folder of acceptance_ci.py is
+# under $RUNNER_TEMP: nothing but records/ is written inside the acceptance
+# repository, and ACCEPTANCE_REPORT is outside it (ACU-34).
+#
+# The code of layer 4 (each "build" of "product", and the product that the
+# tests run) runs only in the job "run", which holds no credential that can
+# write this repository: its checkouts keep no token, and its GITHUB_TOKEN can
+# only read. The job "record" pushes records/, takes from the job "run" only
+# the files records/*.jsonl, and runs no code of layer 4 (ACU-13, level 3).
+# Since the code of layer 4 could rewrite records/ in the job "run", the job
+# "record" takes a file only when it keeps every recorded line byte for byte
+# and adds only lines of kind "test" of this run, with one date later than
+# the date of every recorded line of kind "test" (ACU-34, steps 3 and 6;
+# ACU-35); otherwise it fails and records nothing.
+# The acceptance repository is checked out with its whole history, so that
+# step 3 of ACU-34 can compare the "acceptance_commit" of the last recorded
+# run with HEAD.
+#
+# Secret it needs: CODE_READ_TOKEN, a token with read-only access to the
+# contents of every code repository of the project (ACU-34). No session of
+# layer 3 holds it (LAY-8). Only the step "Write the token to a file" has it in
+# its environment: it writes it to $RUNNER_TEMP/code-read-token, outside the
+# acceptance repository, and the step that runs acceptance_ci.py passes that
+# file with --token-file; the script deletes the file as soon as it reads it,
+# so the token is never in the environment of the run (ACU-34).
+#
+# In a public repository GitHub disables the schedule after 60 days without
+# activity in this repository; a push to a code repository is not activity
+# here. Enable the workflow again in Actions when that happens (ORC-6).
+name: acceptance
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "records/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acceptance
+  cancel-in-progress: false
+
+jobs:
+  run:
+    # Disabled until the continuous integration is put to use: the job runs
+    # only when the repository variable ACCEPTANCE_CI_ENABLED is "true".
+    if: vars.ACCEPTANCE_CI_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      commit: ${{ steps.collect.outputs.commit }}
+      records: ${{ steps.collect.outputs.records }}
+    defaults:
+      run:
+        working-directory: acceptance
+    steps:
+      - name: Check out the acceptance repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: acceptance
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out the plugin acceptance-management
+        uses: actions/checkout@v4
+        with:
+          repository: jpchauny/claude-plugins
+          ref: main
+          path: claude-plugins
+          sparse-checkout: apps/indra-software-factory/modules/acceptance-management
+          persist-credentials: false
+      - name: Write the token to a file
+        env:
+          CODE_READ_TOKEN: ${{ secrets.CODE_READ_TOKEN }}
+        run: |
+          umask 077
+          printf '%s' "$CODE_READ_TOKEN" > "$RUNNER_TEMP/code-read-token"
+      - name: Run the acceptance tests and record them
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 -I ../claude-plugins/apps/indra-software-factory/modules/acceptance-management/scripts/acceptance_ci.py \
+            --repo . --work "$RUNNER_TEMP/acceptance" --produced-by "$RUN_URL" \
+            --token-file "$RUNNER_TEMP/code-read-token"
+      - name: Collect the records
+        id: collect
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ -n "$(git status --porcelain -- records)" ]; then
+            echo "records=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Upload the records
+        if: steps.collect.outputs.records == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: records
+          path: acceptance/records/*.jsonl
+          retention-days: 1
+
+  record:
+    needs: run
+    if: needs.run.outputs.records == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: acceptance
+    steps:
+      - name: Check out the acceptance repository at the commit of the run
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.run.outputs.commit }}
+          path: acceptance
+          fetch-depth: 0
+      - name: Download the records
+        uses: actions/download-artifact@v4
+        with:
+          name: records
+          path: ${{ runner.temp }}/records
+      - name: Check and take the records
+        env:
+          COMMIT: ${{ needs.run.outputs.commit }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git switch -q -C main
+          python3 -I - "$RUNNER_TEMP/records" "$COMMIT" "$RUN_URL" <<'PY'
+          # The lines of records/ are only added (ACU-35). Each downloaded file must
+          # start with the exact bytes of records/<name> at the commit of the run,
+          # and each added line must be an object of kind "test", with "produced_by"
+          # this run, and one "date", later than that of every recorded line of
+          # kind "test" (ACU-34, steps 3 and 6). Otherwise the
+          # job fails and nothing is recorded.
+          import datetime, json, os, re, subprocess, sys
+          src, commit, run_url = sys.argv[1:4]
+          names = sorted(n for n in os.listdir(src)) if os.path.isdir(src) else []
+          def fail(msg):
+              sys.exit(f"error: {msg}; nothing recorded")
+          def when(text):
+              try:
+                  d = datetime.datetime.fromisoformat(text)
+              except (TypeError, ValueError):
+                  return None
+              return d if d.tzinfo else None
+          old, latest = {}, None
+          for name in names:
+              if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.jsonl", name) or not os.path.isfile(os.path.join(src, name)):
+                  fail(f"unexpected file {name!r} in the records of the run")
+          for path in subprocess.run(["git", "ls-tree", "--name-only", commit, "records/"],
+                                     capture_output=True, text=True, check=True).stdout.split():
+              data = subprocess.run(["git", "show", f"{commit}:{path}"], capture_output=True, check=True).stdout
+              old[os.path.basename(path)] = data
+              for raw in data.decode("utf-8", "replace").splitlines():
+                  try:
+                      line = json.loads(raw)
+                  except ValueError:
+                      continue
+                  if isinstance(line, dict) and line.get("kind") == "test" and when(line.get("date")):
+                      d = when(line["date"])
+                      latest = d if latest is None or d > latest else latest
+          new, date = {}, None
+          for name in names:
+              with open(os.path.join(src, name), "rb") as f:
+                  data = f.read()
+              before = old.get(name, b"")
+              if not data.startswith(before) or (before and not before.endswith(b"\n")):
+                  fail(f"records/{name} changes or removes recorded lines")
+              added = data[len(before):]
+              if added and not added.endswith(b"\n"):
+                  fail(f"records/{name} ends with an incomplete line")
+              for raw in added.decode("utf-8").splitlines():
+                  try:
+                      line = json.loads(raw)
+                  except ValueError:
+                      fail(f"records/{name} adds a line that is not JSON")
+                  if not isinstance(line, dict) or line.get("kind") != "test" or line.get("produced_by") != run_url:
+                      fail(f"records/{name} adds a line that is not a test of this run")
+                  if when(line.get("date")) is None or (date is not None and line["date"] != date):
+                      fail(f"records/{name} adds a line without the one date of this run")
+                  date = line["date"]
+              new[name] = data
+          if date is not None and latest is not None and when(date) <= latest:
+              fail(f"the date {date} of this run is not later than every recorded date of a test")
+          os.makedirs("records", exist_ok=True)
+          for name, data in new.items():
+              if data != old.get(name, b""):
+                  with open(os.path.join("records", name), "wb") as f:
+                      f.write(data)
+          PY
+      - name: Push the records
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -z "$(ls -A records 2>/dev/null)" ]; then exit 0; fi
+          git add -- records
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "chore: record acceptance tests (ACU-34)"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1

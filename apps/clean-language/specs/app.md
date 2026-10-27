@@ -4,11 +4,11 @@
 
 **Audience:** The people who write the specs of the Clean Language project; whoever builds one of the modules of this app
 
-**Scope:** What the app is, its modules, and where each one is installed. Each module specifies its own use cases and hooks. How the four layers of a project work is in [layers.md](../../indra-software-factory/modules/development-methodology/specs/layers.md) of the app Indra Software Factory
+**Scope:** What the app is, its modules, and where each one is installed. Each module specifies its own use cases and hooks. How the five layers of a project work is in [layers.md](../../indra-software-factory/modules/development-methodology/specs/layers.md) of the app Indra Software Factory
 
 The app of the marketplace listed in [marketplace.md](../../../specs/marketplace.md).
 
-Clean Language is a programming language, specified in a project of four
+Clean Language is a programming language, specified in a project of five
 layers of Indra Software Factory. This app holds the plugins that are specific
 to that project, and that no other project uses: what they check or generate
 is Clean itself. A plugin that serves every project belongs to Indra Software
@@ -41,4 +41,4 @@ How a module is built, one plugin that depends on no other, is [DEV-7](../../../
   | `clean-examples` | the repository of layer 0 and the repository of layer 1 |
   | `clean-derived-norms` | the repository of layer 2 |
 
-- **CLN-2.** Every module obeys the rules of the four layers, LAY-1 to LAY-7, in [layers.md](../../indra-software-factory/modules/development-methodology/specs/layers.md#rules).
+- **CLN-2.** Every module obeys the rules of the five layers, the clauses LAY-n of [layers.md](../../indra-software-factory/modules/development-methodology/specs/layers.md#rules).

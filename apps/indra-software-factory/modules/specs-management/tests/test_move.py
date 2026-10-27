@@ -37,7 +37,8 @@ def git(cwd, *args):
 
 
 class Base(unittest.TestCase):
-    """A project with layers 0, 1 and 2, each a clone of a bare repository under <tmp>/origin/acme/."""
+    """A project of five layers (LAY-1); layers 0, 1 and 2 are cloned in setUp, each a clone of a bare
+    repository under <tmp>/origin/acme/, and layers 3 and 4 only by the tests that need them (clone)."""
 
     def setUp(self):
         self.tmp = os.path.realpath(tempfile.mkdtemp())
@@ -46,21 +47,25 @@ class Base(unittest.TestCase):
             {"owner": "acme", "name": "p-drafts", "layer": 0, "path": "p-drafts"},
             {"owner": "acme", "name": "p-specs", "layer": 1, "path": "p-specs"},
             {"owner": "acme", "name": "p-norms", "layer": 2, "path": "p-norms"},
-            {"owner": "acme", "name": "p-code", "layer": 3, "path": "p-code"}]}, indent=1) + "\n"
+            {"owner": "acme", "name": "p-acceptance", "layer": 3, "path": "p-acceptance"},
+            {"owner": "acme", "name": "p-code", "layer": 4, "path": "p-code"}]}, indent=1) + "\n"
         self.r = {}
         for layer, name in ((0, "p-drafts"), (1, "p-specs"), (2, "p-norms")):
-            bare = os.path.join(self.tmp, "origin", "acme", name + ".git")
-            os.makedirs(bare)
-            git(bare, "init", "-q", "--bare", "-b", "main")
-            work = os.path.join(self.tmp, "proj", name)
-            git(self.tmp, "clone", "-q", bare, work)
-            git(work, "checkout", "-q", "-b", "main")
-            self.write(work, "project.json", self.project)
-            git(work, "add", "project.json")
-            git(work, "commit", "-q", "-m", "init")
-            git(work, "push", "-q", "-u", "origin", "main")
-            git(work, "remote", "set-head", "origin", "main")
-            self.r[layer] = work
+            self.clone(layer, name)
+
+    def clone(self, layer, name):
+        bare = os.path.join(self.tmp, "origin", "acme", name + ".git")
+        os.makedirs(bare)
+        git(bare, "init", "-q", "--bare", "-b", "main")
+        work = os.path.join(self.tmp, "proj", name)
+        git(self.tmp, "clone", "-q", bare, work)
+        git(work, "checkout", "-q", "-b", "main")
+        self.write(work, "project.json", self.project)
+        git(work, "add", "project.json")
+        git(work, "commit", "-q", "-m", "init")
+        git(work, "push", "-q", "-u", "origin", "main")
+        git(work, "remote", "set-head", "origin", "main")
+        self.r[layer] = work
 
     def write(self, repo, rel, text):
         path = os.path.join(repo, rel)
@@ -212,12 +217,16 @@ class Refusals(Base):
         self.assertEqual(out.splitlines(), ["specs-management:promote: layer 0: not on its default branch main",
                                             "specs-management:promote: layer 1: not at origin/main"])
 
-    def test_no_path_and_layer_2(self):
-        """ORC-37, ORC-39 condition 1."""
+    def test_no_path_and_layers_2_3_4(self):
+        """ORC-39 condition 1: no path; ORC-37: invoked from layer 2, 3 or 4, promote and demote refuse."""
         self.assertEqual(self.move("plan", "promote", layer=0),
                          (1, "specs-management:promote: expected at least one path\n"))
-        self.assertEqual(self.move("plan", "promote", "specs/a.md", layer=2),
-                         (1, "specs-management:promote: runs only from the repository of layer 0 or of layer 1\n"))
+        self.clone(3, "p-acceptance")
+        self.clone(4, "p-code")
+        for layer in (2, 3, 4):
+            for uc in ("promote", "demote"):
+                self.assertEqual(self.move("plan", uc, "specs/a.md", layer=layer),
+                                 (1, f"specs-management:{uc}: runs only from the repository of layer 0 or of layer 1\n"))
 
 
 class Safety(Base):

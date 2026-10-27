@@ -6,13 +6,15 @@
 
 **Scope:** What the app is, how it is used, and its modules. The app is one of the marketplace, listed in [marketplace.md](../../../specs/marketplace.md); each module specifies its own use cases; where each module is installed is in [layers.md](../modules/development-methodology/specs/layers.md#where-each-module-is-installed)
 
-Indra Software Factory is an app of Claude Code plugins for working in four
+Indra Software Factory is an app of Claude Code plugins for working in five
 layers: draft specs and specs written by people, norms and derived norms
-generated from them, code built from the norms and the derived norms by agents. A person installs each module where
+generated from them, acceptance areas and acceptance units that agents write
+from the norms and people approve, and code built from the norms and the
+derived norms by agents. A person installs each module where
 [APP-6](../modules/development-methodology/specs/layers.md#where-each-module-is-installed)
 says, and then invokes its use cases, if it has any.
 
-Every module obeys the rules of the four layers, LAY-1 to LAY-6, in
+Every module obeys the rules of the five layers, the clauses LAY-n of
 [layers.md](../modules/development-methodology/specs/layers.md), and the flow of a run,
 [ORC-15](../modules/development-methodology/specs/flow.md#start-a-run). Both are
 specs of the module `development-methodology`, which carries the methodology to
@@ -30,12 +32,13 @@ every repository of a project.
 
 | Module | Responsibility | Specs |
 |---|---|---|
-| `development-methodology` | The development methodology: the four layers, the flow of a run across them, and their terms; an index of it in every session of every repository of a project | [module.md](../modules/development-methodology/specs/module.md) |
+| `development-methodology` | The development methodology: the five layers, the flow of a run across them, and their terms; an index of it in every session of every repository of a project | [module.md](../modules/development-methodology/specs/module.md) |
 | `project-management` | The repositories of a project: their creation and their life cycle | [module.md](../modules/project-management/specs/module.md) |
 | `specs-management` | Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write, and moves specs between the two layers | [module.md](../modules/specs-management/specs/module.md) |
 | `norms-management` | Layer 2: the norms and the derived norms | [module.md](../modules/norms-management/specs/module.md) |
-| `code-implementation` | Layer 3: code built from the norms and the derived norms, and its traceability to norm IDs | [module.md](../modules/code-implementation/specs/module.md) |
-| `drift-management` | A drift between the norms and the code, sent back to layer 1 | [module.md](../modules/drift-management/specs/module.md) |
+| `acceptance-management` | Layer 3: the acceptance areas and the acceptance units, the order in which they are implemented, their acceptance tests, and when a unit, an area and an increment are done | [module.md](../modules/acceptance-management/specs/module.md) |
+| `code-implementation` | Layer 4: code built from the norms and the derived norms, and its traceability to norm IDs | [module.md](../modules/code-implementation/specs/module.md) |
+| `drift-management` | A drift found while defining acceptance in layer 3 or implementing in layer 4, sent back to layer 1 | [module.md](../modules/drift-management/specs/module.md) |
 | `workflow-orchestration` | Runs the flow across the modules: what triggers a run, and how each step runs in its repository | [module.md](../modules/workflow-orchestration/specs/module.md) |
 | `utilities` | Tools usable in any layer: exploring, the issue tree, explanations, a recap of the session | not yet specified |
 

@@ -1,6 +1,6 @@
 {
   "name": "jpchauny-plugins",
-  "description": "Indra Software Factory: an app of Claude Code plugins for working in four layers - draft specs and specs (people), norms and derived norms (generated), code (agents). Each module is a plugin, installed on its own in the repository of its layer",
+  "description": "Indra Software Factory: an app of Claude Code plugins for working in five layers - draft specs and specs (people), norms and derived norms (generated), acceptance areas and acceptance units (agents, approved by people), code (agents). Each module is a plugin, installed on its own in the repository of its layer",
   "owner": {
     "name": "Jean Pierre Chauny"
   },
@@ -8,7 +8,7 @@
     {
       "name": "development-methodology",
       "source": "./apps/indra-software-factory/modules/development-methodology",
-      "description": "Module development-methodology: the development methodology - the four layers, the flow of a run across them, and their terms - with an index of it in every session of every repository of a project"
+      "description": "Module development-methodology: the development methodology - the five layers, the flow of a run across them, and their terms - with an index of it in every session of every repository of a project"
     },
     {
       "name": "utilities",
@@ -31,14 +31,19 @@
       "description": "Module norms-management, layer 2: the norms and the derived norms; the norms generator (/norms-management:build, /norms-management:verify)"
     },
     {
+      "name": "acceptance-management",
+      "source": "./apps/indra-software-factory/modules/acceptance-management",
+      "description": "Module acceptance-management, layer 3: the acceptance areas and the acceptance units of a project, their acceptance tests, and when a unit, an area and an increment are done; the acceptance architect, the implementation planner and the test agent; a hook that keeps the sessions of layer 3 out of the code repositories"
+    },
+    {
       "name": "code-implementation",
       "source": "./apps/indra-software-factory/modules/code-implementation",
-      "description": "Module code-implementation, layer 3: code built from the norms and the derived norms, and its traceability to norm IDs"
+      "description": "Module code-implementation, layer 4: code built from the norms and the derived norms, within the acceptance units of layer 3, and its traceability to norm IDs"
     },
     {
       "name": "drift-management",
       "source": "./apps/indra-software-factory/modules/drift-management",
-      "description": "Module drift-management: a drift between specs and code, sent back to layer 1"
+      "description": "Module drift-management: a drift found while defining acceptance (layer 3) or implementing (layer 4), sent back to layer 1"
     },
     {
       "name": "workflow-orchestration",

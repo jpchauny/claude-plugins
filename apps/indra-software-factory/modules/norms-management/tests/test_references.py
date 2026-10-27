@@ -1,7 +1,7 @@
 """References to nodes: citing a node cites everything below it.
 
-A reference is an ID. Layer 3 learns that a cited node changed by its tree
-hash, so the tree hash of a node must cover every node below it, at any
+A reference is an ID. Layers 3 and 4 learn that a cited node changed by its
+tree hash, so the tree hash of a node must cover every node below it, at any
 depth, and nothing beside it. An agent finds a cited ID in the annotated
 copy, so the frame of a node must hold the markers of every node below it,
 and no other node's.

@@ -84,7 +84,7 @@ Each build reads the specs at one commit and the JSONL of the previous build, an
   - A rebuild changed nothing when every ID's status is `unchanged`, whatever else differs, such as the generator version in the meta line or the insertions of a newer generator. It keeps both reports as they are. Its JSONL and copies are written as this build makes them.
   - When either report is missing, a rebuild that changed nothing writes both again, from the stored version to the same one (``Specs `c2` -> `c2`.``): every count but `unchanged` is 0, and `data/report.json` is empty.
   - A rebuild that changes an ID's status, as a newer generator may, computes the flags of the IDs it changes as any step does, against that same commit: an ID it retires has as `changed_since` the commit itself. Its report is written again, from the stored version to the new one (``Specs `c2` -> `c2`.``), so it no longer shows the changes of the step that first built that commit, while the JSONL may still flag them.
-  - Layer 3 learns what changed by comparing the norm hash of each of its citations with the tree hash of its node (R21, R31, ORC-25). Example: E84.
+  - Layers 3 and 4 learn what changed by comparing the norm hash of each of their citations with the tree hash of its node (R21, R31, [ACU-27](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event), [ORC-25](../../code-implementation/specs/module.md#implement-the-changed-norms)). Example: E84.
 
 ### Data and outputs
 
@@ -113,7 +113,7 @@ Each build reads the specs at one commit and the JSONL of the previous build, an
   - The specs are read through git at one commit, never from their working tree. They have no required structure: every regular file of the repository is selected, with its exact bytes, whatever folder it is in, except the excluded paths below. A regular file is a blob of mode `100644` or `100755`. A symbolic link (mode `120000`) and a submodule are left out, even with a name ending in `.md`, so a repository whose only `.md` is a link holds no `.md` file to build (R34). Paths are relative to the root of the specs repository.
   - The excluded paths are only what is certainly not specification, in any project; when in doubt a file is selected, and a `README.md` always is, at the root or in a folder. They are:
     - a path with a folder or a file whose name starts with `.`, such as `.claude/settings.json`, `.github/workflows/ci.yml` or `.gitignore`: the configuration of tools;
-    - a file named `CLAUDE.md`, `CLAUDE.local.md` or `AGENTS.md`, in any folder: instructions for agents, which layer 3 must never cite as norms;
+    - a file named `CLAUDE.md`, `CLAUDE.local.md` or `AGENTS.md`, in any folder: instructions for agents, which layers 3 and 4 must never cite as norms;
     - at the root, a file named `LICENSE.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` or `SECURITY.md`: the community files of the repository.
     A name is compared after Python's `str.casefold()`, so `claude.md` and `License.MD` are excluded too. The list is fixed here: no repository can add to it.
   - A selected file whose name ends in `.md` is a spec file: it is built into the tree and annotated. Every other selected file, such as an image or a diagram that the prose links to, is a plain copy: written byte for byte, with no ID, at the same relative path, so that the links of the annotated copies keep working. The JSONL records its path and `sha256` (R61).

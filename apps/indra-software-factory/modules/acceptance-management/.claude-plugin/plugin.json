@@ -1,0 +1,7 @@
+{
+  "name": "acceptance-management",
+  "description": "Module acceptance-management, layer 3: the acceptance areas and the acceptance units of a project, their acceptance tests, the plan of implementation, and when a unit, an area and an increment are done, with a hook that keeps the session out of the code repositories",
+  "author": {
+    "name": "Jean Pierre Chauny"
+  }
+}

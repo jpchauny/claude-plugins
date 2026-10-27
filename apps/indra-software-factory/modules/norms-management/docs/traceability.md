@@ -347,7 +347,7 @@ Tests:
 
 Examples: none
 
-## R22. For now, a person tells the implementation repositories that a new version exists
+## R22. For now, a person tells the repositories of layers 3 and 4 that a new version exists
 
 Spec: `specs/norms-tree.md`
 
@@ -1417,7 +1417,7 @@ Examples: none
 - R2. Freedom
 - R6. Layer 2 is that tree
 - R20. The agent comes first; examples with fixtures: E13
-- R22. For now, a person tells the implementation repositories that a new version exists
+- R22. For now, a person tells the repositories of layers 3 and 4 that a new version exists
 - R32. A viewer
 - U7. Everything of the generator is in the plugin `norms-management`
 
@@ -1426,5 +1426,5 @@ Examples: none
 - R2. Freedom
 - R6. Layer 2 is that tree
 - R20. The agent comes first; examples with fixtures: E13
-- R22. For now, a person tells the implementation repositories that a new version exists
+- R22. For now, a person tells the repositories of layers 3 and 4 that a new version exists
 - R32. A viewer

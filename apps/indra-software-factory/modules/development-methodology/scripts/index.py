@@ -62,7 +62,7 @@ def index(root, layers, modules):
     """MTH-6: the index, line by line."""
     lines = [
         "Development methodology of Indra Software Factory (plugin development-methodology).",
-        "This repository is one repository of a project, in one of four layers:",
+        "This repository is one repository of a project, in one of five layers:",
     ]
     for layer, name, holds, written_by in layers:
         lines.append("- %s: %s; written by: %s; repository: %s" % (layer, holds, written_by, name))
@@ -71,7 +71,7 @@ def index(root, layers, modules):
         lines.append("- %s: %s" % (module, where))
     lines += [
         "Read for detail, before answering about the process:",
-        "- The four layers, their rules, their terms, and where each module is installed: %s/specs/layers.md" % root,
+        "- The five layers, their rules, their terms, and where each module is installed: %s/specs/layers.md" % root,
         "- The flow across the layers (a run, its steps and hand-offs): %s/specs/flow.md" % root,
         "- What carries the methodology to every repository: %s/specs/module.md" % root,
         "- What each module of the app does: %s" % APP_URL,

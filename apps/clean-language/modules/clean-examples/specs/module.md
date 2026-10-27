@@ -9,11 +9,11 @@
 The module `clean-examples` of the app Clean Language, listed in [app.md](../../../specs/app.md).
 
 The Clean examples of the specs are how Clean is defined: the grammar and the
-semantics are derived from them in layer 2, and the compiler is tested against
-them in layer 3. So every example states, on its opening line, whether its
-code is valid or which error it must give, and every example is a whole source
-file. The rules below hold in the repositories of layers 0 and 1 of the project
-([CLN-1](../../../specs/app.md#rules)).
+semantics are derived from them in layer 2, and the acceptance tests of layer 3
+check the compiler, built in layer 4, against them. So every example states, on
+its opening line, whether its code is valid or which error it must give, and
+every example is a whole source file. The rules below hold in the repositories
+of layers 0 and 1 of the project ([CLN-1](../../../specs/app.md#rules)).
 
 ## Terms
 
@@ -83,7 +83,7 @@ file. The rules below hold in the repositories of layers 0 and 1 of the project
 ## What is checked, and by whom
 
 - **CEX-20.** The rules that the text decides alone are checked by the audit and by the hook (complete list): CEX-2, CEX-4, CEX-6 except its first sentence, CEX-7 except its first sentence, CEX-9, CEX-10, CEX-11, CEX-13, CEX-15 to CEX-18. The audit also checks CEX-1 by its fuzzy search ([CAU-6](../use-cases/audit/specs/audit.md#run-the-audit)).
-- **CEX-21.** The rules that need a Clean compiler are checked by no use case or hook of this module (complete list): CEX-5, the first sentence of CEX-6, the first sentence of CEX-7, CEX-12. They bind the author of each example. The derived norms of layer 2 check the syntax part of CEX-5, CEX-6 and CEX-7 ([CDN-4](../../clean-derived-norms/specs/module.md#rules)); the tests of layer 3 check all of them, CEX-12 included. CEX-19 binds the author, and nothing checks it.
+- **CEX-21.** The rules that need a Clean compiler are checked by no use case or hook of this module (complete list): CEX-5, the first sentence of CEX-6, the first sentence of CEX-7, CEX-12. They bind the author of each example. The derived norms of layer 2 check the syntax part of CEX-5, CEX-6 and CEX-7 ([CDN-4](../../clean-derived-norms/specs/module.md#rules)); the acceptance tests of layer 3, run against the compiler built in layer 4, check all of them, CEX-12 included. CEX-19 binds the author, and nothing checks it.
 
 ## The hook
 

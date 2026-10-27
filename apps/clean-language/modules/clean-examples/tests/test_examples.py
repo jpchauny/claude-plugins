@@ -58,14 +58,18 @@ REGISTRY = """# Error Code Registry
 
 
 class Project:
-    """Two repositories, layer 0 and layer 1, in one project folder."""
+    """The repositories of layer 0 and layer 1, in one project folder; project.json lists the five layers (LAY-1)."""
 
     def __init__(self):
         self.root = tempfile.mkdtemp()
         self.l0, self.l1 = os.path.join(self.root, "drafts"), os.path.join(self.root, "specs")
         project = {"project": "p", "repositories": [
             {"owner": "o", "name": "drafts", "layer": 0, "path": "drafts"},
-            {"owner": "o", "name": "specs", "layer": 1, "path": "specs"}]}
+            {"owner": "o", "name": "specs", "layer": 1, "path": "specs"},
+            {"owner": "o", "name": "norms", "layer": 2, "path": "norms"},
+            {"owner": "o", "name": "acceptance", "layer": 3, "path": "acceptance"},
+            {"owner": "o", "name": "code-compiler", "layer": 4, "component": "compiler", "path": "code-compiler"}]}
+        self.project = project
         for repo, name in ((self.l0, "drafts"), (self.l1, "specs")):
             os.makedirs(os.path.join(repo, "specs"))
             git(repo, "init", "-q")
@@ -280,6 +284,15 @@ class Audit(unittest.TestCase):
     def test_cau4_not_a_layer(self):
         os.remove(os.path.join(self.p.l1, "project.json"))
         self.assertEqual(audit.run(self.p.l1), "Audit of Clean examples: the repository has no project.json; nothing checked.\n")
+
+    def test_cau4_layers_3_and_4_are_refused(self):
+        for name in ("acceptance", "code-compiler"):
+            repo = os.path.join(self.p.root, name)
+            os.makedirs(repo)
+            git(repo, "init", "-q")
+            git(repo, "remote", "add", "origin", f"https://github.com/o/{name}.git")
+            self.p.write(repo, "project.json", json.dumps(self.p.project))
+            self.assertEqual(audit.run(repo), "Audit of Clean examples: the layer of the entry of project.json is not 0 or 1; nothing checked.\n")
 
     def test_cau7_other_repository_missing(self):
         shutil.rmtree(self.p.l0)

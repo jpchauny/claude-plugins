@@ -32,8 +32,8 @@ node's tree hash changed in this run (it, or something below it, changed:
 whoever cited it must check). Both describe one version, the step from
 the previous version to this one: the next version computes them again
 from its own step, nothing is carried over; a rebuild of the same version
-keeps them (in cli.py). Layer 3 compares the version it pinned with the
-new one through the tree hashes.
+keeps them (in cli.py). Layers 3 and 4 compare the version they pinned
+with the new one through the tree hashes.
 
 Typical run:
 

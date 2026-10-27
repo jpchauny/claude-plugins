@@ -2,13 +2,13 @@
 
 The module `development-methodology` of Indra Software Factory: the
 development methodology of every project, carried to every repository of the
-project, of the four layers
+project, of the five layers
 ([APP-6](specs/layers.md#where-each-module-is-installed)).
 It is specified in [specs/module.md](specs/module.md).
 
 ## The methodology
 
-- [specs/layers.md](specs/layers.md): the four layers, their rules and their terms, and where each module is installed.
+- [specs/layers.md](specs/layers.md): the five layers, their rules and their terms, and where each module is installed.
 - [specs/flow.md](specs/flow.md): the flow across the layers, a run, its steps and their hand-offs.
 
 ## Use cases

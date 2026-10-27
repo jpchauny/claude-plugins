@@ -26,7 +26,7 @@ The module `norms-management` of the app Indra Software Factory, listed in [app.
 - **ORC-34.** The skills of the module find the repository of layer 1 only through `project.json`, as [ORC-21 and ORC-22](../../project-management/specs/module.md#where-the-repositories-are) say, and the repository they run in must be the one of layer 2. There is no other way: no argument, no `CLAUDE.md`, no folder name.
 - **ORC-8.** In the repository of layer 2, the step runs `/norms-management:build` at the commit of layer 1 that starts the run ([ORC-15](../../development-methodology/specs/flow.md#start-a-run)), then `/norms-management:verify`. A failure of either ends the run, with the norms generator's message shown as it is ([LAY-3](../../development-methodology/specs/layers.md#rules)).
 - **ORC-9.** Its hand-off is the commit of the repository of layer 2 that holds the regenerated `data/`, `specs-repo-annotated/` and `specs-derived/` (NRM-9), and its `data/report.md`, which lists by norm ID what changed.
-- **ORC-10.** When `data/report.md` shows no change of norm, the run ends after this step: there is nothing to implement.
+- **ORC-10.** When `data/report.md` shows no change of norm, the run ends after this step: layers 3 and 4 have nothing to do.
 
 ## Derive the derived norms
 
