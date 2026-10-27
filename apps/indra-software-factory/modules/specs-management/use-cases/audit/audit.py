@@ -14,9 +14,17 @@ Commands, run as `python3 audit.py <command>`:
                              selected files where SPC-14 applies) required for
                              an SPC-14 finding across files
   render [--part N]          the report of AUD-30 to AUD-35; JSON on stdin,
-                             `selected` and `spec_files` (from prepare)
-                             required (AUD-35, AUD-46); refuses a finding that
+                             `selected`, `spec_files`, `link_reports` and
+                             `links_not_checked` (from prepare) required
+                             (AUD-35, AUD-46); refuses a finding that
                              AUD-29 step 2 drops on the bytes filter read (AUD-46)
+
+prepare also does the check of the links between layers 0 and 1 (AUD-54 to
+AUD-59): `link_reports`, the links of AUD-56, and `links_not_checked`, null or
+the reason of AUD-59 when the other layer cannot be found or read; that check
+never makes prepare refuse. It reads, of the other layer, only the paths of its
+tree at HEAD and its project.json (AUD-55), with scripts/layers.py and
+scripts/mdlinks.py of the plugin.
 
 prepare, filter and render print at most PART_SIZE characters per call, so that
 the Bash tool shows their output whole (AUD-30, AUD-38): a longer output comes
@@ -48,6 +56,11 @@ import sys
 import unicodedata
 
 PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+# AUD-54: the links are found as scripts/mdlinks.py finds them, and the layers as ORC-37 says.
+# AUD-5: importing them writes no __pycache__.
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(PLUGIN_ROOT, "scripts"))
+import layers  # noqa: E402
 # AUD-15: the guideline is writing-specs.md at the root of the plugin specs-management, and no other place.
 GUIDELINE = os.path.join(PLUGIN_ROOT, "writing-specs.md")
 
@@ -65,6 +78,21 @@ READERS_REASON = "a reader failed or did not finish"
 CONTEXT_REASON = "could not be read (context only)"
 FOLDER_REASON = "could not be searched"
 FILE_REASONS = ("could not be read", "the auditor failed or did not finish", "the run was stopped", CONTEXT_REASON)
+LINKS_LABEL = "links between layers"
+# AUD-59: the reasons of the line of LINKS_LABEL, in the order of its conditions.
+LINKS_REASONS = re.compile(
+    r"\A(project\.json is missing or does not have the form of ORC-20|this repository is not in project\.json"
+    r"|the repository is not of layer 0 or of layer 1|project\.json has no repository of layer [01]"
+    r"|.+ is not at .+|project\.json differs from the copy of layer 1|git failed: .*)\Z", re.S)
+
+# AUD-57: the problem and the rewrite of each case of AUD-56; None is the plain link of ORC-41.
+LINK_CASES = {
+    1: ("layer 1", "absent link whose link target exists in layer 1", None),
+    2: ("layer 1", "absent link whose link target exists neither in layer 1 nor in layer 0",
+        "delete the whole link, its text and its destination, and rewrite or delete its sentence"),
+    3: ("layer 0", "plain link whose link target exists neither in layer 0 nor in layer 1",
+        "delete the link, or fix its destination"),
+}
 
 # R62 of the module norms-management, specs/norms-versions.md: the excluded paths (fixed list).
 AGENT_FILES = frozenset(n.casefold() for n in ("CLAUDE.md", "CLAUDE.local.md", "AGENTS.md"))
@@ -245,9 +273,12 @@ def split_words(text):
 
 def git_env():
     # AUD-38: no setting of the environment points git at another repository
-    # or makes it write traces; git's messages in English (AUD-40).
+    # or makes it write traces, and git fetches no missing object of a partial
+    # clone (GIT_NO_LAZY_FETCH, git 2.44+): fetch nothing; git's messages in
+    # English (AUD-40).
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     env.update(
+        GIT_NO_LAZY_FETCH="1",
         GIT_OPTIONAL_LOCKS="0",
         GIT_TERMINAL_PROMPT="0",
         GIT_TRACE="0",
@@ -260,8 +291,9 @@ def git_env():
     return env
 
 
-def run_git(args, cwd):
-    """Run git; return (status, stdout bytes, stderr text). None status: git could not be started."""
+def run_git(args, cwd, alone=False):
+    """Run git; return (status, stdout bytes, stderr text). None status: git could not be started.
+    `alone`: git looks for the repository in `cwd` only, never in a folder that holds it."""
     # AUD-38: only commands that change no file and run no other program: no
     # fsmonitor, no untracked cache written, no pager; no filter or hook runs
     # for rev-parse or ls-files.
@@ -271,7 +303,10 @@ def run_git(args, cwd):
         "-c", "core.untrackedCache=false",
     ] + args
     try:
-        proc = subprocess.run(cmd, cwd=cwd, env=git_env(), stdin=subprocess.DEVNULL,
+        env = git_env()
+        if alone:
+            env["GIT_CEILING_DIRECTORIES"] = os.path.dirname(os.path.realpath(cwd))
+        proc = subprocess.run(cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError:
         return None, b"", ""
@@ -834,6 +869,7 @@ def prepare(argv):
     if not selected:
         raise Refusal("specs-management:audit: %s: no spec file found" % shown)
     n = len(spec_files)
+    link_reports, links_not_checked = check_links(root, selected, contents)
     return {
         "repo_root": root,
         "guideline": GUIDELINE,
@@ -846,7 +882,104 @@ def prepare(argv):
         # AUD-23, AUD-24: the threshold counts spec files, not selected files.
         "mode": "workflow" if n > 3 else "session",
         "word_counts": {p: count_words(contents[p]) for p in spec_files if p in contents},
+        # AUD-56 to AUD-59: the link reports, or the reason the check was skipped.
+        "link_reports": link_reports,
+        "links_not_checked": links_not_checked,
     }
+
+
+# ---------------------------------------------------------------- links between layers
+
+
+class GitFailed(Exception):
+    """A git command of the check of AUD-56 failed; the message is <error> of AUD-40."""
+
+
+def unborn(repo):
+    """Whether HEAD names a branch that does not exist yet."""
+    status, out, err = run_git(["symbolic-ref", "-q", "HEAD"], repo, alone=True)
+    if status != 0 or err.strip():
+        return False
+    ref = out.strip().decode("utf-8", "surrogateescape")
+    status, out, err = run_git(["for-each-ref", "--format=%(refname)", ref], repo, alone=True)
+    return status == 0 and not out.strip() and not err.strip()
+
+
+def head_tree(repo):
+    """AUD-55: the paths of the tree of the commit HEAD of `repo`, with the folders that hold them
+    (term Exists); no paths when HEAD has no commit yet. Reads no file's content. Git reads `repo` only:
+    when its .git is no repository, git fails, and never reads the tree of a repository that holds `repo`."""
+    status, out, err = run_git(["rev-parse", "-q", "--verify", "HEAD^{commit}"], repo, alone=True)
+    if status is None:
+        raise GitFailed("git could not be started")
+    if status == 1 and not out.strip() and not err.strip():
+        if unborn(repo):
+            return set()  # HEAD names no commit yet: an empty tree
+        # A branch that names a missing object is a failure, never an empty tree (AUD-59).
+        status, out, err = run_git(["rev-parse", "--verify", "HEAD^{commit}"], repo, alone=True)
+        if status is None:
+            raise GitFailed("git could not be started")
+        raise GitFailed(git_error(err) or "HEAD names no commit")
+    if status != 0:
+        raise GitFailed(git_error(err))
+    commit = out.strip().decode("ascii", "replace")
+    status, out, err = run_git(["ls-tree", "-r", "-z", "--name-only", "--full-tree", commit], repo, alone=True)
+    if status is None:
+        raise GitFailed("git could not be started")
+    if status != 0:
+        raise GitFailed(git_error(err))
+    return layers.tree_paths(os.fsdecode(p) for p in out.split(b"\0") if p)
+
+
+NO_REMOTE = re.compile(r"^(?:error|fatal): No such remote '")  # fatal before git 2.30
+
+
+def check_links(root, selected, contents):
+    """AUD-54 to AUD-59: (the link reports, None), or ([], the reason) when the other layer cannot be
+    found or read. Never refuses (AUD-46)."""
+    def origin():
+        status, out, err = run_git(["remote", "get-url", "origin"], root)
+        if status is None:
+            raise GitFailed("git could not be started")
+        if status != 0:
+            if NO_REMOTE.match(err):
+                return None  # ORC-21: no remote origin, so no entry matches it
+            raise GitFailed(git_error(err))
+        return os.fsdecode(out)
+
+    try:
+        layer, repos = layers.locate(root, origin, own_at_repo=True)
+        other = repos[1 - layer]
+        trees = {layer: head_tree(root), 1 - layer: head_tree(str(other))}
+    except GitFailed as exc:
+        return [], "git failed: " + str(exc)
+    except layers.NotFound as exc:
+        i = exc.info
+        return [], {
+            "form": "project.json is missing or does not have the form of ORC-20",
+            "not_listed": "this repository is not in project.json",
+            "layer": "the repository is not of layer 0 or of layer 1",
+            "no_layer": "project.json has no repository of layer %s" % i.get("layer"),
+            "missing": "%s/%s is not at %s" % (i.get("owner"), i.get("name"), i.get("path")),
+            "differs": "project.json differs from the copy of layer 1",
+        }[exc.code]
+    texts = {}
+    for path in selected:
+        if path in contents:  # AUD-56: the selected files the script could read
+            data = as_utf8(contents[path])
+            if data.startswith(BOM):
+                data = data[len(BOM):]  # term Line: not part of line 1
+            texts[path] = data.decode("utf-8", "surrogateescape")
+    reports = []
+    for r in layers.link_reports(layer, texts, trees):
+        text = texts[r["path"]]
+        report = {"path": r["path"], "line": r["line"], "layer": LINK_CASES[r["case"]][0], "case": r["case"],
+                  "link": as_shown(text[r["open"]:r["end"]])}  # AUD-31: ill-formed UTF-8 as U+FFFD
+        if r["case"] == 1:
+            report["plain"] = as_shown(r["plain"])
+        reports.append(report)
+    reports.sort(key=lambda r: (r["path"], r["line"], r["link"]))  # AUD-34
+    return reports, None
 
 
 # ---------------------------------------------------------------- filter
@@ -1222,8 +1355,40 @@ def plural(count, word):
     return word if count == 1 else word + "s"
 
 
+LINK_KEYS = ("path", "line", "layer", "case", "link", "plain")
+
+
+def check_link_reports(data, sel):
+    """The link reports and the reason of AUD-59 that prepare gave, refused when they are not of the
+    form prepare gives (AUD-56 to AUD-59)."""
+    reports, reason = data["link_reports"], data["links_not_checked"]
+    if reason is not None and (not isinstance(reason, str) or not LINKS_REASONS.match(reason)):
+        raise BadInput("links_not_checked must be null or a reason of AUD-59, as prepare gives it")
+    if not isinstance(reports, list):
+        raise BadInput("link_reports must be a list")
+    if reason is not None and reports:
+        raise BadInput("link_reports must be empty when links_not_checked gives a reason (AUD-59)")
+    for i, r in enumerate(reports):
+        what = "link report %d" % i
+        if not isinstance(r, dict) or not set(r) <= set(LINK_KEYS):
+            raise BadInput("%s: must be an object with only %s" % (what, ", ".join(LINK_KEYS)))
+        if not is_int(r.get("case")) or r["case"] not in LINK_CASES:
+            raise BadInput("%s: case must be 1, 2 or 3" % what)
+        if r.get("layer") != LINK_CASES[r["case"]][0]:
+            raise BadInput("%s: case %d is of %s" % (what, r["case"], LINK_CASES[r["case"]][0]))
+        if not isinstance(r.get("path"), str) or r["path"] not in sel:
+            raise BadInput("%s: not a selected file" % what)
+        if not is_int(r.get("line")) or r["line"] < 1:
+            raise BadInput("%s: line must be an integer of at least 1" % what)
+        if not isinstance(r.get("link"), str):
+            raise BadInput("%s: link must be a string" % what)
+        if (r["case"] == 1) != isinstance(r.get("plain"), str) or (r["case"] != 1 and "plain" in r):
+            raise BadInput("%s: plain is a string in case 1 and absent otherwise" % what)
+    return reports, reason
+
+
 def render(data):
-    for key in ("repo_root", "n", "s", "mode", "selected", "spec_files"):
+    for key in ("repo_root", "n", "s", "mode", "selected", "spec_files", "link_reports", "links_not_checked"):
         if key not in data:
             raise BadInput("render needs " + key)
     questions_text = questions_from_guideline()
@@ -1243,6 +1408,7 @@ def render(data):
         raise BadInput("repo_root must be a string")
     sel = set(data["selected"])
     spec = set(data["spec_files"]) | sel
+    link_reports, links_not_checked = check_link_reports(data, sel)
 
     files_out, passes = [], {}
     for entry in not_audited:
@@ -1364,6 +1530,20 @@ def render(data):
                 if place in see and place not in shown:  # AUD-19, AUD-34: in the order of See also
                     shown.add(place)
                     out.append("  Rewrite at %s: %s" % (place, rewrite_line(r["rewrite"])))
+    out += ["", "## Links between layers", ""]
+    if links_not_checked is not None:
+        out.append("Not checked.")  # AUD-35: AUD-59 skipped the check
+    elif not link_reports:
+        out.append("None.")
+    # AUD-34: by path, then by line, then by link.
+    for k, r in enumerate(sorted(link_reports, key=lambda r: (r["path"], r["line"], r["link"]))):
+        if k:
+            out.append("")  # AUD-33: one empty line between two link reports
+        _, problem, rewrite = LINK_CASES[r["case"]]
+        out.append("- %s:%d · %s" % (esc(r["path"]), r["line"], r["layer"]))
+        out.append("  Link: " + esc(r["link"]))  # AUD-31: on one line, each control character as a path shows it
+        out.append("  Problem: " + problem)
+        out.append("  Rewrite: " + (esc(r["plain"]) if rewrite is None else rewrite))
     out += ["", "## Conditional rules", "", "| Rule | Applies to | Why |", "|---|---|---|"]
     rows = {}
     for c in data.get("conditional") or []:
@@ -1404,6 +1584,8 @@ def render(data):
     for key in ("across", "readers"):
         if key in passes:
             na.append(passes[key])
+    if links_not_checked is not None:
+        na.append((LINKS_LABEL, esc(links_not_checked)))  # AUD-42: last, AUD-59
     if not na:
         out.append("None.")
     out += ["- %s — %s" % (esc(what), reason) for what, reason in na]

@@ -41,6 +41,9 @@ class Base(unittest.TestCase):
         os.makedirs(os.path.join(self.plugin, "use-cases", "audit"))
         self.script = os.path.join(self.plugin, "use-cases", "audit", "audit.py")
         shutil.copy(SCRIPT, self.script)
+        # AUD-54: the shared scripts of the plugin, mdlinks.py and layers.py among them.
+        shutil.copytree(os.path.join(PLUGIN, "scripts"), os.path.join(self.plugin, "scripts"),
+                        ignore=shutil.ignore_patterns("__pycache__"))
         self.guideline = os.path.join(self.plugin, "writing-specs.md")
         shutil.copy(GUIDELINE, self.guideline)
         self.repo = os.path.join(self.tmp, "repo")
@@ -55,6 +58,17 @@ class Base(unittest.TestCase):
         return path
 
     def run_script(self, *args, stdin=b"", cwd=None, env=None):
+        if args[:1] == ("render",) and stdin:
+            # render needs prepare's two fields of the links between layers (AUD-56, AUD-59); a test of
+            # another requirement gives the check as done, with nothing to report, unless it sets them.
+            try:
+                data = json.loads(stdin)
+            except ValueError:
+                data = None
+            if isinstance(data, dict):
+                data.setdefault("link_reports", [])
+                data.setdefault("links_not_checked", None)
+                stdin = json.dumps(data).encode()
         proc = subprocess.run([sys.executable, self.script] + list(args), cwd=cwd or self.repo, input=stdin,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         return proc.returncode, proc.stdout.decode("utf-8", "surrogateescape"), proc.stderr.decode()
@@ -752,7 +766,8 @@ class Render(Base):
         return self.json_cmd("render", self.base(**extra))
 
     def tail(self):
-        lines = ["", "## Conditional rules", "", "| Rule | Applies to | Why |", "|---|---|---|"]
+        lines = ["", "## Links between layers", "", "None."]  # AUD-30, AUD-35
+        lines += ["", "## Conditional rules", "", "| Rule | Applies to | Why |", "|---|---|---|"]
         lines += ["| SPC-%d | none | No line meets it. |" % i for i in range(13, 21)]
         lines += ["", "## Questions for the approver", ""]
         for i in range(1, 18):
@@ -825,7 +840,7 @@ class Render(Base):
             "path": "specs/a.md", "line": 4, "rule": "SPC-3", "quote": ["Member: a person with a card."],
             "problem": "p", "rewrite": "r", "see_also": ["specs/c.md:2", "specs/b.md:10", "specs/b.md:9"]}])
         self.assertIn("- specs/a.md:4 · SPC-3\n  > Member: a person with a card.\n  Problem: p\n  Rewrite: r\n"
-                      "  See also: specs/b.md:9, specs/b.md:10, specs/c.md:2\n\n## Conditional rules", out)
+                      "  See also: specs/b.md:9, specs/b.md:10, specs/c.md:2\n\n## Links between layers", out)
 
     def test_not_verified(self):
         """AUD-43: a finding whose skeptic failed ends its first line with ` · not verified`."""
@@ -864,7 +879,7 @@ class Render(Base):
             "- z.md — the run was stopped\n"
             "- across files (SPC-3, SPC-11, SPC-13, SPC-14, SPC-Q4, SPC-Q12) — the pass failed or did not finish\n"
             "- readers (SPC-Q2, SPC-Q3) — a reader failed or did not finish\n"))
-        self.assertIn("## Findings\n\nNone.\n\n## Conditional rules", out)
+        self.assertIn("## Findings\n\nNone.\n\n## Links between layers\n\nNone.\n\n## Conditional rules", out)
         self.assertIn("- SPC-Q2 %s\n  Evidence: none.\n" % questions()["SPC-Q2"], out)
         self.assertIn("- SPC-Q4 %s\n  Evidence: a.md:2 No error path.\n" % questions()["SPC-Q4"], out)
 
@@ -1591,7 +1606,7 @@ class RoundThreeFilterRender(Base):
             verify += got["verify"]
         whole = audit.filter_findings(json.loads(json.dumps(data)))
         self.assertEqual((kept, verify), (whole["findings"], whole["verify"]))
-        rdata = self.report(findings=kept)
+        rdata = dict(self.report(findings=kept), link_reports=[], links_not_checked=None)
         status, out, err = self.run_script("render", stdin=json.dumps(rdata).encode())
         self.assertEqual(status, 0, err)
         head, _, rest = out.partition("\n")
@@ -1877,7 +1892,7 @@ class RoundFourFilterRender(Base):
                     pieces = []
         whole = audit.filter_findings(json.loads(json.dumps(data)))
         self.assertEqual((findings, verify), (whole["findings"], whole["verify"]))
-        rdata = self.render_input(findings)
+        rdata = dict(self.render_input(findings), link_reports=[], links_not_checked=None)
         status, out, err = self.run_script("render", stdin=json.dumps(rdata).encode())
         self.assertEqual(status, 0, err)
         total = int(out.split("\n", 1)[0].split()[3][:-1])
@@ -2227,6 +2242,297 @@ class RoundFiveWorkflow(unittest.TestCase):
         self.assertIn("each statement that the finding says lacks an identifier", cross)
         self.assertIn("every involved place of that finding", cross)
         self.assertNotIn("where SPC-14 applies. An involved place", cross)
+
+
+class LinksBetweenLayers(Base):
+    """AUD-54 to AUD-59, AUD-E14 to AUD-E18: the check of the links between layers 0 and 1."""
+
+    PROJECT = {"project": "p", "repositories": [
+        {"owner": "acme", "name": "p-drafts", "layer": 0, "path": "p-drafts"},
+        {"owner": "acme", "name": "p-specs", "layer": 1, "path": "p-specs"},
+        {"owner": "acme", "name": "p-norms", "layer": 2, "path": "p-norms"}]}
+
+    def setUp(self):
+        super().setUp()
+        self.project = json.dumps(self.PROJECT, indent=1) + "\n"
+        self.layer = {}
+        for n, name in ((0, "p-drafts"), (1, "p-specs"), (2, "p-norms")):
+            self.layer[n] = self.make(name)
+
+    def make(self, name, project=None):
+        work = os.path.join(self.tmp, "proj", name)
+        os.makedirs(work)
+        git(work, "init", "-q")
+        git(work, "remote", "add", "origin", "https://github.com/acme/%s.git" % name)
+        self.write("project.json", self.project if project is None else project, work)
+        self.write("doc.md", "# Doc\n", work)  # a spec file, so that prepare does not refuse (AUD-40)
+        self.commit(work)
+        return work
+
+    def commit(self, work, *files):
+        for rel, text in files:
+            self.write(rel, text, work)
+        git(work, "add", "-A")
+        git(work, "commit", "-q", "--allow-empty", "-m", "c")
+
+    def check(self, n, *args):
+        status, out = self.prepare(*args, cwd=self.layer[n])
+        self.assertEqual(status, 0, out)
+        return out
+
+    def rendered(self, prep):
+        """The report of a run with no findings, from prepare's output."""
+        return self.json_cmd("render", {
+            "repo_root": prep["repo_root"], "n": prep["n"], "s": prep["s"], "mode": prep["mode"],
+            "spec_files": prep["spec_files"], "selected": prep["selected"], "unreadable": prep["unreadable"],
+            "unsearchable": prep["unsearchable"], "audited": prep["selected"], "findings": [], "conditional": [],
+            "questions": [], "not_audited": [], "link_reports": prep["link_reports"],
+            "links_not_checked": prep["links_not_checked"]})
+
+    def process(self, line6="See [Fees (not specified yet)](absent:fees.md)."):
+        self.commit(self.layer[1], ("specs/process.md", "# Process\n\n1\n2\n3\n%s\n" % line6))
+
+    def test_absent_link_to_a_draft(self):
+        """AUD-E14, AUD-56: an absent link of layer 1 whose link target exists in layer 0 only is not reported."""
+        self.process()
+        self.commit(self.layer[0], ("specs/fees.md", "# Fees\n"))
+        out = self.check(1)
+        self.assertEqual((out["link_reports"], out["links_not_checked"]), ([], None))
+        self.assertIn("## Links between layers\n\nNone.\n\n## Conditional rules", self.rendered(out))
+
+    def test_absent_link_to_a_deleted_spec(self):
+        """AUD-E15, AUD-56 case 2, AUD-57, AUD-58: the report byte for byte; <f> does not count it."""
+        self.process()
+        out = self.check(1)
+        self.assertEqual(out["link_reports"], [{"path": "specs/process.md", "line": 6, "layer": "layer 1", "case": 2,
+                                                "link": "[Fees (not specified yet)](absent:fees.md)"}])
+        report = self.rendered(out)
+        self.assertIn("2 of 2 selected spec files audited, 0 findings.", report)
+        self.assertIn(
+            "## Links between layers\n\n"
+            "- specs/process.md:6 · layer 1\n"
+            "  Link: [Fees (not specified yet)](absent:fees.md)\n"
+            "  Problem: absent link whose link target exists neither in layer 1 nor in layer 0\n"
+            "  Rewrite: delete the whole link, its text and its destination, and rewrite or delete its sentence\n"
+            "\n## Conditional rules", report)
+        self.assertTrue(report.endswith("## Not audited\n\nNone.\n"))
+
+    def test_absent_link_to_a_promoted_spec(self):
+        """AUD-E16, AUD-56 case 1, AUD-57: the rewrite is the plain link of ORC-41, also when layer 0 holds it too."""
+        self.process()
+        self.commit(self.layer[1], ("specs/fees.md", "# Fees\n"))
+        self.commit(self.layer[0], ("specs/fees.md", "# Fees\n"))
+        report = self.rendered(self.check(1))
+        self.assertIn("- specs/process.md:6 · layer 1\n  Link: [Fees (not specified yet)](absent:fees.md)\n"
+                      "  Problem: absent link whose link target exists in layer 1\n  Rewrite: [Fees](fees.md)\n", report)
+
+    def test_broken_link_of_a_draft(self):
+        """AUD-E17, AUD-56 case 3: a plain link of layer 0 to no spec of either layer; none when layer 1 holds it."""
+        self.commit(self.layer[0], ("drafts/a.md", "# A\n\nUses [B](b.md).\n"))
+        report = self.rendered(self.check(0))
+        self.assertIn("## Links between layers\n\n- drafts/a.md:3 · layer 0\n  Link: [B](b.md)\n"
+                      "  Problem: plain link whose link target exists neither in layer 0 nor in layer 1\n"
+                      "  Rewrite: delete the link, or fix its destination\n\n## Conditional rules", report)
+        self.commit(self.layer[1], ("drafts/b.md", "# B\n"))
+        self.assertEqual(self.check(0)["link_reports"], [])
+
+    def test_repository_with_no_project(self):
+        """AUD-E18, AUD-59 condition 1, AUD-35, AUD-42: no refusal; Not checked., and the line of Not audited, last."""
+        self.write("specs/a.md", "# A\n")
+        status, out = self.prepare()
+        self.assertEqual(status, 0, out)
+        self.assertEqual((out["link_reports"], out["links_not_checked"]),
+                         ([], "project.json is missing or does not have the form of ORC-20"))
+        data = dict(out, audited=[], findings=[], not_audited=[{"what": "specs/a.md", "reason": "could not be read"},
+                                                              {"pass": "readers"}])
+        report = self.json_cmd("render", data)
+        self.assertIn("## Links between layers\n\nNot checked.\n\n## Conditional rules", report)
+        self.assertTrue(report.endswith(
+            "## Not audited\n\n- specs/a.md — could not be read\n- readers (SPC-Q2, SPC-Q3) — a reader failed or did not finish\n"
+            "- links between layers — project.json is missing or does not have the form of ORC-20\n"))
+
+    def reason(self, n):
+        return self.check(n)["links_not_checked"]
+
+    def test_conditions_in_order(self):
+        """AUD-59: each condition with its reason, in order; the check never refuses (AUD-46)."""
+        bad = self.make("bad", project="{not json")
+        self.layer["bad"] = bad
+        self.assertEqual(self.reason("bad"), "project.json is missing or does not have the form of ORC-20")
+        self.write("project.json", json.dumps({"repositories": [{"owner": "acme", "layer": 0, "path": "../x"}]}), bad)
+        self.assertEqual(self.reason("bad"), "project.json is missing or does not have the form of ORC-20")
+        git(self.layer[1], "remote", "set-url", "origin", "https://github.com/acme/other.git")
+        self.assertEqual(self.reason(1), "this repository is not in project.json")
+        git(self.layer[1], "remote", "remove", "origin")
+        self.assertEqual(self.reason(1), "this repository is not in project.json")
+        self.assertEqual(self.reason(2), "the repository is not of layer 0 or of layer 1")
+        one = json.dumps({"project": "p", "repositories": self.PROJECT["repositories"][:1]})
+        self.write("project.json", one, self.layer[0])
+        self.assertEqual(self.reason(0), "project.json has no repository of layer 1")
+        self.write("project.json", self.project, self.layer[0])
+        shutil.rmtree(self.layer[1])
+        self.assertEqual(self.reason(0), "acme/p-specs is not at %s" % os.path.join(self.tmp, "proj", "p-specs"))
+
+    def test_no_remote_before_git_2_30(self):
+        """AUD-59 condition 2: a git before 2.30 says `fatal: No such remote` (exit 128) for a repository with no
+        origin; the reason is the same as with `error:`."""
+        fake = os.path.join(self.tmp, "bin")
+        os.makedirs(fake)
+        self.write("git", "#!/bin/sh\ncase \" $* \" in *\" remote get-url origin \"*)\n"
+                   "  echo \"fatal: No such remote 'origin'\" >&2; exit 128;;\nesac\nexec '%s' \"$@\"\n"
+                   % shutil.which("git"), base=fake)
+        os.chmod(os.path.join(fake, "git"), 0o755)
+        status, out = self.prepare(cwd=self.layer[1], env=dict(os.environ, PATH=fake + os.pathsep + os.environ["PATH"]))
+        self.assertEqual(status, 0, out)
+        self.assertEqual(out["links_not_checked"], "this repository is not in project.json")
+
+    def test_path_that_cannot_be_resolved(self):
+        """AUD-59 condition 5, AUD-46: a `path` of layer 1 that is a symlink loop, or holds a NUL, is not found; the
+        check does not refuse."""
+        os.symlink("loop", os.path.join(self.tmp, "proj", "loop"))
+        for bad in ("loop", "a\u0000b"):
+            data = json.loads(self.project)
+            next(e for e in data["repositories"] if e["layer"] == 1)["path"] = bad
+            self.write("project.json", json.dumps(data), self.layer[0])
+            reason = self.reason(0)
+            self.assertTrue(reason.startswith("acme/p-specs is not at "), reason)
+
+    def test_project_json_differs(self):
+        """AUD-59 condition 6, AUD-54: the repository's copy is compared with that of layer 1, as ORC-24 says; the copy
+        of layer 1 is that copy, and the other layer's is not read for it."""
+        self.write("project.json", self.project + " ", self.layer[0])
+        self.assertEqual(self.reason(0), "project.json differs from the copy of layer 1")
+        self.assertIsNone(self.reason(1))
+
+    def test_git_fails_in_the_other_layer(self):
+        """AUD-59 condition 7: a git command of the check fails; the audit goes on (AUD-40 does not apply)."""
+        self.commit(self.layer[1], ("specs/a.md", "# A\n"))
+        git_dir = os.path.join(self.layer[0], ".git")
+        shutil.rmtree(git_dir)
+        with open(git_dir, "w") as f:
+            f.write("gitdir: %s\n" % os.path.join(self.tmp, "nowhere"))
+        reason = self.reason(1)
+        self.assertTrue(reason.startswith("git failed: fatal: not a git repository"), reason)
+
+    def test_other_layer_inside_another_repository(self):
+        """AUD-59 condition 7, AUD-55: when the .git of the other layer is no repository, git fails; it never reads
+        the tree of a repository that holds the project folder (AUD-46)."""
+        self.process()
+        git(self.tmp, "init", "-q")
+        self.write("specs/fees.md", "# Fees\n", self.tmp)
+        git(self.tmp, "add", "--", "specs/fees.md")
+        git(self.tmp, "commit", "-q", "-m", "outer")
+        git_dir = os.path.join(self.layer[0], ".git")
+        shutil.rmtree(git_dir)
+        os.mkdir(git_dir)
+        out = self.check(1)
+        self.assertEqual(out["link_reports"], [])
+        self.assertTrue(out["links_not_checked"].startswith("git failed: "), out["links_not_checked"])
+
+    def test_branch_names_a_missing_object(self):
+        """AUD-59 condition 7, AUD-55: a branch whose commit is missing is a git failure, in each layer, never an
+        empty tree that would report every link (AUD-46)."""
+        self.process()
+        self.commit(self.layer[0], ("specs/x.md", "[Y](y.md)\n"))
+        for n in (0, 1):
+            with self.subTest(layer=n):
+                ref = subprocess.run(["git", "symbolic-ref", "HEAD"], cwd=self.layer[n], capture_output=True,
+                                     text=True, check=True).stdout.strip()
+                path = os.path.join(self.layer[n], ".git", *ref.split("/"))
+                with open(path) as f:
+                    good = f.read()
+                with open(path, "w") as f:
+                    f.write("1" * 40 + "\n")
+                try:
+                    for m in (0, 1):
+                        out = self.check(m)
+                        self.assertEqual(out["link_reports"], [])
+                        self.assertTrue(out["links_not_checked"].startswith("git failed: "), out["links_not_checked"])
+                finally:
+                    with open(path, "w") as f:
+                        f.write(good)
+
+    def test_no_lazy_fetch(self):
+        """AUD-38: git fetches no missing object of a partial clone."""
+        self.assertEqual(audit.git_env()["GIT_NO_LAZY_FETCH"], "1")
+
+    def test_what_counts_as_a_link_and_as_existing(self):
+        """AUD-56, AUD-54: the destination as the file holds it; working tree read, HEAD for existence; folders exist."""
+        lines = [
+            "# Process",
+            "[A (not specified yet)](absent:../specs/)",       # 2: a folder of layer 1 that holds a file: case 1
+            "`[B (not specified yet)](absent:nope.md)`",       # 3: in a code span, not a link
+            "[C](absent:nope.md)",                             # 4: absent: without the suffix, neither kind
+            "[D (not specified yet)](<absent:x%20y.md>)",      # 5: angle brackets, percent-encoding kept: case 2
+            "[E (not specified yet)](absent:../../out.md)",    # 6: outside the repository, no link target
+            "[F](nope.md) [G (not specified yet)](https://x)", # 7: plain links of layer 1 and a URI: not reported
+            "[H\nI (not specified yet)](absent:uncommitted.md)",  # 8-9: a line feed, shown as \u000a
+        ]
+        self.commit(self.layer[1], ("specs/process.md", "# x\n"))
+        self.write("specs/process.md", "\n".join(lines) + "\n", self.layer[1])  # not committed: read as it is
+        self.write("specs/uncommitted.md", "# U\n", self.layer[1])  # in the working tree only: does not exist
+        out = self.check(1, "specs/process.md")
+        got = [(r["line"], r["case"], r["link"], r.get("plain")) for r in out["link_reports"]]
+        self.assertEqual(got, [
+            (2, 1, "[A (not specified yet)](absent:../specs/)", "[A](../specs/)"),
+            (5, 2, "[D (not specified yet)](<absent:x%20y.md>)", None),
+            (8, 2, "[H\nI (not specified yet)](absent:uncommitted.md)", None),
+        ])
+        self.assertIn("  Link: [H\\u000aI (not specified yet)](absent:uncommitted.md)\n", self.rendered(out))
+
+    def test_order_and_empty_lines(self):
+        """AUD-34, AUD-33: by path, then line, then link; one empty line between two reports; only selected files."""
+        self.commit(self.layer[0], ("b.md", "[Z](z.md) [Y](y.md)\n"), ("a.md", "x\n[Q](q.md)\n"), ("c.md", "[W](w.md)\n"))
+        out = self.check(0)
+        self.assertEqual([(r["path"], r["line"], r["link"]) for r in out["link_reports"]],
+                         [("a.md", 2, "[Q](q.md)"), ("b.md", 1, "[Y](y.md)"), ("b.md", 1, "[Z](z.md)"), ("c.md", 1, "[W](w.md)")])
+        report = self.rendered(out)
+        self.assertIn("  Rewrite: delete the link, or fix its destination\n\n- b.md:1 · layer 0\n  Link: [Y](y.md)\n", report)
+        self.assertEqual([r["path"] for r in self.check(0, "b.md")["link_reports"]], ["b.md", "b.md"])
+
+    def test_reads_only_and_writes_nothing(self):
+        """AUD-55, AUD-38, AUD-46: no file of either repository differs and the plugin gets no __pycache__."""
+        self.process()
+        self.write("specs/fees.md", "# Fees\n", self.layer[0])  # not committed in layer 0: does not exist
+        def state(work):
+            out = subprocess.run(["git", "status", "--porcelain", "--ignored"], cwd=work, capture_output=True).stdout
+            return out, sorted(os.listdir(work))
+        before = {n: state(self.layer[n]) for n in (0, 1)}
+        self.assertEqual(self.check(1)["link_reports"][0]["case"], 2)
+        self.assertEqual({n: state(self.layer[n]) for n in (0, 1)}, before)
+        for folder, _, _ in os.walk(self.plugin):
+            self.assertNotEqual(os.path.basename(folder), "__pycache__")
+
+    def test_unborn_head_and_utf8(self):
+        """AUD-55, AUD-31, term Line: a layer with no commit has an empty tree; a byte order mark is not on line 1's
+        count, an ill-formed UTF-8 sequence is shown as U+FFFD."""
+        fresh = os.path.join(self.tmp, "proj", "p-drafts")
+        shutil.rmtree(fresh)
+        os.makedirs(fresh)
+        git(fresh, "init", "-q")
+        git(fresh, "remote", "add", "origin", "https://github.com/acme/p-drafts.git")
+        self.write("project.json", self.project, fresh)
+        self.write("a.md", b"\xef\xbb\xbf[N\xff](n.md)\n", fresh)
+        out = self.check(0)
+        self.assertEqual(out["link_reports"], [{"path": "a.md", "line": 1, "layer": "layer 0", "case": 3,
+                                                "link": "[N�](n.md)"}])
+
+    def test_render_refuses_what_prepare_does_not_give(self):
+        """AUD-56 to AUD-59, AUD-46: render exits 2 on link reports or a reason of another form, and on missing fields."""
+        self.process()
+        prep = self.check(1)
+        good = dict(prep, audited=prep["selected"], findings=[], not_audited=[])
+        report = dict(prep["link_reports"][0])
+        for bad in ({"links_not_checked": "some reason"}, {"link_reports": [dict(report, case=3)]},
+                    {"link_reports": [dict(report, path="other.md")]}, {"link_reports": [dict(report, line="6")]},
+                    {"link_reports": [dict(report, plain="[x](y)")]}, {"link_reports": [dict(report, case=1)]},
+                    {"link_reports": [report], "links_not_checked": "git failed: x"}, {"link_reports": "none"}):
+            status, _, err = self.run_script("render", stdin=json.dumps(dict(good, **bad)).encode())
+            self.assertEqual(status, 2, bad)
+        self.assertEqual(audit.render(dict(good))[:5], "Audit")
+        for key in ("link_reports", "links_not_checked"):
+            with self.assertRaises(audit.BadInput):
+                audit.render({k: v for k, v in good.items() if k != key})
 
 
 if __name__ == "__main__":
