@@ -74,6 +74,12 @@ Feature: Write a draft spec
       Then the skill writes nothing
       And it says "specs-management:write: ../a.md: invalid path"
 
+    Scenario: A path that a layer tracks with other case
+      Given layer 0 tracks "specs/a.md"
+      When the user types "/specs-management:write specs/A.md"
+      Then the skill writes nothing, since paths are compared ignoring case
+      And it says "specs-management:write: specs/A.md: already in layer 0"
+
   Rule: ORC-61 A new spec is born only in layer 0 (must not)
 
     Scenario: A new draft spec
@@ -185,6 +191,12 @@ Feature: Write a draft spec
       Given "specs/process.md" of layer 1 holds "[A (not specified yet)](absent:a.md)"
       When "specs/a.md" is deleted
       Then neither "A (not specified yet)" nor "A" stays in place of the link
+
+    Scenario: A link that cannot be deleted as written
+      Given "specs/process.md" holds "[A](a%2Emd)" at line 3, whose destination resolves to "specs/a.md" only once its backslash escapes and %XX are decoded
+      When the user asks to delete "specs/a.md"
+      Then the skill writes nothing in either layer
+      And it says "specs-management:write: specs/process.md:3: link cannot be rewritten"
 
     Scenario: The commits of a deletion
       Given the user approved the diff

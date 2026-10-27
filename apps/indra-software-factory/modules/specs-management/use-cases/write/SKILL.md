@@ -102,8 +102,10 @@ New statement IDs follow those already used in the project: before writing,
 find the IDs of the prefix the draft will use with Grep (pattern
 `\*\*<PREFIX>-[0-9]+|Rule: <PREFIX>-[0-9]+`) over `<repos.0>` and
 `<repos.1>`, and take the next number after the highest one found. After
-each later change, step 6 lists in `ids` each ID that collides; renumber it
-with the user's yes.
+each later change, step 6 lists in `ids` each ID that another file uses; it
+collides only when an `also` entry has `declared` true and the ID is new in
+this run. Renumber only those, with the user's yes; never renumber an ID the
+draft already had (SPC-14 of writing-specs.md: stable identifiers).
 
 ## 6. Cheap check (ORC-65)
 

@@ -46,6 +46,7 @@ import re
 import shlex
 import sys
 from pathlib import Path
+from urllib.parse import unquote
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -94,6 +95,25 @@ def layer_of(repo, repos):
 def check_path(path, trees):
     if not valid(path) or is_folder(trees[0], path) or is_folder(trees[1], path):
         raise Refused([say(f"{path}: invalid path")])
+    # ORC-60: a path that a layer tracks with other case is that file on a file system that ignores case
+    # (macOS): never written as another (as ORC-39 condition 4 and ORC-48).
+    for layer in (0, 1):
+        if any(p != path and p.lower() == path.lower() for p in trees[layer]):
+            raise Refused([say(f"{path}: already in {LAYER[layer]}")])
+
+
+def listed(root, path):
+    """The file is at `path` with this exact name: each part is listed in its folder, whatever the case
+    rules of the file system."""
+    folder = root
+    for part in path.split("/"):
+        try:
+            if part not in os.listdir(folder):
+                return False
+        except OSError:
+            return False
+        folder = folder / part
+    return folder.is_file()
 
 
 def locate(repo, path):
@@ -106,7 +126,7 @@ def locate(repo, path):
     check_path(path, trees)
     in0, in1 = path in trees[0], path in trees[1]
     out["in_both"] = in0 and in1
-    out["on_disk"] = (repos[0] / path).is_file()
+    out["on_disk"] = not in0 and not in1 and listed(repos[0], path)
     if in1:
         # A path of layer 1 (also when a demote left it in both, ORC-45): change or delete, after its demote.
         out["choices"] = [CASE_NAMES["change-spec"], CASE_NAMES["delete"]]
@@ -228,17 +248,17 @@ def check(repo, path):
         neighbours.setdefault((layer, p), set()).add(why)
 
     # Each link of the draft whose link target does not exist; each file it links to.
+    # The links as the audit reads them (layers.layer_links): an absent link in angle brackets too (AUD-56).
     broken = []
-    for l in move.links(path, draft):
-        t = l["target"]
+    for l, absent, t in layers.layer_links(path, draft):
         if not exists_anywhere(trees, t, path):
-            broken.append(dict(line=l["line"], target=t, absent=l["absent"]))
+            broken.append(dict(line=l["line"], target=t, absent=absent))
         for layer in (0, 1):
             if t in trees[layer] and (layer, t) != (0, path):
                 near(layer, t, "linked from the draft")
     # Each file that links to the draft.
     for (layer, p), text in sorted(others.items()):
-        if any(l["target"] == path for l in move.links(p, text)):
+        if any(t == path for _, _, t in layers.layer_links(p, text)):
             near(layer, p, "links to the draft")
 
     # Each term of the draft that another file also defines (SPC-3).
@@ -295,6 +315,33 @@ def link_spans(file, text, path):
     opens = {l["open"] for l in move.links(file, text) if l["target"] == path}
     opens |= {l["open"] for l, _, t in layers.layer_links(file, text) if t == path}
     return [(l["open"], l["end"], l["line"]) for l in mdlinks.find_links(text) if l["open"] in opens]
+
+
+def unescaped(dest):
+    """A destination with its backslash escapes and its %XX decoded, as a reader resolves it."""
+    return unquote(re.sub(r"\\([!-/:-@\[-`{-~])", r"\1", dest), errors="surrogateescape")
+
+
+def hidden_links(file, text, path):
+    """The line of each link of `file` that resolves to `path` once its destination is decoded
+    (unescaped), but whose link target, the destination as the file holds it, is not `path`: a
+    link that ORC-68 cannot delete, as ORC-39 condition 6 cannot rewrite it."""
+    found = {s[0] for s in link_spans(file, text, path)}
+    lines = []
+    for l in mdlinks.find_links(text):
+        dest = text[l["dest_start"]:l["dest_end"]]
+        if l["angle"]:
+            dest = dest[1:-1]
+        dest = unescaped(dest)
+        absent = dest.startswith(layers.SCHEME)
+        if l["open"] in found or absent and not text[l["open"] + 1:l["close"]].endswith(layers.SUFFIX):
+            continue
+        p = (dest[len(layers.SCHEME):] if absent else dest).partition("#")[0]
+        if not p or p.startswith("/") or (layers.has_scheme(p) and not absent):
+            continue
+        if layers.link_target(file, p) == path:
+            lines.append(l["line"])
+    return lines
 
 
 def cut(text, spans):
@@ -386,6 +433,9 @@ def plan_deletion(repo, path):
     elif path not in trees[0]:
         errs.append(say(f"{path}: not in layer 0"))
     writes, lines = deletion(repos, trees, path)
+    for (layer, p), text in sorted(md_files(repos, trees).items()):
+        if (layer, p) != (0, path):
+            errs += [say(f"{p}:{n}: link cannot be rewritten") for n in hidden_links(p, text, path)]
     for layer in (0, 1):
         touched = set(writes[layer]) | ({path} if layer == 0 and path in trees[0] else set())
         for p in dirty(repos, layer, touched):
