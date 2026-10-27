@@ -104,4 +104,3 @@ file. The rules below hold in the repositories of layers 0 and 1 of the project
 
 1. CEX-5: what context a valid example builds in, such as the libraries in scope, imported files, and names it uses without declaring them. The derived norms of layer 2 need it before they check CEX-5.
 2. The format of a definition beyond its heading (name, severity, phase, condition, message template, primary label, suggestion, a passing and a failing example), and the generator in layer 2 of the full list of error codes, belong to the module `clean-derived-norms` and to the project's specs.
-3. Which error code code at column 1 that is not a section line gives (the registry has none today), so that an example of it can be written (CEX-10).
