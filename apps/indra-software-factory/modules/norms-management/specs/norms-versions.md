@@ -84,7 +84,7 @@ Each build reads the specs at one commit and the JSONL of the previous build, an
   - A rebuild changed nothing when every ID's status is `unchanged`, whatever else differs, such as the generator version in the meta line or the insertions of a newer generator. It keeps both reports as they are. Its JSONL and copies are written as this build makes them.
   - When either report is missing, a rebuild that changed nothing writes both again, from the stored version to the same one (``Specs `c2` -> `c2`.``): every count but `unchanged` is 0, and `data/report.json` is empty.
   - A rebuild that changes an ID's status, as a newer generator may, computes the flags of the IDs it changes as any step does, against that same commit: an ID it retires has as `changed_since` the commit itself. Its report is written again, from the stored version to the new one (``Specs `c2` -> `c2`.``), so it no longer shows the changes of the step that first built that commit, while the JSONL may still flag them.
-  - Layers 3 and 4 learn what changed by comparing the norm hash of each of their citations with the tree hash of its node (R21, R31, [ACU-27](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event), [ORC-25](../../code-implementation/specs/module.md#implement-the-changed-norms)). Example: E84.
+  - Layers 3 and 4 learn what changed as R31 says (R21). Example: E84.
 
 ### Data and outputs
 

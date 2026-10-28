@@ -13,3 +13,11 @@ En búsquedas por el repo (grep, find, Explore), excluir `research/`.
 
 Esta app se desarrolla con spec-driven development: antes de cambiar
 cualquier cosa, seguir [specs/development.md](specs/development.md).
+
+## El qué y el cómo (2026-10-28)
+
+El usuario dice el qué: el comportamiento que se ve desde afuera.
+Claude decide el cómo: formatos, algoritmos, scripts, mensajes, campos,
+estructura del código y de las specs. No preguntar detalles de
+implementación; decidirlos, escribirlos en la spec y seguir. Preguntar
+solo lo que cambia lo que el usuario ve o decide.

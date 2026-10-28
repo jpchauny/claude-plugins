@@ -137,7 +137,8 @@ class Scaffold(unittest.TestCase):
             path = os.path.join(folder, "billing-acceptance", "acceptance.json")
             self.assertIn(path, r.stdout.splitlines())
             with open(path, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"default_profile": profile, "increments": [],
+                self.assertEqual(json.load(f), {"default_profile": profile, "last_area_id": 0,
+                                                "last_unit_id": 0, "last_scenario_id": 0,
                                                 "test_command": "", "product": {}})
             for name in ["billing-drafts", "billing-specs", "billing-norms", "billing-code"]:
                 self.assertFalse(os.path.exists(os.path.join(folder, name, "acceptance.json")), name)

@@ -23,6 +23,16 @@ ENV = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
 ENV.update(GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t",
            GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL="/dev/null")
 
+# The files of a unit (ACU-8) and of an area (ACU-7); AU1_HASH and AU2_HASH are
+# their unit hashes (ACU-52), computed by hand.
+AU1 = ("# AU-1 Add\n\nArea: AA-1\n\n## Narrative\n\nIn order to add\nAs a user\nI want sums\n\n"
+       "## Norms\n\n- INV-7@5a627175: the sum\n")
+AU2 = ("# AU-2 Subtract\n\nArea: AA-1\n\n## Narrative\n\nIn order to subtract\nAs a user\nI want differences\n\n"
+       "## Norms\n\n- INV-9@0c1d2e3f: the difference\n")
+AA1 = ("# AA-1 Math\n\n## Purpose\n\nArithmetic.\n\n## Scenarios\n\n```gherkin\n"
+       "@SC-3 @unit:AU-1 @unit:AU-2 @INV-7 @INV-9\nScenario: Both together\n  Then it works\n```\n")
+AU1_HASH, AU2_HASH = "f84f8333", "554a95b2"
+
 JUNIT = """cat > "$ACCEPTANCE_REPORT" <<'XML'
 <testsuite><testcase classname="AU-1" name="adds"/><testcase classname="AU-1" name="subtracts"><failure/></testcase></testsuite>
 XML
@@ -57,14 +67,15 @@ class AcceptanceCI(unittest.TestCase):
         repos = [{"owner": "acme", "name": "billing-acceptance", "layer": 3, "path": "billing-acceptance"},
                  {"owner": "acme", "name": "billing-code", "layer": 4, "path": "billing-code"}]
         write(os.path.join(self.acc, "project.json"), json.dumps({"project": "billing", "repositories": repos}))
-        write(os.path.join(self.acc, "units", "AU-1.md"), "# AU-1 Add\n")
-        write(os.path.join(self.acc, "units", "AU-2.md"), "# AU-2 Subtract\n")
-        write(os.path.join(self.acc, "areas", "AA-1.md"), "# AA-1 Math\n@unit:AU-1 @unit:AU-2\n")
+        write(os.path.join(self.acc, "units", "AU-1.md"), AU1)
+        write(os.path.join(self.acc, "units", "AU-2.md"), AU2)
+        write(os.path.join(self.acc, "areas", "AA-1.md"), AA1)
         write(os.path.join(self.acc, "tests", "AU-1", "run.sh"),
-              "# AU-1: Two integers give their sum\n# INV-7@5a627175: the sum\n"
+              f"# AU-1@{AU1_HASH}: Add\n# SC-1@1234abcd: Two integers give their sum\n"
               'test "$PRODUCT_CMD" = product-v1\n')
-        write(os.path.join(self.acc, "tests", "AU-2", "run.sh"), "# AU-2: x\nexit 1\n")
-        write(os.path.join(self.acc, "tests", "AA-1", "run.sh"), "# AA-1: y\n# INV-9@0c1d2e3f: both\nexit 0\n")
+        write(os.path.join(self.acc, "tests", "AU-2", "run.sh"), f"# AU-2@{AU2_HASH}: Subtract\nexit 1\n")
+        write(os.path.join(self.acc, "tests", "AA-1", "run.sh"),
+              "# AA-1@aaaa1111: Math\n# SC-3@bbbb2222: Both together\nexit 0\n")
         self.configure('sh "$ACCEPTANCE_TARGET/run.sh"', {"build": "sh build.sh", "env": "PRODUCT_CMD"})
 
     def tearDown(self):
@@ -73,7 +84,8 @@ class AcceptanceCI(unittest.TestCase):
     def configure(self, command, entry):
         product = {"acme/billing-code": entry} if entry else {}
         write(os.path.join(self.acc, "acceptance.json"), json.dumps(
-            {"default_profile": "product", "increments": [], "test_command": command, "product": product}))
+            {"default_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
+             "test_command": command, "product": product}))
         git(self.acc, "add", "-A")
         git(self.acc, "commit", "-q", "-m", "config")
 
@@ -113,12 +125,43 @@ class AcceptanceCI(unittest.TestCase):
         self.assertEqual(line["date"], "2026-10-27T00:00:00+00:00")
         self.assertEqual(line["produced_by"], "https://ci/run/1")
         self.assertEqual(line["for"]["reference_commits"], {"acme/billing-code": self.code_commit})
+        self.assertEqual(line["for"]["hashes"], {"AU-1": AU1_HASH, "SC-1": "1234abcd"})
         self.assertEqual(line["for"]["norm_hashes"], {"INV-7": "5a627175"})
-        self.assertEqual(sorted(line["for"]["files"]), ["tests/AU-1/run.sh", "units/AU-1.md"])
-        blob = git(self.acc, "rev-parse", "HEAD:units/AU-1.md").stdout.strip()
-        self.assertEqual(line["for"]["files"]["units/AU-1.md"], blob)
-        self.assertEqual(sorted(aa1[0]["for"]["files"]),
-                         ["areas/AA-1.md", "tests/AA-1/run.sh", "units/AU-1.md", "units/AU-2.md"])
+        self.assertEqual(sorted(line["for"]["files"]), ["tests/AU-1/run.sh"])
+        blob = git(self.acc, "rev-parse", "HEAD:tests/AU-1/run.sh").stdout.strip()
+        self.assertEqual(line["for"]["files"]["tests/AU-1/run.sh"], blob)
+        self.assertEqual(aa1[0]["for"]["hashes"],
+                         {"AA-1": "aaaa1111", "AU-1": AU1_HASH, "AU-2": AU2_HASH, "SC-3": "bbbb2222"})
+        self.assertEqual(aa1[0]["for"]["norm_hashes"], {"INV-7": "5a627175", "INV-9": "0c1d2e3f"})
+        self.assertEqual(sorted(aa1[0]["for"]["files"]), ["tests/AA-1/run.sh"])
+
+    def test_acu35_an_id_cited_with_two_hashes_maps_to_the_empty_string(self):
+        write(os.path.join(self.acc, "tests", "AA-1", "run.sh"),
+              "# AA-1@aaaa1111: Math\n# AU-1@00000000: Add\n# SC-3@bbbb2222: Both together\nexit 0\n")
+        write(os.path.join(self.acc, "units", "AU-2.md"), AU2.replace("0c1d2e3f", "11112222")
+              + "\n")
+        write(os.path.join(self.acc, "units", "AU-3.md"),
+              AU1.replace("AU-1", "AU-3").replace("5a627175", "99998888"))
+        write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("@unit:AU-2", "@unit:AU-2 @unit:AU-3"))
+        git(self.acc, "add", "-A")
+        git(self.acc, "commit", "-q", "-m", "conflicts")
+        self.assertEqual(self.run_ci().returncode, 0)
+        line = self.records("AA-1")[0]
+        self.assertEqual(line["for"]["hashes"]["AU-1"], "")
+        self.assertEqual(line["for"]["norm_hashes"]["INV-7"], "")
+        self.assertEqual(line["for"]["norm_hashes"]["INV-9"], "11112222")
+
+    def test_acu35_an_area_crosses_only_the_units_of_its_scenarios(self):
+        write(os.path.join(self.acc, "areas", "AA-1.md"),
+              AA1.replace("Arithmetic.", "Arithmetic, as @unit:AU-2 says.").replace("@unit:AU-2 ", "@unit:AU-4 "))
+        git(self.acc, "add", "-A")
+        git(self.acc, "commit", "-q", "-m", "area")
+        self.assertEqual(self.run_ci().returncode, 0)
+        line = self.records("AA-1")[0]
+        # AU-2 is named only in the prose; AU-4 has no file, so it has no unit hash (ACU-35).
+        self.assertEqual(line["for"]["hashes"],
+                         {"AA-1": "aaaa1111", "AU-1": AU1_HASH, "AU-4": "", "SC-3": "bbbb2222"})
+        self.assertEqual(line["for"]["norm_hashes"], {"INV-7": "5a627175"})
 
     def test_acu35_lines_are_only_added(self):
         self.assertEqual(self.run_ci().returncode, 0)
@@ -237,7 +280,8 @@ class AcceptanceCI(unittest.TestCase):
 
     def test_acu6_product_of_an_unknown_repository_is_refused(self):
         write(os.path.join(self.acc, "acceptance.json"), json.dumps(
-            {"default_profile": "product", "increments": [], "test_command": "true",
+            {"default_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
+             "test_command": "true",
              "product": {"acme/other": {"build": "true", "env": "X"}}}))
         r = self.run_ci()
         self.assertEqual(r.returncode, 1)
@@ -250,6 +294,71 @@ class AcceptanceCI(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         order = [line.split(":")[0] for line in r.stdout.splitlines() if line.startswith(("AA-", "AU-"))]
         self.assertEqual(order, ["AA-1", "AU-1", "AU-2", "AU-10"])
+
+    def test_acu35_for_is_read_from_the_commit_not_the_working_tree(self):
+        # The code of layer 4 runs in test_command: it changes units/ and tests/, and Python writes __pycache__.
+        self.configure('printf -- "- INV-9@11112222: injected\\n" >> units/AU-1.md; '
+                       'echo "# AU-1@99999999: forged" >> tests/AU-1/run.sh; '
+                       'mkdir -p "$ACCEPTANCE_TARGET/__pycache__"; echo x > "$ACCEPTANCE_TARGET/__pycache__/t.pyc"; '
+                       'sh "$ACCEPTANCE_TARGET/run.sh"', {"build": "sh build.sh", "env": "PRODUCT_CMD"})
+        r = self.run_ci()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        line = self.records("AU-1")[0]
+        self.assertEqual(line["for"]["norm_hashes"], {"INV-7": "5a627175"})
+        self.assertEqual(line["for"]["hashes"], {"AU-1": AU1_HASH, "SC-1": "1234abcd"})
+        self.assertEqual(sorted(line["for"]["files"]), ["tests/AU-1/run.sh"])
+        self.assertEqual(line["for"]["files"]["tests/AU-1/run.sh"],
+                         git(self.acc, "rev-parse", "HEAD:tests/AU-1/run.sh").stdout.strip())
+        self.assertEqual(sorted(self.records("AA-1")[0]["for"]["norm_hashes"]), ["INV-7", "INV-9"])
+        self.assertEqual(self.records("AA-1")[0]["for"]["norm_hashes"]["INV-9"], "0c1d2e3f")
+
+    def test_acu34_a_folder_that_is_not_committed_is_not_run(self):
+        write(os.path.join(self.acc, "tests", "AU-5", "run.sh"), "exit 0\n")
+        self.assertEqual(self.run_ci().returncode, 0)
+        self.assertIsNone(self.records("AU-5"))
+
+    def test_acu35_no_commit_records_nothing(self):
+        other = os.path.join(self.root, "empty-acceptance")
+        os.mkdir(other)
+        git(other, "init", "-q", "-b", "main")
+        for name in ("project.json", "acceptance.json"):
+            with open(os.path.join(self.acc, name), encoding="utf-8") as f:
+                write(os.path.join(other, name), f.read())
+        self.acc = other
+        r = self.run_ci()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("cannot read the commit HEAD", r.stderr)
+        self.assertFalse(os.path.exists(os.path.join(other, "records")))
+
+    def test_acu34_an_empty_last_line_of_the_build_fails(self):
+        self.configure("true", {"build": "printf 'x\\n\\n'", "env": "PRODUCT_CMD"})
+        r = self.run_ci()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("build of acme/billing-code failed", r.stderr)
+        self.assertFalse(os.path.exists(os.path.join(self.acc, "records")))
+
+    def test_acu6_acceptance_json_of_another_form_is_refused(self):
+        good = {"default_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
+                "test_command": "true", "product": {}}
+        bad = ["[]", json.dumps(dict(good, test_command=7)), json.dumps(dict(good, test_command=["true"])),
+               json.dumps(dict(good, test_command=0)), json.dumps(dict(good, last_unit_id="1")),
+               json.dumps(dict(good, last_unit_id=-1)), json.dumps(dict(good, increments=[])),
+               json.dumps(dict(good, product=[])), json.dumps(dict(good, default_profile="gold")), "not json"]
+        for text in bad:
+            with self.subTest(text=text):
+                write(os.path.join(self.acc, "acceptance.json"), text)
+                r = self.run_ci()
+                self.assertEqual(r.returncode, 1)
+                self.assertIn("fields of ACU-6", r.stderr)
+                self.assertFalse(os.path.exists(os.path.join(self.acc, "records")))
+
+    def test_acu55_a_folder_that_is_not_an_id_is_not_run(self):
+        for name in ("AU-0", "AU-03"):
+            write(os.path.join(self.acc, "tests", name, "run.sh"), "exit 0\n")
+        self.configure('sh "$ACCEPTANCE_TARGET/run.sh"', {"build": "sh build.sh", "env": "PRODUCT_CMD"})
+        self.assertEqual(self.run_ci().returncode, 0)
+        self.assertIsNone(self.records("AU-0"))
+        self.assertIsNone(self.records("AU-03"))
 
     def test_acu34_a_work_folder_inside_the_acceptance_repository_is_refused(self):
         r = self.run_ci(work=os.path.join(self.acc, ".ci", "work"))

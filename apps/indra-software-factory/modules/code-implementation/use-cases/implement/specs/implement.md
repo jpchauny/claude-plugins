@@ -4,9 +4,9 @@
 
 **Audience:** The people who ask for code to be built from the norms of a project; whoever builds the skill `implement` of the plugin `code-implementation`
 
-**Scope:** The use case that implements a task in the code repository: one acceptance unit of the acceptance repository, in the order of the plan of implementation, from the norms and the derived norms of the norms repository alone, with every piece of code and every unit test citing the norms it comes from and the version of each. How the code of a unit is updated after a norm that it cites changes is open question 2. How the norms are annotated with IDs is in the specs of `norms-management`. What an acceptance unit, an acceptance test, a decision block and the plan of implementation are, and when a unit is done, is in [acceptance-management](../../../../acceptance-management/specs/module.md). The clauses of other specs that the rules below cite are (complete list): [LAY-1](../../../../development-methodology/specs/layers.md#rules) (the five layers), [LAY-3](../../../../development-methodology/specs/layers.md#rules) (how layer 2 is derived), [LAY-4](../../../../development-methodology/specs/layers.md#rules) (layer 4 reads layers 2 and 3, never layer 1), [LAY-5](../../../../development-methodology/specs/layers.md#rules) (an inconsistency goes back to layer 1); [ORC-20, ORC-21, ORC-22 and ORC-24](../../../../project-management/specs/module.md#where-the-repositories-are) (where the repositories of a project are); [ORC-25, ORC-26, ORC-27 and CIM-2](../../../specs/module.md#implement-the-changed-norms) (the commits that the module reads, and the review of the citations of the code repository); [ACU-2 and ACU-4](../../../../acceptance-management/specs/module.md#the-acceptance-area-and-the-acceptance-unit) (who decides the norms of a unit); [ACU-6 and ACU-8](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository) (the files of the acceptance repository); [ACU-12, ACU-34 and ACU-49](../../../../acceptance-management/specs/module.md#acceptance-tests-and-independent-evidence) (acceptance tests are run, never changed, and their run here is feedback; which build each entry of `product` gives them); [ACU-17](../../../../acceptance-management/specs/module.md#when-a-unit-is-done) (the AI decisions and their decision blocks); [ACU-23](../../../../acceptance-management/specs/module.md#the-ladder-of-states) (the state `verified`); [ACU-28](../../../../acceptance-management/specs/module.md#done-is-a-state-not-an-event) (a unit whose norm changed is updated in layer 3); [ACU-41](../../../../acceptance-management/specs/module.md#done-is-a-state-not-an-event) (the hand-off of the step of layer 3); [ORC-9](../../../../norms-management/specs/module.md#regenerate-the-norms) (the commit of layer 2 of a run); [ORC-15](../../../../development-methodology/specs/flow.md#start-a-run) (a run); [ACU-39 and ACU-42](../../../../acceptance-management/specs/module.md#the-plan-of-implementation) (the plan of implementation, and the order of its units and components)
+**Scope:** The use case that implements a task in the code repository: one acceptance unit of the acceptance repository, in the order of the plan of implementation, from the norms and the derived norms of the norms repository alone, with every piece of code and every unit test citing the unit it implements and the version of that unit. How the code of a unit that is not the task is updated after the unit changes is open question 2. How the norms are annotated with IDs is in the specs of `norms-management`. What an acceptance unit, an acceptance test, a decision block and the plan of implementation are, and when a unit is done, is in [acceptance-management](../../../../acceptance-management/specs/module.md). The clauses of other specs that the rules below cite are (complete list): [LAY-1](../../../../development-methodology/specs/layers.md#rules) (the five layers), [LAY-3](../../../../development-methodology/specs/layers.md#rules) (how layer 2 is derived), [LAY-4](../../../../development-methodology/specs/layers.md#rules) (layer 4 reads layers 2 and 3, never layer 1), [LAY-5](../../../../development-methodology/specs/layers.md#rules) (an inconsistency goes back to layer 1); [ORC-20, ORC-21, ORC-22 and ORC-24](../../../../project-management/specs/module.md#where-the-repositories-are) (where the repositories of a project are); [ORC-25, ORC-26, ORC-27 and CIM-2](../../../specs/module.md#implement-the-changed-norms) (the commits that the module reads, and the review of the citations of the code repository); [ACU-2 and ACU-4](../../../../acceptance-management/specs/module.md#the-acceptance-area-and-the-acceptance-unit) (who decides the norms of a unit); [ACU-9](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository) (a unit that no increment holds is not implemented); [ACU-52 and ACU-56](../../../../acceptance-management/specs/module.md#hashes-and-citations) (the unit hash, and the forms of a citation); [ACU-6 and ACU-8](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository) (the files of the acceptance repository); [ACU-12, ACU-34 and ACU-49](../../../../acceptance-management/specs/module.md#acceptance-tests-and-independent-evidence) (acceptance tests are run, never changed, and their run here is feedback; which build each entry of `product` gives them); [ACU-17](../../../../acceptance-management/specs/module.md#when-a-unit-is-done) (the AI decisions and their decision blocks); [ACU-23](../../../../acceptance-management/specs/module.md#the-ladder-of-states) (the state `verified`); [ACU-28](../../../../acceptance-management/specs/module.md#done-is-a-state-not-an-event) (a unit whose norm changed is updated in layer 3); [ACU-41](../../../../acceptance-management/specs/module.md#done-is-a-state-not-an-event) (the hand-off of the step of layer 3); [ORC-9](../../../../norms-management/specs/module.md#regenerate-the-norms) (the commit of layer 2 of a run); [ORC-15](../../../../development-methodology/specs/flow.md#start-a-run) (a run); [ACU-39 and ACU-42](../../../../acceptance-management/specs/module.md#the-plan-of-implementation) (the plan of implementation, and the order of its units and components)
 
-A use case of the module `code-implementation`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). The terms acceptance unit, unit ID, acceptance test, unit test, product build, AI decision, decision block, non-goal, evidence, acceptance architect, implementation planner and requester are those of [acceptance-management](../../../../acceptance-management/specs/module.md#terms); the term user is that of [module.md](../../../specs/module.md#terms).
+A use case of the module `code-implementation`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). The terms acceptance unit, unit ID, unit hash, increment, acceptance test, unit test, product build, AI decision, decision block, non-goal, evidence, acceptance architect, implementation planner and requester are those of [acceptance-management](../../../../acceptance-management/specs/module.md#terms); the terms user and unit behind layer 2 are those of [module.md](../../../specs/module.md#terms).
 
 ## Terms
 
@@ -28,16 +28,17 @@ A use case of the module `code-implementation`, specified in [module.md](../../.
 | Norm | A node of `specs-repo-annotated/` in the norms repository, with its norm ID, such as `SYN-3`. |
 | Norm ID | The ID of a norm, such as `SYN-3`, as the norms generator gives it. The skill reads the IDs from `data/tree.jsonl`, the only source of truth for them ([R23](../../../../norms-management/specs/norms-tree.md#storage-and-process)), and not from the markers of `specs-repo-annotated/`, which take several forms ([R24](../../../../norms-management/specs/norms-tree.md#annotations)). |
 | Norms of the task | The norms that the `## Norms` of the task groups, each with its norm hash in the commit of the norms repository that the skill read. The acceptance architect decides them; the skill adds none and removes none (IMP-4). |
-| Norm hash | The first 8 hex digits, in lower case, of the `tree_hash` of a norm in `data/tree.jsonl` of the norms repository ([R31](../../../../norms-management/specs/norms-tree.md#the-tree-in-layer-2), [R61](../../../../norms-management/specs/norms-versions.md#data-and-outputs)), such as `5a627175`. When and why it changes is R31's. Each citation holds the norm hash of the version it was written for, so the code repository pins no single version of layer 2. |
-| Citation | One line of comment in code or in a test, `<norm ID>@<norm hash>: <reason>` after the comment mark of the language, where `<reason>` says in a few words what of the norm the code does or the test checks, such as `# INV-7@5a627175: one row per invoice` in Python or `// INV-7@5a627175: one row per invoice` in Rust and JavaScript. It names a norm that the code implements or the test checks, the version of the norm that it was written for, and why. A derived norm cites its norms with the same citation (LAY-3). |
+| Norm hash | The first 8 hex digits, in lower case, of the `tree_hash` of a norm in `data/tree.jsonl` of the norms repository ([R31](../../../../norms-management/specs/norms-tree.md#the-tree-in-layer-2), [R61](../../../../norms-management/specs/norms-versions.md#data-and-outputs)), such as `5a627175`. When and why it changes is R31's. Each norm citation holds the norm hash of the version that its unit was written for. |
+| Citation | A citation of a unit by the code ([ACU-56](../../../../acceptance-management/specs/module.md#hashes-and-citations)): one line of comment in code or in a unit test, `<unit ID>@<unit hash>: <reason>` after the comment mark of the language, where `<reason>` says in a few words what of the unit the code does or the test checks, such as `# AU-3@efc7ae86: one row per invoice` in Python or `// AU-3@efc7ae86: one row per invoice` in Rust and JavaScript. It names a unit that the code implements or the test checks, the version of the unit that it was written for, and why. The unit hash is computed by a script, never by the model ([ACU-51](../../../../acceptance-management/specs/module.md#hashes-and-citations)). |
+| Norm citation | A citation of a norm ([ACU-56](../../../../acceptance-management/specs/module.md#hashes-and-citations)), `<norm ID>@<norm hash>: <reason>`, such as `INV-7@5a627175: one row per invoice`: a list item of `## Norms` of a unit, or a line of a derived norm, which cites its norms in this form (LAY-3). The code repository holds none (IMP-6). |
 
 ## Implement a task
 
 ```gherkin
 Feature: Implement a task
-  In order to have code that does only what the norms say, and that shows which norm each part comes from
+  In order to have code that does only what the norms say, and that shows which unit, and through it which norms, each part comes from
   As a person who asks for code to be built from the norms of a project
-  I want a task implemented from the norms of the norms repository, with every part citing its norm IDs
+  I want a task implemented from the norms of the norms repository, with every part citing the unit it implements
 
   Rule: IMP-1 The skill runs only in a code repository
 
@@ -121,12 +122,29 @@ Feature: Implement a task
   Rule: IMP-18 Before it starts the task, the skill shows the review of the citations of the code repository (ORC-25, ORC-26)
 
     Scenario: A citation of the code repository changed
-      Given the code repository holds the citation "# INV-3@aa11bb22: a reason"
-      And "INV-3" has the norm hash "cc33dd44" in the commit of the norms repository that the skill read
+      Given the code repository holds the citation "# AU-5@aa11bb22: a reason"
+      And "AU-5" has the unit hash "cc33dd44" in the commit of the acceptance repository that the skill read
       When the user invokes the skill
-      Then before it shows the task (IMP-4), the skill shows the citation of "INV-3" as "changed", with the files that hold it and the units of CIM-2
-      And it lists no other norm, and adds none to the task
-      And when "INV-3" is not a norm of the task, the citation stays as it is (IMP-9)
+      Then before it shows the task (IMP-4), the skill shows the citation of "AU-5" as "changed", with the files that hold it and what CIM-2 says of it
+      And it lists no other unit, and adds no norm to the task
+      And when "AU-5" is not the task, the citation stays as it is (IMP-9)
+
+    Scenario Outline: A citation of a unit that is not in the acceptance repository
+      Given the code repository holds the citation "# <unit>@aa11bb22: a reason"
+      And the commit of the acceptance repository that the skill read holds no file "units/<unit>.md", and its "acceptance.json" has "last_unit_id" 9
+      When the user invokes the skill
+      Then the skill shows the citation of "<unit>" as "<state>", with the files that hold it (ORC-25, CIM-2)
+
+      Examples:
+        | unit  | state   |
+        | AU-7  | retired |
+        | AU-12 | unknown |
+
+    Scenario: A cited unit is behind layer 2
+      Given the code repository holds the citation "# AU-3@efc7ae86: one row per invoice", and "efc7ae86" is the unit hash of "AU-3" in the commit of the acceptance repository that the skill read
+      And "## Norms" of "AU-3" holds "INV-12@0c1d2e3f: amounts with two decimals", and "INV-12" has the norm hash "7b8c9d0e" in the commit of the norms repository that the skill read
+      When the user invokes the skill
+      Then the skill shows "AU-3" as a unit behind layer 2, because of "INV-12" (ORC-26)
 
     Scenario: The comparison cannot run
       Given the comparison of ORC-25 cannot run
@@ -141,13 +159,14 @@ Feature: Implement a task
       Then it shows "AU-3", each of its norms by its norm ID and its text, its non-goals, and the commit of the norms repository
       And it adds no norm to the task and removes none: the norms of a unit are decided in layer 3 (ACU-2)
 
-  Rule: IMP-19 The skill implements the task only when each citation of its "## Norms" names a norm of the commit of the norms repository that it read, with its norm hash in that commit
+  Rule: IMP-19 The skill implements the task only when each norm citation of its "## Norms" names a norm of the commit of the norms repository that it read, with its norm hash in that commit: the task is not a unit behind layer 2
 
     Scenario: The task cites one of its norms with another norm hash
       Given "AU-3" groups "INV-12" with the norm hash "0c1d2e3f"
       And "INV-12" has the norm hash "7b8c9d0e" in the commit of the norms repository that the skill read
       When the skill starts the task
       Then it does not implement "AU-3", and says that the acceptance architect must update it (ACU-28)
+      And the code that cites "AU-3" stays as it is
 
     Scenario: A norm of the unit is no longer in layer 2
       Given the "## Norms" of "AU-3" holds the citation "INV-15@9e8d7c6b: cancelled invoices are not exported"
@@ -244,75 +263,95 @@ Feature: Implement a task
       Then the skill writes nothing
       And it says that "AU-99" is not a unit of the acceptance repository
 
+    Scenario: The unit is in no increment
+      Given the acceptance repository holds the file "units/AU-20.md"
+      And no increment of "plan.json" holds "AU-20"
+      When the user invokes the skill with the requested unit "AU-20"
+      Then the skill writes nothing
+      And it says that "AU-20" is not yet planned, and that the implementation planner must add it to the plan (ACU-9, ACU-39)
+
   Rule: IMP-15 The skill implements no norm that the task does not group
 
     Scenario: The unit needs a norm it does not group
       Given the task is "AU-3"
       And implementing "AU-3" needs the norm "INV-20", which "AU-3" does not group
       When the skill finds it
-      Then it writes no code that cites "INV-20"
+      Then it writes no code for "INV-20"
       And it writes no more code for "AU-3", and leaves the code it already wrote for "AU-3" in the code repository, uncommitted (IMP-12)
       And it does not report the task as done, names the files it changed, and says that the acceptance architect must group "INV-20" in a unit (ACU-2, IMP-11)
 
-  Rule: IMP-6 Every piece of code and every unit test cites the norms it comes from, with the norm hash of the commit of the norms repository that it read
+  Rule: IMP-6 Every piece of code and every unit test cites the units it implements or checks, with the unit hash of the commit of the acceptance repository that it read, and never a norm ID (ACU-56)
 
-    Scenario: Code that implements a norm
-      Given the norm "INV-7" says that the CSV export has one row per invoice
-      And its norm hash in the commit of the norms repository that the skill read is "5a627175"
+    Scenario: Code that implements the task
+      Given the task is "AU-3", whose unit hash in the commit of the acceptance repository that the skill read is "efc7ae86"
+      And "AU-3" groups "INV-7", which says that the CSV export has one row per invoice
       When the skill writes the Python function that builds the rows
-      Then the function holds the citation "# INV-7@5a627175: one row per invoice"
+      Then the function holds the citation "# AU-3@efc7ae86: one row per invoice"
+      And it holds no norm citation, such as "# INV-7@5a627175: one row per invoice"
 
-    Scenario: A unit test that checks a norm
-      When the skill writes a test of "INV-7"
+    Scenario: A unit test that checks the task
+      When the skill writes a test of "AU-3"
       Then the test is a unit test of the code repository, and never an acceptance test (ACU-12)
-      And it holds a citation of "INV-7" with the norm hash "5a627175"
+      And it holds a citation of "AU-3" with the unit hash "efc7ae86"
 
-    Scenario: Code that implements three norms
-      Given a function implements "INV-7", "INV-12" and "EXP-3"
-      When the skill writes it
-      Then it holds three citations, one line each, each with its own norm hash and reason
+    Scenario: Code that serves two units
+      Given the function "parse_expr" holds the citation "// AU-10@4e5f6a7b: parse additions"
+      And the task is "AU-11", whose unit hash is "a596f507"
+      When the skill changes "parse_expr" so that it also parses multiplications
+      Then the function holds two citations, one line each, "// AU-10@4e5f6a7b: parse additions" and "// AU-11@a596f507: parse multiplications"
 
     Scenario Outline: The comment mark follows the language
-      When the skill writes a citation of "INV-7" in a file of <language>
+      When the skill writes a citation of "AU-3" in a file of <language>
       Then the citation is "<citation>"
 
       Examples:
         | language   | citation                                  |
-        | Python     | # INV-7@5a627175: one row per invoice     |
-        | Rust       | // INV-7@5a627175: one row per invoice    |
-        | JavaScript | // INV-7@5a627175: one row per invoice    |
-        | SQL        | -- INV-7@5a627175: one row per invoice    |
+        | Python     | # AU-3@efc7ae86: one row per invoice      |
+        | Rust       | // AU-3@efc7ae86: one row per invoice     |
+        | JavaScript | // AU-3@efc7ae86: one row per invoice     |
+        | SQL        | -- AU-3@efc7ae86: one row per invoice     |
 
-    Scenario: Code that comes from no norm of the task
+    Scenario: Code that does not serve the task
       When the skill implements the task
-      Then it writes no code that cites none of the norms of the task, except code that the language or the build requires, such as imports, and decision blocks (IMP-17)
+      Then it writes no code that holds no citation of the task, except code that the language or the build requires, such as imports, and decision blocks (IMP-17)
 
-  Rule: IMP-7 A citation is placed on the smallest part of the code that holds the whole implementation of the norm
+  Rule: IMP-20 When the code cites the task with another unit hash, the skill reviews that code against the task, and cites the unit hash of the task
+
+    Scenario: The task changed since its code was written
+      Given the task is "AU-3", whose unit hash is "efc7ae86"
+      And the code repository holds the citation "# AU-3@1a2b3c4d: one row per invoice", shown as "changed" in the review (ORC-26)
+      When the skill implements the task
+      Then it changes the code under that citation, and its unit tests, as the diff of CIM-2 and the norms of the task ask
+      And it replaces the citation with "# AU-3@efc7ae86: one row per invoice", or removes the citation and the code under it when the task no longer needs that code
+      And when it ends, no citation of "AU-3" in the code repository holds a unit hash other than "efc7ae86"
+
+  Rule: IMP-7 A citation is placed on the smallest part of the code that holds the whole of what its reason says
 
     Scenario Outline: Where the citation goes
-      Given the norm "<norm>" is implemented by <part>
+      Given what of "AU-3" the reason of the citation says is implemented by <part>
       When the skill cites it
       Then the citation is <place>
 
       Examples:
-        | norm   | part                                   | place                                |
-        | INV-7  | one function                           | on the line just above that function |
-        | INV-12 | one line inside a function             | on the line just above that line     |
-        | INV-2  | a whole class, and no one method of it | on the line just above that class    |
-        | CFG-1  | a whole file                           | at the top of that file              |
+        | part                                   | place                                |
+        | one function                           | on the line just above that function |
+        | one line inside a function             | on the line just above that line     |
+        | a whole class, and no one method of it | on the line just above that class    |
+        | a whole file                           | at the top of that file              |
 
-  Rule: IMP-13 Code built from a derived norm cites the norms that derived norm cites
+  Rule: IMP-13 Code built from a derived norm cites the task, as IMP-6 says, and never the norms that the derived norm cites
 
     Scenario: A function built from a rule of the grammar
-      Given the rule "expr" of the grammar of the norms repository holds the citation "SYN-3@abcd1234: binary operators"
+      Given the rule "expr" of the grammar of the norms repository holds the norm citation "SYN-3@abcd1234: binary operators"
+      And the task is "AU-11", whose "## Norms" groups "SYN-3", and whose unit hash is "a596f507"
       When the skill writes the function that parses "expr"
-      Then the function cites "SYN-3", as IMP-6 says
+      Then the function holds the citation "// AU-11@a596f507: parse multiplications", and no citation of "SYN-3"
 
-  Rule: IMP-8 Every citation that the skill writes names a norm of the commit of the norms repository that it read, with its norm hash in that commit
+  Rule: IMP-8 Every citation that the skill writes names a unit of the commit of the acceptance repository that it read, with its unit hash in that commit
 
     Scenario: Every citation is checked
       When the skill has written the code and the tests
-      Then it checks each citation that it wrote: its norm ID exists in that commit, and its norm hash is the one of that norm in that commit
+      Then a script checks each citation that the skill wrote: its unit ID is the ID of a file "units/<unit ID>.md" of that commit, and its unit hash is the one of that unit in that commit (ACU-52)
 
     Scenario Outline: A citation that does not check
       Given the skill wrote the citation "<citation>"
@@ -321,18 +360,21 @@ Feature: Implement a task
       Then it fixes the citation before it ends, and does not report the task as done until every citation it wrote checks
 
       Examples:
-        | citation                     | fact                                              |
-        | # INV-99@1f2e3d4c: a reason  | "INV-99" does not exist in that commit             |
-        | # INV-7@00000000: a reason   | the norm hash of "INV-7" in that commit is "5a627175" |
+        | citation                     | fact                                                  |
+        | # AU-99@1f2e3d4c: a reason   | "AU-99" is not a unit of that commit                  |
+        | # AU-3@00000000: a reason    | the unit hash of "AU-3" in that commit is "efc7ae86"  |
+        | # INV-7@5a627175: a reason   | "INV-7" is a norm ID, not a unit ID (IMP-6)           |
 
-  Rule: IMP-9 The skill changes no citation of a norm that is not a norm of the task
+  Rule: IMP-9 The skill changes no citation of a unit that is not the task
 
-    Scenario: A file holds a citation of another norm
-      Given a file that the skill changes holds the citation "# INV-3@aa11bb22: a reason"
-      And "INV-3" is not a norm of the task
+    Scenario: A file holds a citation of another unit
+      Given a file that the skill changes holds the citation "# AU-5@aa11bb22: a reason"
+      And "AU-5" is not the task
       When the skill implements the task
-      Then the citation of "INV-3" stays as it is, with its norm hash "aa11bb22"
-      And the code that it cites stays as it is
+      Then the citation of "AU-5" stays as it is, with its unit hash "aa11bb22"
+      And the code under it changes only so that it also serves the task, with a citation of the task added (IMP-6)
+      And it does not change that code when "AU-5" is a unit behind layer 2, or its citation is not "unchanged" (CIM-2)
+      And the unit tests that cite "AU-5" still pass
 
   Rule: IMP-16 The skill runs the acceptance tests of the task as feedback, with the builds that ACU-49 says, and never changes them (ACU-12)
 
@@ -414,12 +456,12 @@ Feature: Implement a task
       And it shows the text of an issue for the specs repository that names both norm IDs and what contradicts
       And it opens the issue only after the user confirms
 
-  Rule: IMP-11 The skill ends with the list of what it implemented, by norm ID
+  Rule: IMP-11 The skill ends with the list of what it implemented for the task
 
     Scenario: The task is implemented
       When the skill has implemented the task
       Then it shows the commit of the norms repository and the commit of the acceptance repository that it read
-      And for each norm of the task, the files and the functions or tests that cite it
+      And the task, with its unit hash, and the files and the functions or tests that cite it
       And each norm of the task that it did not implement, and why
       And each acceptance test of the task, and whether it passed in the run of IMP-16
       And the slug of each decision block that it wrote, and the units of each (ACU-17)
@@ -434,10 +476,10 @@ Feature: Implement a task
       Given the skill has implemented the task
       When the user asks to commit
       Then the skill commits only the files it changed, each by its path
-      And the message of the commit names the commit of the norms repository, the commit of the acceptance repository, and the norm IDs it covers
+      And the message of the commit names the commit of the norms repository, the commit of the acceptance repository, and the unit ID of the task with its unit hash
 ```
 
 ## Open questions
 
 1. Where does the citation go for a file whose language has no comment, such as JSON?
-2. When a unit is updated in layer 3 after a norm that it groups changes ([ACU-28](../../../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)), is the code that cites the old norm hash updated by implementing that unit again as the task (IMP-14), or by a use case of its own?
+2. When a unit is updated in layer 3 ([ACU-28](../../../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)), the code that cites its old unit hash is updated when the unit is the task again (IMP-14, IMP-20). Must a use case of its own update it sooner, when the unit comes late in the plan of implementation?

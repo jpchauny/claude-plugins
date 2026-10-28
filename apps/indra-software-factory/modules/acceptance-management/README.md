@@ -14,8 +14,9 @@ approves each change
 
 - the acceptance architect decides the acceptance areas, the acceptance units
   and the norms of each unit;
-- the implementation planner writes `plan.json`, the order in which the units
-  and their components are implemented;
+- the implementation planner writes `plan.json`: the increments, the units
+  of each, and the order in which the units and their components are
+  implemented;
 - the test agent writes the acceptance tests;
 - the norms reviewer selects the norms of a unit without seeing those that the
   acceptance architect chose, when the done profile of the unit asks for it
@@ -49,4 +50,25 @@ could read it. Its tests run with the command above.
 
 ## Use cases
 
-None built yet.
+- `/acceptance-management:define`
+  ([define.md](use-cases/define/specs/define.md)): the acceptance architect
+  analyses every norm of layer 2, at the head of the default branch of the
+  norms repository, against every acceptance area and unit, and creates,
+  changes and deletes areas and units with their scenarios, in changes that
+  the requester approves. Its skill is
+  [use-cases/define/SKILL.md](use-cases/define/SKILL.md); its script,
+  `use-cases/define/define.py`, computes with no model the checks before the
+  skill starts, the inventory of the norms, areas and units with their format
+  errors, and the checks, the ID fields and the commit command of each
+  change. Its tests are `tests/test_define.py`, and run with the command
+  above.
+
+## Not built yet
+
+No script of this module computes yet which evidence is stale and the state
+of each unit ([ACU-26 and ACU-27](specs/module.md#done-is-a-state-not-an-event),
+[ACU-23](specs/module.md#the-ladder-of-states)), when an increment is done, or
+the norms that no unit groups
+([ACU-31 and ACU-32](specs/module.md#when-an-area-and-an-increment-are-done)).
+The continuous integration records what each line of `records/` is for
+(ACU-35), but nothing reads it yet.

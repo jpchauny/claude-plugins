@@ -36,8 +36,8 @@ every repository of a project.
 | `project-management` | The repositories of a project: their creation and their life cycle | [module.md](../modules/project-management/specs/module.md) |
 | `specs-management` | Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write, and moves specs between the two layers | [module.md](../modules/specs-management/specs/module.md) |
 | `norms-management` | Layer 2: the norms and the derived norms | [module.md](../modules/norms-management/specs/module.md) |
-| `acceptance-management` | Layer 3: the acceptance areas and the acceptance units, the order in which they are implemented, their acceptance tests, and when a unit, an area and an increment are done | [module.md](../modules/acceptance-management/specs/module.md) |
-| `code-implementation` | Layer 4: code built from the norms and the derived norms, and its traceability to norm IDs | [module.md](../modules/code-implementation/specs/module.md) |
+| `acceptance-management` | Layer 3: the acceptance areas and the acceptance units, the increments and the order in which the units are implemented, their acceptance tests, and when a unit, an area and an increment are done | [module.md](../modules/acceptance-management/specs/module.md) |
+| `code-implementation` | Layer 4: code built from the norms and the derived norms, and its traceability to the acceptance units it implements, and through them to the norms | [module.md](../modules/code-implementation/specs/module.md) |
 | `drift-management` | A drift found while defining acceptance in layer 3 or implementing in layer 4, sent back to layer 1 | [module.md](../modules/drift-management/specs/module.md) |
 | `workflow-orchestration` | Runs the flow across the modules: what triggers a run, and how each step runs in its repository | [module.md](../modules/workflow-orchestration/specs/module.md) |
 | `utilities` | Tools usable in any layer: exploring, the issue tree, explanations, a recap of the session | not yet specified |

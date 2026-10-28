@@ -73,7 +73,8 @@ def add_deny(settings: Path, rules: list[str]) -> None:
 
 def acceptance_json(profile: str) -> str:
     """The acceptance.json of ACU-6, as the project starts (CRP-2)."""
-    data = {"default_profile": profile, "increments": [], "test_command": "", "product": {}}
+    data = {"default_profile": profile, "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
+            "test_command": "", "product": {}}
     return json.dumps(data, indent=2) + "\n"
 
 
