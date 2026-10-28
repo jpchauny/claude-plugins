@@ -226,6 +226,9 @@ SPC-1 to SPC-12 apply to every spec. SPC-13 to SPC-20 apply only when their "App
 - The spec set must declare the convention once.
 - A spec set may adopt the convention of this guideline by reference.
 - Rationale must be labelled as rationale.
+- Each statement that has an ID must have a rationale: why it exists, and what would go wrong without it.
+- A rationale must give reasons that stay true as long as its statement stays as it is. It must not record how the decision was taken: no dates, votes, studies, tool versions or issue numbers. Version control keeps them (SPC-T14).
+- A change of a statement must update its rationale in the same change.
 - Accepted costs must be labelled as accepted costs.
 - A prescribed design must be labelled as deliberate.
 - A departure from common practice must be labelled as deliberate.
