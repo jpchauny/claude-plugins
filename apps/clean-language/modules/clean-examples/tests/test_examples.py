@@ -232,6 +232,49 @@ class Markdown(unittest.TestCase):
         self.assertEqual([b.line for b in ex.blocks(text) if ex.is_suspect(b)], [3])
 
 
+class ExpectedOutput(unittest.TestCase):
+    VALID = md("clean-language expect=valid", "start:", "\tprint(1)")
+    OUT = md("clean-language-output", "1")
+
+    def outputs(self, text):
+        return sorted(ex.check_outputs(text))
+
+    def test_cex27_right_after_a_valid_example(self):
+        self.assertEqual(self.outputs(self.VALID + "\n" + self.OUT), [])
+        self.assertEqual(self.outputs(self.VALID + self.OUT), [])
+        self.assertEqual(self.outputs(self.VALID + "\n \t\n" + self.OUT), [])
+
+    def test_cex27_anywhere_else(self):
+        self.assertEqual(self.outputs(self.OUT), [(1, "CEX-27")])
+        self.assertEqual(self.outputs(self.VALID + "\nIt prints:\n\n" + self.OUT), [(8, "CEX-27")])
+        error = md("clean-language expect=error code=SEM004", "start:", "\tx")
+        self.assertEqual(self.outputs(error + "\n" + self.OUT), [(6, "CEX-27")])
+        syntax = md("clean-language expect=syntax-error code=SYN011 line=1", "x")
+        self.assertEqual(self.outputs(syntax + "\n" + self.OUT), [(5, "CEX-27")])
+        self.assertEqual(self.outputs(md("text", "1") + "\n" + self.OUT), [(5, "CEX-27")])
+
+    def test_cex27_a_second_block(self):
+        self.assertEqual(self.outputs(self.VALID + "\n" + self.OUT + "\n" + self.OUT), [(10, "CEX-27")])
+
+    def test_cex28_the_info_string_is_exact(self):
+        self.assertEqual(self.outputs(self.VALID + "\n" + md("clean-language-output text", "1")), [(6, "CEX-28")])
+        self.assertEqual(rules(md("clean-language-outputs", "1")), [])
+
+    def test_an_expected_output_block_is_no_clean_example(self):
+        block = [b for b in ex.blocks(self.OUT) if b.fenced][0]
+        self.assertTrue(block.is_output())
+        self.assertFalse(block.is_example())
+        self.assertEqual(rules(md("clean-language-output", "x = 1")), [])
+
+    def test_cau6_an_expected_output_block_is_no_suspect(self):
+        text = self.VALID + "\n" + md("clean-language-output", "start:", "\tprint(1)")
+        self.assertFalse(any(ex.is_suspect(b) for b in ex.blocks(text)))
+
+    def test_cex27_inside_a_list_item(self):
+        text = "- item\n\n  ```clean-language expect=valid\n  start:\n  \tprint(1)\n  ```\n\n  ```clean-language-output\n  1\n  ```\n"
+        self.assertEqual(self.outputs(text), [])
+
+
 class Suspects(unittest.TestCase):
     def test_cau6_suspects(self):
         for text in ("```\nstart:\n\tprint(1)\n```\n", "```text\nfunctions:\n\tvoid f()\n```\n",
@@ -269,6 +312,15 @@ class Audit(unittest.TestCase):
             "",
             "None.",
             ""]))
+
+    def test_cau5_expected_output_blocks(self):
+        p = self.p
+        valid = md("clean-language expect=valid", "start:", "\tprint(1)")
+        p.write(p.l1, "specs/o.md", valid + "\n" + md("clean-language-output", "1") + "\n" + md("clean-language-output text", "1"))
+        report = audit.run(p.l1, "specs/o.md")
+        self.assertIn("- specs/o.md:10 · CEX-27 · an expected output block goes right after a Clean example with expect=valid, one at most", report)
+        self.assertIn("- specs/o.md:10 · CEX-28 · the info string of an expected output block is exactly clean-language-output", report)
+        self.assertIn("1 Clean examples in 1 selected files, 2 violations", report)
 
     def test_cau9_same_report(self):
         self.p.write(self.p.l0, "specs/a.md", md("clean", "start:"))
@@ -374,6 +426,18 @@ class Hook(unittest.TestCase):
         code, _, err = self.call("Write", file_path=os.path.join(self.p.l0, "q.md"), content=md("clean", "q"))
         self.assertEqual(code, 2)
         self.assertIn("the registry not read at " + os.path.join(os.path.realpath(self.p.l1), "specs/platform/error-codes.md"), err)
+
+    def test_cex27_through_the_hook_only_for_a_new_block(self):
+        valid = md("clean-language expect=valid", "start:", "\tprint(1)")
+        error = md("clean-language expect=error code=SEM004", "start:", "\tprint(1)")
+        out = md("clean-language-output", "1")
+        path = os.path.join(self.p.l1, "specs/o.md")
+        code, _, err = self.call("Write", file_path=path, content=error + "\n" + out)
+        self.assertEqual(code, 2)
+        self.assertIn("specs/o.md:6 · CEX-27", err)
+        self.assertEqual(self.call("Write", file_path=path, content=valid + "\n" + out)[0], 0)
+        self.p.write(self.p.l1, "specs/o.md", error + "\n" + out)
+        self.assertEqual(self.call("Edit", file_path=path, old_string="print(1)", new_string="print(2)")[0], 0)
 
     def test_cex26_never_changes_a_file(self):
         path = self.p.write(self.p.l0, "specs/a.md", "x\n")

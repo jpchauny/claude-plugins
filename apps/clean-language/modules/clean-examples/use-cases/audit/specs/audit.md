@@ -16,10 +16,10 @@ A use case of the module `clean-examples`, specified in [module.md](../../../spe
 | Working repository | The git repository that holds the working directory. Its entry of `project.json` is found as [ORC-21](../../../../../../indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are) says. |
 | Other repository | The repository of layer 1 when the working repository is that of layer 0, and that of layer 0 when it is that of layer 1. |
 | Selected file | A spec file of the working repository that the argument selects (CAU-3). |
-| Suspect | A fenced block or an indented code block (CommonMark 4.4) of a selected file that is not a Clean example and that CAU-6 takes for a Clean source file. A suspect is not a violation: a person decides. |
+| Suspect | A fenced block or an indented code block (CommonMark 4.4) of a selected file that is neither a Clean example nor an expected output block, and that CAU-6 takes for a Clean source file. A suspect is not a violation: a person decides. |
 | Finding | One violation or one suspect in the report. |
 
-The terms repository, spec file, fenced block, info string, Clean example, opening line, attribute, code, code line, section line, Clean source file, error code, definition, registry, registry row, retired code and violation are those of [module.md](../../../specs/module.md#terms).
+The terms repository, spec file, fenced block, info string, Clean example, expected output block, blank line, opening line, attribute, code, code line, section line, Clean source file, error code, definition, registry, registry row, retired code and violation are those of [module.md](../../../specs/module.md#terms).
 
 ## Run the audit
 
@@ -64,7 +64,7 @@ Feature: Audit the Clean examples of a layer
       When the audit runs
       Then it says which of the three holds, and checks nothing
 
-  Rule: CAU-5 The audit checks every Clean example of every selected file against the rules of CEX-20, and every fenced block against CEX-2
+  Rule: CAU-5 The audit checks every Clean example of every selected file against the rules of CEX-20, every fenced block against CEX-2, and every expected output block against CEX-27 and CEX-28
     Scenario: A malformed opening line
       Given "specs/language/lexical.md" holds at line 40 a fenced block with the info string "clean-language expect=syntax-error code=SYN011"
       When the audit runs
@@ -91,7 +91,25 @@ Feature: Audit the Clean examples of a layer
       When the audit runs
       Then the report holds a violation of CEX-16 at its opening line
 
-  Rule: CAU-6 A fenced block that is not a Clean example, or an indented code block, is a suspect when its lines read as a Clean source file
+    Scenario Outline: An expected output block
+      Given a selected file holds at line 20 a Clean example with "<opening line>", then <between>, then an expected output block with the info string "<info string>"
+      When the audit runs
+      Then the report holds <violations> at the opening line of the expected output block
+
+      Examples:
+        | opening line                       | between                            | info string                | violations                 |
+        | clean-language expect=valid        | one blank line                     | clean-language-output      | no violation               |
+        | clean-language expect=valid        | no line                            | clean-language-output      | no violation               |
+        | clean-language expect=valid        | the line "It prints:"              | clean-language-output      | a violation of CEX-27      |
+        | clean-language expect=error code=SEM004 | one blank line                | clean-language-output      | a violation of CEX-27      |
+        | clean-language expect=valid        | one blank line                     | clean-language-output text | a violation of CEX-28      |
+
+    Scenario: A second expected output block
+      Given a Clean example with "expect=valid" is followed by two expected output blocks, with one blank line before each
+      When the audit runs
+      Then the report holds no violation at the first and a violation of CEX-27 at the opening line of the second
+
+  Rule: CAU-6 A fenced block that is neither a Clean example nor an expected output block, or an indented code block, is a suspect when its lines read as a Clean source file
     Its lines read as a Clean source file when, read as the code of a Clean example, one of its lines is a section line that is followed, on the next line, by a line that starts with a tab or a space and is not blank.
 
     Scenario Outline: A suspect
@@ -115,6 +133,7 @@ Feature: Audit the Clean examples of a layer
         | a fenced block with the info string "text" that holds only "SYN007: `state:` must come after `import:`" |
         | a fenced block with the info string "text" that holds "start:" and no indented line after it |
         | a fenced block with the info string "clean", which CEX-2 already reports               |
+        | an expected output block that holds "start:" and, on the next line, a tab and "print(1)" |
 
   Rule: CAU-7 The audit reads the definitions and the registry in both repositories
     Scenario: Definitions of the other repository
@@ -162,6 +181,8 @@ Feature: Audit the Clean examples of a layer
         | CEX-16 | the error code has neither a definition nor a registry row              |
         | CEX-17 | the error code is retired                                               |
         | CEX-18 | a definition of a retired code                                          |
+        | CEX-27 | an expected output block goes right after a Clean example with expect=valid, one at most |
+        | CEX-28 | the info string of an expected output block is exactly clean-language-output |
 
   Rule: CAU-9 The audit gives the same report for the same files
     Scenario: Two runs

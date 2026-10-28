@@ -1,6 +1,6 @@
 """The hook of the plugin clean-examples: refuses a change that writes a malformed Clean example.
 
-Spec: specs/module.md, CEX-22 to CEX-26. A PreToolUse hook of Claude Code: it reads the tool call
+Spec: specs/module.md, CEX-22 to CEX-26, with the rules of CEX-20. A PreToolUse hook of Claude Code: it reads the tool call
 as JSON on stdin; it exits 2 with the violations on stderr to refuse the change, and 0 otherwise.
 """
 
@@ -70,7 +70,11 @@ def main(stdin):
         message = f"clean-examples: CEX-15 to CEX-18 not checked, the other repository not found at {other_path}"
     pair = None if codes is None else (codes.defined(), codes.retired)
     rel = os.path.relpath(path, repo)
-    found = sorted({(line, rule) for b in ex.new_blocks(before, after) for line, rule in ex.check_block(b, pair)})
+    new = ex.new_blocks(before, after)
+    found = {(line, rule) for b in new for line, rule in ex.check_block(b, pair)}
+    opening_lines = {b.line for b in new}
+    found |= {(line, rule) for line, rule in ex.check_outputs(after) if line in opening_lines}  # CEX-27, CEX-28
+    found = sorted(found)
     out = json.dumps({"systemMessage": message}) if message else ""
     if found:
         lines = [f"clean-examples refused the change: {len(found)} violations in new Clean examples."]

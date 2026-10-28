@@ -4,15 +4,17 @@
 
 **Audience:** The people who write Clean examples in the specs of the project, in layer 0 or layer 1; the Claude sessions that write them; whoever builds the use cases and the hook of the plugin `clean-examples`
 
-**Scope:** The rules of how a Clean example is written, the only place where they are stated; how an example refers to an error code; the hook that refuses a malformed example as it is written. What the audit reports is in [audit.md](../use-cases/audit/specs/audit.md). Out of scope: what a Clean program means, which the specs of the project say; the grammar and the other derived norms, which layer 2 generates
+**Scope:** The rules of how a Clean example is written, the only place where they are stated; how an example refers to an error code; how an example states what it prints, in its expected output block; the hook that refuses a malformed example as it is written. What the audit reports is in [audit.md](../use-cases/audit/specs/audit.md). Out of scope: what a Clean program means, which the specs of the project say; the grammar and the other derived norms, which layer 2 generates
 
 The module `clean-examples` of the app Clean Language, listed in [app.md](../../../specs/app.md).
 
-The Clean examples of the specs are how Clean is defined: the grammar and the
-semantics are derived from them in layer 2, and the acceptance tests of layer 3
-check the compiler, built in layer 4, against them. So every example states, on
-its opening line, whether its code is valid or which error it must give, and
-every example is a whole source file. The rules below hold in the repositories
+The Clean examples of the specs are how Clean is defined. In layer 2 the
+grammar is derived from them, and the semantics, derived from the prose of the
+specs, is checked against them, the expected output of an example included; the
+acceptance tests of layer 3 check the compiler, built in layer 4, against them.
+So every example states, on its opening line, whether its code is valid or which
+error it must give, a valid example may state what it prints, and every example
+is a whole source file. The rules below hold in the repositories
 of layers 0 and 1 of the project ([CLN-1](../../../specs/app.md#rules)).
 
 ## Terms
@@ -24,6 +26,9 @@ of layers 0 and 1 of the project ([CLN-1](../../../specs/app.md#rules)).
 | Fenced block | A fenced code block of CommonMark 0.31.2, section 4.5, in a spec file. |
 | Info string | The text of a fenced block's opening line after its fence, without the spaces before and after it. |
 | Clean example | A fenced block whose info string is `clean-language`, or starts with `clean-language` followed by a space. |
+| Expected output block | A fenced block whose info string is `clean-language-output`, or starts with `clean-language-output` followed by a space. It is no Clean example. |
+| Blank line | A line of a spec file that holds nothing, or only spaces and tabs. |
+| Standard output | The bytes that a program writes to its standard output stream while it runs, in their order. |
 | Opening line | The first line of a fenced block: its fence and its info string. |
 | Attribute | A `<key>=<value>` pair of the info string of a Clean example, after `clean-language`. |
 | Code | The lines of a fenced block between its opening line and its closing fence. Line 1 of the code is the line after the opening line. The indentation of the fenced block itself (CommonMark 4.5) is not part of the code. |
@@ -71,6 +76,17 @@ of layers 0 and 1 of the project ([CLN-1](../../../specs/app.md#rules)).
   1. on a line that starts while a `(`, `[` or `{` of an earlier line is still open, the brackets inside string literals and comments left out;
   2. in an example with `expect=syntax-error code=SYN003`, which shows an indentation error.
 
+## The expected output
+
+An expected output block states what a valid example prints, so that layer 2
+can check the semantics against it. These rules say where it goes and what its
+code means.
+
+- **CEX-27.** An expected output block is written right after a Clean example with `expect=valid`: the fenced block just before it is that Clean example, and only blank lines, or none, stand between the closing fence of the example and the opening line of the block. Any other expected output block is a violation at its opening line. The other cases (complete list): no fenced block comes before it; a line that is not blank stands between the two; the fenced block before it is not a Clean example; the Clean example before it has another `expect`. An expected output block is not a Clean example, so a second expected output block after the same example is a violation, and a Clean example has at most one. Rationale: the block names no example, so its place is what ties it to one; a block after an example that fails states an output that no rule checks, and a second block would state a second output for the same run.
+- **CEX-28.** The info string of an expected output block is exactly `clean-language-output`. Any other is a violation at its opening line. Rationale: a block such as `clean-language-output text` would look like an expected output and be read as none.
+- **CEX-29.** The code of an expected output block, each of its lines followed by one line feed (U+000A), in order, is the whole standard output of the program of its Clean example, byte for byte, in UTF-8. It is the content of the block as CommonMark 0.31.2, section 4.5, gives it, adopted whole. A block with no line states that the program writes nothing. Rationale: an output that a comment or a reader rounds off cannot check a semantics; byte for byte, it can. Accepted cost: a standard output whose last byte is not a line feed cannot be stated, and its example states no expected output.
+- **CEX-30.** A Clean example with `expect=valid` and no expected output block states nothing about its output. A comment `// prints:` (CEX-8) is no expected output, and nothing compares the output with it. Rationale: one place states the output that is checked, and a comment written for a reader is never taken for it.
+
 ## Error codes
 
 - **CEX-14.** An error code is defined in the spec of the rule that gives it, by its definition. Until its definition is written, its registry row stands for it.
@@ -82,8 +98,8 @@ of layers 0 and 1 of the project ([CLN-1](../../../specs/app.md#rules)).
 
 ## What is checked, and by whom
 
-- **CEX-20.** The rules that the text decides alone are checked by the audit and by the hook (complete list): CEX-2, CEX-4, CEX-6 except its first sentence, CEX-7 except its first sentence, CEX-9, CEX-10, CEX-11, CEX-13, CEX-15 to CEX-18. The audit also checks CEX-1 by its fuzzy search ([CAU-6](../use-cases/audit/specs/audit.md#run-the-audit)).
-- **CEX-21.** The rules that need a Clean compiler are checked by no use case or hook of this module (complete list): CEX-5, the first sentence of CEX-6, the first sentence of CEX-7, CEX-12. They bind the author of each example. The derived norms of layer 2 check the syntax part of CEX-5, CEX-6 and CEX-7 ([CDN-4](../../clean-derived-norms/specs/module.md#rules)); the acceptance tests of layer 3, run against the compiler built in layer 4, check all of them, CEX-12 included. CEX-19 binds the author, and nothing checks it.
+- **CEX-20.** The rules that the text decides alone are checked by the audit and by the hook (complete list): CEX-2, CEX-4, CEX-6 except its first sentence, CEX-7 except its first sentence, CEX-9, CEX-10, CEX-11, CEX-13, CEX-15 to CEX-18, CEX-27, CEX-28. The audit also checks CEX-1 by its fuzzy search ([CAU-6](../use-cases/audit/specs/audit.md#run-the-audit)).
+- **CEX-21.** The rules that need a Clean compiler are checked by no use case or hook of this module (complete list): CEX-5, the first sentence of CEX-6, the first sentence of CEX-7, CEX-12, CEX-29. They bind the author of each example. The derived norms of layer 2 check them in part ([CDN-4](../../clean-derived-norms/specs/module.md#rules)): the grammar checks the syntax part of CEX-5, CEX-6 and CEX-7; the semantics checks the rest of CEX-5 and of CEX-7, and CEX-29. The acceptance tests of layer 3, run against the compiler built in layer 4, check all of them, CEX-12 included. CEX-19 binds the author, and nothing checks it.
 
 ## The hook
 
@@ -102,5 +118,5 @@ of layers 0 and 1 of the project ([CLN-1](../../../specs/app.md#rules)).
 
 ## Open questions
 
-1. CEX-5: what context a valid example builds in, such as the libraries in scope, imported files, and names it uses without declaring them. The derived norms of layer 2 need it before they check CEX-5.
+1. CEX-5: whether a valid example may build in a context, such as the libraries in scope, imported files, or names declared outside its code, and how a spec writes that context. Until layer 1 decides it, a name that a valid example uses without declaring it is a gap of layer 1: the semantics of layer 2 invents no declaration for it, and the example gets its own issue in layer 1 ([DSM-10](../../clean-derived-norms/use-cases/derive-semantics/specs/derive-semantics.md#derive-the-semantics)).
 2. The format of a definition beyond its heading (name, severity, phase, condition, message template, primary label, suggestion, a passing and a failing example), and the generator in layer 2 of the full list of error codes, belong to the module `clean-derived-norms` and to the project's specs.

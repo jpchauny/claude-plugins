@@ -1,6 +1,6 @@
 """The rules of the Clean examples that the text decides alone, shared by the audit and the hook.
 
-Spec: specs/module.md (CEX-1 to CEX-26) and use-cases/audit/specs/audit.md (CAU-1 to CAU-9).
+Spec: specs/module.md (CEX-1 to CEX-30) and use-cases/audit/specs/audit.md (CAU-1 to CAU-9).
 Python 3.9 or later, standard library only.
 """
 
@@ -18,6 +18,7 @@ DEFINITION = re.compile(r"^ {0,3}#{3,6}[ \t]+([A-Z]{3,6}[0-9]{3}) — \S")
 CODE_TOKEN = re.compile(r"\b([A-Z]{3,6}[0-9]{3})\b")
 FILE_LINE = re.compile(r"^// file: \S")
 FAILS = re.compile(r"^//[ \t]*fails:")
+OUTPUT_INFO = "clean-language-output"  # CEX term "Expected output block", CEX-28
 REGISTRY = "specs/platform/error-codes.md"
 
 # CEX term "Section line" (complete list).
@@ -48,6 +49,8 @@ MESSAGES = {  # CAU-8
     "CEX-16": "the error code has neither a definition nor a registry row",
     "CEX-17": "the error code is retired",
     "CEX-18": "a definition of a retired code",
+    "CEX-27": "an expected output block goes right after a Clean example with expect=valid, one at most",
+    "CEX-28": "the info string of an expected output block is exactly clean-language-output",
 }
 SUSPECT_MESSAGE = "looks like a Clean source file outside a Clean example"
 
@@ -55,11 +58,12 @@ SUSPECT_MESSAGE = "looks like a Clean source file outside a Clean example"
 class Block:
     """A fenced block (CEX term) or an indented code block: its first line, info string and code."""
 
-    def __init__(self, line, info, code, fenced=True):
+    def __init__(self, line, info, code, fenced=True, end=None):
         self.line = line  # the line of the file of its opening line (fenced) or first line (indented)
         self.info = info
         self.code = code  # list of str, line 1 of the code first
         self.fenced = fenced
+        self.end = end if end is not None else line + len(code)  # its last line: the closing fence, if any
 
     def key(self):
         return (self.info, tuple(self.code))
@@ -69,6 +73,10 @@ class Block:
 
     def is_old(self):
         return self.fenced and (self.info == "clean" or self.info.startswith("clean "))
+
+    def is_output(self):
+        """CEX term "Expected output block"."""
+        return self.fenced and (self.info == OUTPUT_INFO or self.info.startswith(OUTPUT_INFO + " "))
 
 
 def split_lines(text):
@@ -149,7 +157,7 @@ def blocks(text):
             while j < n and body[j] is not None and not close.match(body[j]):
                 code.append(strip_indent(body[j], indent))
                 j += 1
-            out.append(Block(i + 1, info, code))
+            out.append(Block(i + 1, info, code, end=min(j + 1, n)))
             i, para = j + 1, False
             continue
         if not line.strip():
@@ -285,9 +293,28 @@ def check_block(block, codes):
     return found
 
 
+def check_outputs(text):
+    """The violations of the expected output blocks of a text: [(line of the file, rule ID)]. Spec: CEX-27, CEX-28."""
+    body = contents(split_lines(text))
+    fenced = [b for b in blocks(text) if b.fenced]
+    found = []
+    for k, b in enumerate(fenced):
+        if not b.is_output():
+            continue
+        if b.info != OUTPUT_INFO:
+            found.append((b.line, "CEX-28"))
+        before = fenced[k - 1] if k else None
+        between = body[before.end:b.line - 1] if before else None
+        parsed = parse_info(before.info) if before is not None and before.is_example() else None
+        if before is None or parsed is None or parsed[0] != "valid" \
+                or any(line is None or line.strip(" \t") for line in between):
+            found.append((b.line, "CEX-27"))
+    return found
+
+
 def is_suspect(block):
     """CAU-6."""
-    if block.is_example() or block.is_old():
+    if block.is_example() or block.is_old() or block.is_output():
         return False
     lexed = lex(block.code)
     for k in range(len(block.code) - 1):

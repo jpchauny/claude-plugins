@@ -65,6 +65,8 @@ def run(cwd, arg=None):
                     violations.append(("", p, line, rule))
             if ex.is_suspect(b):
                 suspects.append((p, b.line))
+        for line, rule in ex.check_outputs(text):  # CEX-27, CEX-28
+            violations.append(("", p, line, rule))
     if codes is not None:
         for label, p, line, rule in codes.violations():
             violations.append((f"{label}:" if label else "", p, line, rule))

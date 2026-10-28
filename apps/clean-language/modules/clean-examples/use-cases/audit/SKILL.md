@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Audit the Clean examples of the specs of the repository of layer 0 or layer 1 of the Clean Language project - every fenced block clean-language checked against the rules of the plugin clean-examples, every old ```clean block, and every block outside an example that looks like Clean code - and report in the chat. Changes nothing. Use only when the user types /clean-examples:audit, or asks in words to audit the Clean examples ("audita los ejemplos", "audit the Clean examples").
+description: Audit the Clean examples of the specs of the repository of layer 0 or layer 1 of the Clean Language project - every fenced block clean-language checked against the rules of the plugin clean-examples, every expected output block clean-language-output checked for its place and its info string, every old ```clean block, and every block outside an example that looks like Clean code - and report in the chat. Changes nothing. Use only when the user types /clean-examples:audit, or asks in words to audit the Clean examples ("audita los ejemplos", "audit the Clean examples").
 argument-hint: "[<path>]"
 ---
 
