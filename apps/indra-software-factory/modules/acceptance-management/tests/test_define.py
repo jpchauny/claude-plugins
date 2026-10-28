@@ -1,8 +1,8 @@
 """Tests of use-cases/define/define.py.
 
 The script of the use case define, as ACU-57 to ACU-73 of
-use-cases/define/specs/define.md say, with the files of ACU-6 to ACU-8 and the
-fingerprints of ACU-51 to ACU-56 of specs/module.md. Each test names the
+use-cases/define/specs/define.md say, with the checks of ACU-74, the files of
+ACU-6 to ACU-8 and the fingerprints of ACU-51 to ACU-56 of specs/module.md. Each test names the
 clause it checks. The fixtures are temporary git repositories: a project
 folder with the norms repository (data/tree.jsonl and specs-repo-annotated/)
 and the acceptance repository, each a clone of a bare repository that stands
@@ -250,7 +250,7 @@ class Fixture(unittest.TestCase):
 
 
 class Start(Fixture):
-    """ACU-57, ACU-58: the checks, in their order."""
+    """ACU-57, ACU-74 then ACU-58: the checks, in their order."""
 
     def refused(self, message, *extra, cwd=None):
         r = self.start(*extra, cwd=cwd)
@@ -269,86 +269,86 @@ class Start(Fixture):
                          f"Layer 2 at {self.norms_commit()[:7]}: 10 norms. Layer 3 at {head[:7]}: 1 acceptance area, 3 acceptance units; "
                          "1 norm citation changed, 0 retired; 0 format errors.")
 
-    def test_acu58_argument(self):
+    def test_acu74_argument(self):
         self.refused("takes no argument", "--", "AA-1")
 
-    def test_acu58_blank_argument_is_none(self):
+    def test_acu74_blank_argument_is_none(self):
         self.assertEqual(self.start("--", "  ").returncode, 0)
 
-    def test_acu58_not_a_git_repository(self):
+    def test_acu74_not_a_git_repository(self):
         other = os.path.join(self.root, "plain")
         os.mkdir(other)
         self.refused("runs only from the acceptance repository", cwd=other)
 
-    def test_acu58_another_layer(self):
+    def test_acu74_another_layer(self):
         self.refused("runs only from the acceptance repository", cwd=self.norms)
 
-    def test_acu58_no_project_json(self):
+    def test_acu74_no_project_json(self):
         os.remove(os.path.join(self.acc, "project.json"))
         self.refused("runs only from the acceptance repository")
 
-    def test_acu58_no_entry_matches_origin(self):
+    def test_acu74_no_entry_matches_origin(self):
         git(self.acc, "remote", "set-url", "origin", "https://github.com/acme/elsewhere")
         self.refused("runs only from the acceptance repository")
 
-    def test_acu58_norms_repository_not_at_its_path(self):
+    def test_acu74_norms_repository_not_at_its_path(self):
         shutil.rmtree(self.norms)
         self.refused(f"acme/billing-norms not found at {self.norms}; run: git clone "
                      f"https://github.com/acme/billing-norms {self.norms}")
 
-    def test_acu58_cannot_fetch_acceptance(self):
+    def test_acu74_cannot_fetch_acceptance(self):
         git(self.acc, "remote", "set-url", "origin", os.path.join(self.root, "nowhere", "acme", "billing-acceptance"))
         self.refused("cannot fetch acme/billing-acceptance")
 
-    def test_acu58_cannot_fetch_norms(self):
+    def test_acu74_cannot_fetch_norms(self):
         git(self.norms, "remote", "set-url", "origin", os.path.join(self.root, "nowhere", "acme", "billing-norms"))
         self.refused("cannot fetch acme/billing-norms")
 
-    def test_acu58_no_default_branch_acceptance(self):
+    def test_acu74_no_default_branch_acceptance(self):
         git(os.path.join(self.remotes, "billing-acceptance.git"), "symbolic-ref", "HEAD", "refs/heads/nope")
         self.refused("cannot find the default branch of acme/billing-acceptance")
 
-    def test_acu58_no_default_branch_norms(self):
+    def test_acu74_no_default_branch_norms(self):
         git(os.path.join(self.remotes, "billing-norms.git"), "symbolic-ref", "HEAD", "refs/heads/nope")
         self.refused("cannot find the default branch of acme/billing-norms")
 
-    def test_acu58_no_tree_jsonl(self):
+    def test_acu74_no_tree_jsonl(self):
         git(self.norms, "rm", "-q", "data/tree.jsonl")
         self.commit_all(self.norms)
         self.refused("acme/billing-norms has no data/tree.jsonl on main")
 
-    def test_acu58_tree_jsonl_not_valid(self):
+    def test_acu74_tree_jsonl_not_valid(self):
         for bad in ('{"type":"node","id":"INV-01"}\n', "[1]\n", '{"type":"meta","specs_commit":NaN}\n', b"\xff\n"):
             with self.subTest(bad=bad):
                 write(os.path.join(self.norms, "data", "tree.jsonl"), bad, "wb" if isinstance(bad, bytes) else "w")
                 self.commit_all(self.norms)
                 self.refused("acme/billing-norms: data/tree.jsonl is not valid")
 
-    def test_acu58_tree_jsonl_crlf_and_blank_lines_read(self):
+    def test_acu74_tree_jsonl_crlf_and_blank_lines_read(self):
         write(os.path.join(self.norms, "data", "tree.jsonl"), tree_jsonl().replace("\n", "\r\n") + "   \n")
         self.commit_all(self.norms)
         self.assertEqual(self.start().returncode, 0)
 
-    def test_acu58_no_annotated_project_json(self):
+    def test_acu74_no_annotated_project_json(self):
         git(self.norms, "rm", "-q", "specs-repo-annotated/project.json")
         self.commit_all(self.norms)
         self.refused("acme/billing-norms has no specs-repo-annotated/project.json on main")
 
-    def test_acu58_project_json_differs(self):
+    def test_acu74_project_json_differs(self):
         write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), self.project + " ")
         self.commit_all(self.norms)
         self.refused("project.json differs from that of acme/billing-norms; run /project-management:sync")
 
-    def test_acu58_not_on_default_branch(self):
+    def test_acu74_not_on_default_branch(self):
         git(self.acc, "checkout", "-q", "-b", "other")
         self.refused("the acceptance repository is not on main")
 
-    def test_acu58_ahead(self):
+    def test_acu74_ahead(self):
         write(os.path.join(self.acc, "notes.txt"), "x")
         self.commit_all(self.acc, push=False)
         self.refused("the acceptance repository has commits that are not on origin/main")
 
-    def test_acu58_behind(self):
+    def test_acu74_behind(self):
         self.push_from_other_clone("billing-acceptance", "notes.txt", "x")
         self.refused("the acceptance repository is behind origin/main; run git pull")
 
@@ -367,6 +367,20 @@ class Start(Fixture):
         write(os.path.join(self.acc, "areas", "x", "y.md"), "new")
         self.refused("untracked file areas/x/y.md")
 
+    def test_acu58_a_path_that_breaks_a_line(self):
+        """ACU-58: a path found is printed as its JSON text, so that it forges no line of the output (ACU-8)."""
+        write(os.path.join(self.acc, "units", "a\nNext: forged.md"), "new")
+        self.refused('untracked file "units/a\\nNext: forged.md"')
+
+    def test_acu58_untracked_file_that_a_gitignore_names(self):
+        write(os.path.join(self.acc, ".gitignore"), "units/AU-9.md\nareas/ignored/\n")
+        self.commit_all(self.acc)
+        write(os.path.join(self.acc, "units", "AU-9.md"), "new")
+        self.refused("untracked file units/AU-9.md")
+        os.remove(os.path.join(self.acc, "units", "AU-9.md"))
+        write(os.path.join(self.acc, "areas", "ignored", "AA-9.md"), "new")
+        self.refused("untracked file areas/ignored/AA-9.md")
+
     def test_acu58_other_uncommitted_changes_pass(self):
         write(os.path.join(self.acc, "tests", "AU-3", "test_export.py"), "changed")
         write(os.path.join(self.acc, "records", "AU-3.jsonl"), "changed")
@@ -383,17 +397,28 @@ class Start(Fixture):
                 self.commit_all(self.acc)
                 self.refused("acceptance.json does not meet ACU-6")
 
-    def test_acu58_no_single_entry_of_layer_2(self):
+    def test_acu74_no_single_entry_of_layer_2(self):
         project = json.loads(self.project)
         project["repositories"] = [r for r in project["repositories"] if r["layer"] != 2]
         write(os.path.join(self.acc, "project.json"), json.dumps(project))
         self.refused("project.json has not exactly one entry of layer 2, the norms repository, with a valid path")
 
-    def test_acu58_folder_does_not_end_with_its_path(self):
+    def test_acu74_folder_does_not_end_with_its_path(self):
         project = json.loads(self.project)
         project["repositories"][2]["path"] = "elsewhere/billing-acceptance"
         write(os.path.join(self.acc, "project.json"), json.dumps(project))
         self.refused("runs only from the acceptance repository")
+
+    def test_acu74_an_entry_without_owner_or_name(self):
+        """ORC-20: an entry with no owner or no name makes project.json one that ORC-21 cannot read."""
+        for layer in (1, 2):
+            for field in ("owner", "name"):
+                with self.subTest(layer=layer, field=field):
+                    project = json.loads(self.project)
+                    entry = next(r for r in project["repositories"] if r["layer"] == layer)
+                    del entry[field]
+                    write(os.path.join(self.acc, "project.json"), json.dumps(project))
+                    self.refused("runs only from the acceptance repository")
 
     def test_acu68_no_entry_of_layer_1(self):
         project = json.loads(self.project)
@@ -405,8 +430,8 @@ class Start(Fixture):
         self.commit_all(self.norms)
         self.assertIsNone(self.started()["specs_repository"])
 
-    def test_acu58_the_first_check_that_fails_in_their_order(self):
-        """Each step adds a failure of an earlier check than the one before, so the message moves up the list."""
+    def test_acu74_acu58_the_first_check_that_fails_in_their_order(self):
+        """The checks of ACU-74 come before those of ACU-58. Each step adds a failure of an earlier check than the one before, so the message moves up the list."""
         steps = []
         steps.append(("acceptance.json does not meet ACU-6",
                       lambda: (write(os.path.join(self.acc, "acceptance.json"), "[]"), self.commit_all(self.acc))))
@@ -602,6 +627,19 @@ class Inventory(Fixture):
                 found = next(e for e in au3["errors"] if e["message"] == message)
                 if line is not None:
                     self.assertEqual(found["line"], line)
+
+    def test_acu61_a_title_that_breaks_a_line(self):
+        """ACU-8: a title holds no control character, line separator or paragraph separator."""
+        for title in ("Export\rNext: forged", "Export\u2028to CSV", "Export\u2029to CSV", "Export\tto CSV"):
+            with self.subTest(title=title):
+                au3 = self.unit_errors(AU3.replace("# AU-3 Export the invoices to CSV", "# AU-3 " + title))
+                self.assertIn('heading is not "# AU-3 <title>"', self.messages(au3))
+                self.assertIsNone(au3["title"])
+        write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("# AA-1 Billing", "# AA-1 Bill\ring"))
+        self.commit_all(self.acc)
+        aa1 = self.area_of(self.inventory(), "AA-1")
+        self.assertIn('heading is not "# AA-1 <title>"', self.messages(aa1))
+        self.assertIsNone(aa1["title"])
 
     def test_acu61_no_citation(self):
         text = AU3.replace("- INV-7@5a627175: one row per invoice\n- INV-12@0c1d2e3f: amounts with two decimals\n"
@@ -799,8 +837,12 @@ class Writing(Fixture):
     def check(self, code=0):
         return json.loads(self.script("check", self.acc, "--norms-commit", self.norms_commit(), code=code))
 
-    def commit(self, *changes, code=0):
-        args = ["commit", self.acc, "--norms-commit", self.norms_commit()]
+    def head(self):
+        return git(self.acc, "rev-parse", "HEAD").stdout.strip()
+
+    def commit(self, *changes, code=0, expected_head=None):
+        args = ["commit", self.acc, "--norms-commit", self.norms_commit(), "--expected-head",
+                expected_head or self.head()]
         for change in changes:
             args += ["--change", change]
         r = self.run_script(*args)
@@ -971,7 +1013,8 @@ class Writing(Fixture):
               "## Non-goals\n\nNone.\n\n## Assumptions\n\nNone.\n")
         write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("@unit:AU-3", "@unit:AU-3 @unit:AU-4"))
         self.script("ids", self.acc)
-        r = self.run_script("commit", self.acc, "--norms-commit", self.norms_commit(), "--change", "add AU-4")
+        r = self.run_script("commit", self.acc, "--norms-commit", self.norms_commit(), "--expected-head",
+                            git(self.acc, "rev-parse", "HEAD").stdout.strip(), "--change", "add AU-4")
         # AA-1 crosses AU-3, which no longer cites INV-15 of the tag of SC-9; AU-3 lost SC-6 to AU-4.
         self.assertEqual(r.returncode, 0, r.stdout)
         self.assertEqual(json.loads(r.stdout)["paths"], ["acceptance.json", "areas/AA-1.md", "units/AU-3.md",
@@ -1025,6 +1068,39 @@ class Writing(Fixture):
         self.push_from_other_clone("billing-acceptance", "notes.txt", "x")
         self.assertEqual(self.commit("add AU-4", code=3), PREFIX + "origin/main moved; run the skill again")
 
+    def test_acu75_cannot_fetch_comes_before_the_default_branch(self):
+        """ACU-75: an unreachable origin gives the message of the fetch, with the status 3, not that of the default
+        branch."""
+        self.add_au4()
+        self.script("ids", self.acc)
+        git(self.acc, "remote", "set-url", "origin", os.path.join(self.root, "nowhere", "acme", "billing-acceptance"))
+        self.assertEqual(self.commit("add AU-4", code=3), PREFIX + "cannot fetch acme/billing-acceptance")
+
+    def test_acu75_cannot_find_the_default_branch(self):
+        self.add_au4()
+        self.script("ids", self.acc)
+        git(os.path.join(self.remotes, "billing-acceptance.git"), "symbolic-ref", "HEAD", "refs/heads/nope")
+        self.assertEqual(self.commit("add AU-4", code=3),
+                         PREFIX + "cannot find the default branch of acme/billing-acceptance")
+
+    def test_acu71_a_gitignore_does_not_refuse_the_files_of_the_commit(self):
+        write(os.path.join(self.acc, ".gitignore"), "units/AU-4.md\n")
+        self.commit_all(self.acc)
+        self.add_au4()
+        self.script("ids", self.acc)
+        r = self.approve(self.commit("add AU-4"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("units/AU-4.md", self.remote_log())
+
+    def test_acu60_records_and_acceptance_json_nested_deeply(self):
+        """A value nested deeper than json.loads reads gives no traceback on any version of Python."""
+        deep = "[" * 100000 + "]" * 100000
+        write(os.path.join(self.acc, "records", "AU-1.jsonl"), deep + "\n")
+        write(os.path.join(self.acc, "acceptance.json"), deep + "\n")
+        self.commit_all(self.acc)
+        r = self.run_script("start", self.acc)
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
+
     def test_acu71_the_default_branch_moves_after_the_command_is_shown(self):
         self.add_au4()
         self.script("ids", self.acc)
@@ -1032,10 +1108,72 @@ class Writing(Fixture):
         self.push_from_other_clone("billing-acceptance", "notes.txt", "x")
         head = git(self.acc, "rev-parse", "HEAD").stdout
         r = self.approve(plan)
-        self.assertEqual((r.returncode, r.stdout.strip()), (3, PREFIX + "origin/main moved; run the skill again"))
+        self.assertEqual((r.returncode, (r.stdout + r.stderr).strip()),
+                         (3, PREFIX + "origin/main moved; run the skill again"))
         self.assertEqual(git(self.acc, "rev-parse", "HEAD").stdout, head)
         self.assertEqual(git(self.acc, "diff", "--cached", "--name-only").stdout, "")
         self.assertNotIn("AU-4", self.remote_log())
+
+    def test_acu71_a_local_commit_made_after_the_start(self):
+        self.add_au4()
+        self.script("ids", self.acc)
+        expected_head = self.head()
+        plan = self.commit("add AU-4")
+        git(self.acc, "commit", "-q", "--allow-empty", "-m", "another session")
+        r = self.approve(plan)
+        message = PREFIX + "the acceptance repository has commits that are not on origin/main"
+        self.assertEqual((r.returncode, (r.stdout + r.stderr).strip()), (3, message))
+        self.assertEqual(self.commit("add AU-4", code=3, expected_head=expected_head), message)
+        self.assertNotIn("another session", self.remote_log())
+        self.assertEqual(git(self.acc, "diff", "--cached", "--name-only").stdout, "")
+
+    def test_acu71_head_is_no_longer_the_expected_head(self):
+        self.add_au4()
+        self.script("ids", self.acc)
+        expected_head = self.head()
+        plan = self.commit("add AU-4")
+        git(self.acc, "commit", "-q", "--allow-empty", "-m", "another session")
+        git(self.acc, "push", "-q", "origin", "HEAD:main")
+        moved = PREFIX + "origin/main moved; run the skill again"
+        r = self.approve(plan)
+        self.assertEqual((r.returncode, (r.stdout + r.stderr).strip()), (3, moved))
+        self.assertEqual(self.commit("add AU-4", code=3, expected_head=expected_head), moved)
+        self.assertNotIn("AU-4", self.remote_log())
+
+    def test_acu71_the_command_prints_the_commit_it_pushed(self):
+        self.add_au4()
+        self.script("ids", self.acc)
+        r = self.approve(self.commit("add AU-4"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(r.stdout.strip().split("\n")[-1], self.head())
+
+    def test_acu71_the_push_is_rejected(self):
+        self.add_au4()
+        self.script("ids", self.acc)
+        plan = self.commit("add AU-4")
+        hook = os.path.join(self.remotes, "billing-acceptance.git", "hooks", "pre-receive")
+        write(hook, "#!/bin/sh\nexit 1\n")
+        os.chmod(hook, 0o755)
+        r = self.approve(plan)
+        self.assertEqual(r.returncode, 4, r.stdout + r.stderr)
+        self.assertEqual((r.stdout + r.stderr).strip(),
+                         PREFIX + f"push rejected; commit {self.head()[:7]} is not on origin/main; run git pull "
+                                  "--rebase, then git push, and run the skill again")
+        self.assertNotIn("AU-4", self.remote_log())
+
+    def test_acu71_git_or_a_hook_refuses_the_commit(self):
+        self.add_au4()
+        self.script("ids", self.acc)
+        plan = self.commit("add AU-4")
+        head = self.head()
+        hook = os.path.join(self.acc, ".git", "hooks", "pre-commit")
+        write(hook, "#!/bin/sh\nexit 1\n")
+        os.chmod(hook, 0o755)
+        r = self.approve(plan)
+        self.assertNotIn(r.returncode, (0, 3, 4), r.stdout + r.stderr)
+        self.assertEqual(self.head(), head)
+        self.script("rollback", self.acc, "--change", "add AU-4")
+        self.assertEqual(git(self.acc, "status", "--porcelain").stdout, "")
 
     def test_acu71_refused_command_after_an_earlier_change_was_pushed(self):
         self.add_au4()
@@ -1079,18 +1217,27 @@ class Writing(Fixture):
         write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("# AU-3 Export the invoices to CSV",
                                                                      "# AU-3 Export to CSV"))
         self.commit_all(self.acc)
-        self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
-                         "Next: the implementation planner updates plan.json.")
+        # "Only a title": no unit hash and no area hash changed (ACU-52), so no line "Next:".
+        self.assertEqual(self.script("next", self.acc, "--since", since), "")
         write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("INV-12@0c1d2e3f", "INV-12@7d6e5f40"))
         self.add_au4()
         write(os.path.join(self.acc, "areas", "AA-1.md"), AA1 + "\n")
         self.commit_all(self.acc)
         self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
-                         "Next: the implementation planner updates plan.json; "
+                         "Next: the implementation planner updates plan.json with /acceptance-management:plan; "
                          "the test agent updates the acceptance tests of AU-3, AU-4.")
         write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("Then the CSV", "Then the file"))
         self.commit_all(self.acc)
         self.assertIn("of AA-1, AU-3, AU-4.", self.script("next", self.acc, "--since", since))
+
+    def test_acu72_since_is_not_a_commit_of_head(self):
+        for since in ("nonexistent", "0" * 40):
+            self.assertEqual(self.script("next", self.acc, "--since", since, code=1).strip(),
+                             PREFIX + f"--since {since} is not a commit of HEAD")
+        # A commit outside the history of HEAD: a commit with no parent, made with the tree of HEAD.
+        side = git(self.acc, "commit-tree", "HEAD^{tree}", "-m", "side").stdout.strip()
+        self.assertEqual(self.script("next", self.acc, "--since", side, code=1).strip(),
+                         PREFIX + f"--since {side} is not a commit of HEAD")
 
     def test_acu72_only_a_deletion(self):
         since = git(self.acc, "rev-parse", "HEAD").stdout.strip()
@@ -1098,7 +1245,29 @@ class Writing(Fixture):
         os.remove(os.path.join(self.acc, "units", "AU-2.md"))
         self.commit_all(self.acc)
         self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
-                         "Next: the implementation planner updates plan.json.")
+                         "Next: the implementation planner updates plan.json with /acceptance-management:plan.")
+
+    def test_acu72_only_the_area_line_or_the_profile_line(self):
+        since = git(self.acc, "rev-parse", "HEAD").stdout.strip()
+        write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("Area: AA-1\n", "Area: AA-1\nProfile: critical\n"))
+        self.commit_all(self.acc)
+        self.assertEqual(self.script("next", self.acc, "--since", since), "")
+
+    def test_acu72_a_unit_hash_changed_with_no_new_test(self):
+        """A change of the unit hash outside "## Norms" and "## Scenarios" names both agents."""
+        since = git(self.acc, "rev-parse", "HEAD").stdout.strip()
+        write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("- The unit does not export to PDF.\n", ""))
+        self.commit_all(self.acc)
+        self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
+                         "Next: the implementation planner updates plan.json with /acceptance-management:plan; "
+                         "the test agent updates the acceptance tests of AU-3.")
+
+    def test_acu72_only_an_area(self):
+        since = git(self.acc, "rev-parse", "HEAD").stdout.strip()
+        write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("Then the CSV", "Then the file"))
+        self.commit_all(self.acc)
+        self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
+                         "Next: the test agent updates the acceptance tests of AA-1.")
 
     def test_hash_command(self):
         path = os.path.join(self.acc, "units", "AU-3.md")

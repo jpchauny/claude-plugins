@@ -2,15 +2,16 @@
 
 Spec: specs/define.md of this folder, and specs/module.md of the module. The
 fingerprints (ACU-51 to ACU-54) are those of scripts/acceptance_hashes.py of the
-module, which this script imports.
+module, and the checks that every use case of the module shares (ACU-74) those
+of scripts/acceptance_repository_checks.py, which this script imports.
 
 Usage (REPO is the working directory of the skill; every command reads, and
 only `ids`, `delete-tests` and `rollback` write, in the acceptance repository
 only):
 
     define.py start REPO [-- ARG...]
-        ACU-58: the checks, in their order, with the fetch of both
-        repositories; on the first that fails, prints
+        ACU-74, then ACU-58: the checks, in their order, with the fetch of
+        both repositories; on the first that fails, prints
         "acceptance-management:define: <message>" and exits 1. Otherwise
         prints one JSON object: "acceptance_repository" and
         "norms_repository" (<owner>/<name>), "specs_repository" (<owner>/<name>
@@ -30,22 +31,27 @@ only):
     define.py delete-tests REPO UNIT_ID
         ACU-10, ACU-70: deletes from the working tree each file of
         tests/<unit ID>/ that HEAD holds.
-    define.py commit REPO --norms-commit SHA --change "<verb> <ID>"...
-        ACU-71: fetches; when the fetch fails or origin/<branch> moved, exits
-        3. Runs `check`; refuses a deleted acceptance unit whose
+    define.py commit REPO --norms-commit SHA --expected-head SHA --change "<verb> <ID>"...
+        ACU-71, ACU-75: fetches; when the fetch fails, the default branch
+        cannot be found, origin/<branch> moved, HEAD holds a commit that
+        origin/<branch> does not, or HEAD is not the expected head, prints the
+        message and exits 3. Runs `check`; refuses a deleted acceptance unit whose
         tests/<unit ID>/ is still there (ACU-70), and a file of areas/ or
         units/ that belongs to no change. Prints a JSON object: "display" (the whole diff and the
         message), "paths", "message" and "command", which fetches again and
-        exits 3 with the same message when the fetch fails or origin/<branch>
-        moved, and otherwise stages each path by name, commits only them, and
-        pushes to the default branch.
+        exits 3 with the same messages, and otherwise stages each path by
+        name, commits only them, and pushes to the default branch; a rejected
+        push prints the message of ACU-75 and exits 4, and a pushed commit
+        prints its 40 hex digits as the last line, the expected head of the
+        next command.
     define.py rollback REPO [--change "<verb> <ID>"...]
         ACU-71: puts each file of areas/, units/ and acceptance.json back as
         HEAD holds it, removes the new ones, and gives back the files of
-        tests/<unit ID>/ of each "delete <unit ID>".
+        tests/<unit ID>/ of each "delete <unit ID>", in the working tree and,
+        for those paths only, in the index.
     define.py next REPO --since SHA
         ACU-72: prints the line "Next: ..." for the commits from SHA to HEAD,
-        or nothing.
+        or nothing; SHA must be a commit in the history of HEAD.
     define.py hash FILE...
         Prints the unit hash, the area hash and the scenarios, each with its
         scenario hash, of each file, wherever it is, as ACU-52 to ACU-54
@@ -66,7 +72,6 @@ import json
 import os
 import re
 import shlex
-import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -75,7 +80,8 @@ sys.path.insert(0, SCRIPTS)
 sys.dont_write_bytecode = True
 
 import acceptance_hashes as hashes  # noqa: E402
-from deny_code_repositories import owner_name, valid_path  # noqa: E402
+import acceptance_repository_checks as checks  # noqa: E402
+from acceptance_repository_checks import default_branch, git, ls_tree, out, read_tree, show  # noqa: E402
 
 PREFIX = "acceptance-management:define: "
 PROFILES = ("prototype", "product", "critical")  # ACU-19
@@ -84,14 +90,10 @@ ID_FIELDS = (("acceptance_area", "AA", "last_area_id"), ("acceptance_unit", "AU"
              ("scenario", "SC", "last_scenario_id"))  # ACU-55
 ACCEPTANCE_FIELDS = {"default_done_profile": str, "last_area_id": int, "last_unit_id": int,
                      "last_scenario_id": int, "test_command": str, "product": dict}  # ACU-6
-NORM_ID = re.compile(r"[A-Z]{3,}(?:-[1-9][0-9]*)?")  # ACU-56, R61
-PREFIX_FORM = re.compile(r"[A-Z]{3,}")
 ACCEPTANCE_UNIT_FILE = re.compile(r"units/(AU-[1-9][0-9]*)\.md")
 ACCEPTANCE_AREA_FILE = re.compile(r"areas/(AA-[1-9][0-9]*)\.md")
 CHANGE = re.compile(r"(add|change|delete) ((?:AA|AU)-[1-9][0-9]*)")
 SC_LIKE = re.compile(r"@SC-([0-9]+)")
-NODE_KINDS = {"file", "section", "heading", "paragraph", "code_block", "html_block", "link_ref_def", "table",
-              "table_row", "table_cell", "block_quote", "list", "item"}  # R61
 ACCEPTANCE_UNIT_PARTS = ["## Narrative", "## Norms", "## Scenarios", "## Non-goals", "## Assumptions"]  # ACU-8
 ACCEPTANCE_AREA_PARTS = ["## Purpose", "## Scenarios"]  # ACU-7
 ASSUMPTION_END = re.compile(r"\(([^()]*)\)\.?$")
@@ -106,194 +108,19 @@ class Stop(Exception):
         self.code = code
 
 
-# ---------------------------------------------------------------- git
-
-def git(cwd, *args, binary=False, check=False):
-    """The completed git process; output as text, or as bytes when `binary`."""
-    done = subprocess.run(["git", "-C", cwd, *args], capture_output=True, text=not binary)
-    if check and done.returncode != 0:
-        raise Stop(f"git {' '.join(args)} failed in {cwd}")
-    return done
-
-
-def out(cwd, *args):
-    """The output of a git command, stripped, or None when it fails."""
-    done = git(cwd, *args)
-    return done.stdout.strip() if done.returncode == 0 else None
-
-
-def show(cwd, rev, path):
-    """The bytes of `path` at `rev`, or None when `rev` holds no such file."""
-    done = git(cwd, "show", f"{rev}:{path}", binary=True)
-    return done.stdout if done.returncode == 0 else None
-
-
-def ls_tree(cwd, rev, *paths):
-    """The files that `rev` holds under `paths`, in path order."""
-    done = git(cwd, "ls-tree", "-r", "-z", "--name-only", rev, "--", *paths, binary=True)
-    if done.returncode != 0:
-        return []
-    return sorted(p.decode("utf-8", "surrogateescape") for p in done.stdout.split(b"\0") if p)
-
-
-def default_branch(cwd):
-    """The branch that `git ls-remote --symref origin HEAD` names, or None."""
-    text = out(cwd, "ls-remote", "--symref", "origin", "HEAD")
-    for line in (text or "").splitlines():
-        m = re.match(r"ref: refs/heads/(\S+)\s+HEAD$", line)
-        if m:
-            return m.group(1)
-    return None
-
-
 # ---------------------------------------------------------------- where the repositories are
 
 def locate(cwd):
-    """ORC-20, ORC-21: the acceptance repository, the norms repository and the specs repository.
-
-    Raises Stop with the message of the second row of ACU-58 when the repository is not that of layer 3, and
-    with that of the third row when project.json has not exactly one entry of layer 2 with a valid path."""
-    refused = Stop("runs only from the acceptance repository")
-    root = out(cwd, "rev-parse", "--show-toplevel")
-    if not root:
-        raise refused
-    root = os.path.realpath(root)
+    """ORC-20, ORC-21: the acceptance repository, the norms repository and the specs repository, as rows 2 and 3 of
+    ACU-74 find them in scripts/acceptance_repository_checks.py; raises Stop with the message of the row that
+    fails."""
     try:
-        with open(os.path.join(root, "project.json"), "rb") as f:
-            project_bytes = f.read()
-        project = json.loads(project_bytes.decode("utf-8"))
-    except (OSError, ValueError):
-        raise refused
-    entries = project.get("repositories") if isinstance(project, dict) else None
-    if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
-        raise refused
-    remote = out(root, "config", "--get", "remote.origin.url")
-    me = owner_name(remote) if remote else None
-    mine = [e for e in entries if f"{e.get('owner')}/{e.get('name')}" == me]
-    if len(mine) != 1 or mine[0].get("layer") != 3 or not valid_path(mine[0].get("path")):
-        raise refused
-    parts = mine[0]["path"].split("/")
-    if root.split(os.sep)[-len(parts):] != parts:
-        raise refused
-    folder = root
-    for _ in parts:
-        folder = os.path.dirname(folder)
-    norms_entries = [e for e in entries if e.get("layer") == 2]
-    if len(norms_entries) != 1 or not valid_path(norms_entries[0].get("path")):
-        raise Stop("project.json has not exactly one entry of layer 2, the norms repository, with a valid path")
-    specs_entries = [e for e in entries if e.get("layer") == 1]
-    norms_entry = norms_entries[0]
-    return {
-        "root": root,
-        "project_bytes": project_bytes,
-        "acceptance_repository": f"{mine[0]['owner']}/{mine[0]['name']}",
-        "norms_repository": f"{norms_entry['owner']}/{norms_entry['name']}",
-        "norms_repository_path": os.path.join(folder, *norms_entry["path"].split("/")),
-        "specs_repository": (f"{specs_entries[0]['owner']}/{specs_entries[0]['name']}"
-                             if len(specs_entries) == 1 else None),
-    }
-
-
-def norms_repository_present(where):
-    """ORC-22: whether the norms repository is a git repository at its path, with its remote origin."""
-    path = where["norms_repository_path"]
-    top = out(path, "rev-parse", "--show-toplevel") if os.path.isdir(path) else None
-    if not top or os.path.realpath(top) != os.path.realpath(path):
-        return False
-    remote = out(path, "config", "--get", "remote.origin.url")
-    return bool(remote) and owner_name(remote) == where["norms_repository"]
+        return checks.locate(cwd)
+    except checks.Refusal as refusal:
+        raise Stop(refusal.message)
 
 
 # ---------------------------------------------------------------- layer 2
-
-def _strings_ok(value):
-    """R61: every string is valid Unicode (no lone surrogate)."""
-    if isinstance(value, str):
-        try:
-            value.encode("utf-8")
-        except UnicodeEncodeError:
-            return False
-        return True
-    if isinstance(value, list):
-        return all(_strings_ok(v) for v in value)
-    if isinstance(value, dict):
-        return all(_strings_ok(k) and _strings_ok(v) for k, v in value.items())
-    return True
-
-
-def _path_ok(path, md=None):
-    if not isinstance(path, str) or not path or path.startswith("/"):
-        return False
-    if any(not part or part in (".", "..") or any(ord(c) < 32 or ord(c) == 127 or 0x80 <= ord(c) <= 0x9f
-                                                  for c in part) for part in path.split("/")):
-        return False
-    return md is None or path.endswith(".md") == md
-
-
-def _int_ok(value):
-    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
-
-
-def _id_ok(value):
-    return isinstance(value, str) and NORM_ID.fullmatch(value) is not None
-
-
-def _reject_constant(name):
-    raise ValueError(name)
-
-
-def _line_ok(obj):
-    """R61: whether one object of data/tree.jsonl has its required fields, each of its type and form."""
-    if not isinstance(obj, dict) or not _strings_ok(obj):
-        return False
-    kind = obj.get("type")
-    if kind == "meta":
-        rp = obj.get("retired_prefixes", [])
-        return (isinstance(obj.get("specs_commit", ""), str) and isinstance(obj.get("generator_version", ""), str)
-                and isinstance(rp, list) and all(isinstance(p, str) and PREFIX_FORM.fullmatch(p) for p in rp))
-    if kind == "file":
-        ins = obj.get("insertions", [])
-        return ("path" in obj and "prefix" in obj and _path_ok(obj["path"], True)
-                and isinstance(obj["prefix"], str) and PREFIX_FORM.fullmatch(obj["prefix"]) is not None
-                and isinstance(obj.get("sha256", ""), str) and isinstance(ins, list)
-                and all(isinstance(i, list) and len(i) == 2 and _int_ok(i[0]) and isinstance(i[1], str)
-                        for i in ins))
-    if kind == "copy":
-        return "path" in obj and _path_ok(obj["path"], False) and isinstance(obj.get("sha256", ""), str)
-    if kind == "node":
-        required = ("id", "file", "kind", "start", "end", "own_text", "own_hash", "tree_hash")
-        if any(field not in obj for field in required):
-            return False
-        parent = obj.get("parent")
-        changed = obj.get("changed_since")
-        return (_id_ok(obj["id"]) and _path_ok(obj["file"]) and obj["kind"] in NODE_KINDS
-                and (parent is None or _id_ok(parent)) and _int_ok(obj["start"]) and _int_ok(obj["end"])
-                and all(isinstance(obj[f], str) for f in ("own_text", "own_hash", "tree_hash"))
-                and obj.get("status", "active") in ("active", "retired")
-                and isinstance(obj.get("to_review", False), bool)
-                and (changed is None or isinstance(changed, str)))
-    return False
-
-
-def read_tree(data):
-    """R23, R61: the active nodes of data/tree.jsonl, in its order. Raises ValueError when it is not valid."""
-    text = data.decode("utf-8")
-    found = []
-    for line in text.split("\n"):
-        if line.endswith("\r"):
-            line = line[:-1]
-        if not line or line.isspace():
-            continue
-        try:
-            obj = json.loads(line, parse_constant=_reject_constant)
-        except RecursionError:
-            raise ValueError("too deep")
-        if not _line_ok(obj):
-            raise ValueError("bad line")
-        if obj["type"] == "node" and obj.get("status", "active") == "active":
-            found.append(obj)
-    return found
-
 
 def read_norms(where, commit):
     """The norms at the norms commit (ACU-60): one dict per norm, in the order of data/tree.jsonl."""
@@ -321,7 +148,7 @@ def acceptance_ok(data):
     """ACU-6: the object of acceptance.json, or None when it does not meet ACU-6."""
     try:
         obj = json.loads(data.decode("utf-8"))
-    except (ValueError, UnicodeDecodeError, AttributeError):
+    except (ValueError, UnicodeDecodeError, AttributeError, RecursionError):
         return None
     if not isinstance(obj, dict) or set(obj) != set(ACCEPTANCE_FIELDS):
         return None
@@ -445,9 +272,9 @@ def parse_acceptance_unit(unit_id, data, ctx):
         _err(errors, None, "not UTF-8")
         return acceptance_unit
     lines = hashes.lines_of(data)
-    heading = re.fullmatch(re.escape(f"# {unit_id} ") + r"(.*\S.*)", lines[0])
-    if heading:
-        acceptance_unit["title"] = heading.group(1)
+    title = checks.heading_title(lines, unit_id)
+    if title is not None:
+        acceptance_unit["title"] = title
     else:
         _err(errors, 1, f'heading is not "# {unit_id} <title>"')
     acceptance_unit["unit_hash"] = hashes.unit_hash(data)
@@ -560,9 +387,9 @@ def parse_acceptance_area(area_id, data, ctx, acceptance_units):
         _err(errors, None, "not UTF-8")
         return acceptance_area
     lines = hashes.lines_of(data)
-    heading = re.fullmatch(re.escape(f"# {area_id} ") + r"(.*\S.*)", lines[0])
-    if heading:
-        acceptance_area["title"] = heading.group(1)
+    title = checks.heading_title(lines, area_id)
+    if title is not None:
+        acceptance_area["title"] = title
     else:
         _err(errors, 1, f'heading is not "# {area_id} <title>"')
     acceptance_area["area_hash"] = hashes.area_hash(data)
@@ -635,7 +462,7 @@ def evidence_counter(root, rev):
         for line in data.decode("utf-8", "replace").split("\n"):
             try:
                 obj = json.loads(line)
-            except ValueError:
+            except (ValueError, RecursionError):
                 continue
             if isinstance(obj, dict) and obj.get("kind") in counts:
                 counts[obj["kind"]] += 1
@@ -668,21 +495,22 @@ def inventory(where, norms_commit, rev="HEAD", norms=None):
     head_rev = rev if rev is not None else "HEAD"
     ctx = {"default_done_profile": acc["default_done_profile"], "norm_hashes": {n["norm_id"]: n["norm_hash"] for n in norms},
            "evidence": evidence_counter(root, head_rev)}
-    unit_files, area_files = {}, {}
+    acceptance_unit_files, acceptance_area_files = {}, {}
     for path in source.paths():
-        m_unit, m_area = ACCEPTANCE_UNIT_FILE.fullmatch(path), ACCEPTANCE_AREA_FILE.fullmatch(path)
-        if m_unit:
-            unit_files[m_unit.group(1)] = path
-        elif m_area:
-            area_files[m_area.group(1)] = path
+        match_of_acceptance_unit_file = ACCEPTANCE_UNIT_FILE.fullmatch(path)
+        match_of_acceptance_area_file = ACCEPTANCE_AREA_FILE.fullmatch(path)
+        if match_of_acceptance_unit_file:
+            acceptance_unit_files[match_of_acceptance_unit_file.group(1)] = path
+        elif match_of_acceptance_area_file:
+            acceptance_area_files[match_of_acceptance_area_file.group(1)] = path
         else:
             errors.append({"path": path, "line": None,
                            "message": "not the file of an acceptance area or an acceptance unit"})
-    ctx["area_ids"] = set(area_files)
+    ctx["area_ids"] = set(acceptance_area_files)
     acceptance_units = [parse_acceptance_unit(unit_id, source.read(path) or b"", ctx) for unit_id, path in
-                        sorted(unit_files.items(), key=lambda kv: number(kv[0]))]
+                        sorted(acceptance_unit_files.items(), key=lambda kv: number(kv[0]))]
     acceptance_areas = [parse_acceptance_area(area_id, source.read(path) or b"", ctx, acceptance_units)
-                        for area_id, path in sorted(area_files.items(), key=lambda kv: number(kv[0]))]
+                        for area_id, path in sorted(acceptance_area_files.items(), key=lambda kv: number(kv[0]))]
 
     holders = {}
     for item in sorted(acceptance_areas + acceptance_units, key=lambda x: x["path"]):
@@ -728,11 +556,12 @@ def head_ids(root):
     head = Layer3(root, "HEAD")
     ids = {kind: set() for kind, _, _ in ID_FIELDS}
     for path in head.paths():
-        m_unit, m_area = ACCEPTANCE_UNIT_FILE.fullmatch(path), ACCEPTANCE_AREA_FILE.fullmatch(path)
-        if m_unit:
-            ids["acceptance_unit"].add(m_unit.group(1))
-        elif m_area:
-            ids["acceptance_area"].add(m_area.group(1))
+        match_of_acceptance_unit_file = ACCEPTANCE_UNIT_FILE.fullmatch(path)
+        match_of_acceptance_area_file = ACCEPTANCE_AREA_FILE.fullmatch(path)
+        if match_of_acceptance_unit_file:
+            ids["acceptance_unit"].add(match_of_acceptance_unit_file.group(1))
+        elif match_of_acceptance_area_file:
+            ids["acceptance_area"].add(match_of_acceptance_area_file.group(1))
         else:
             continue
         try:
@@ -806,76 +635,44 @@ def summary(inv):
             f"{plural(changed, 'norm citation')} changed, {retired} retired; {plural(errors, 'format error')}.")
 
 
-# ---------------------------------------------------------------- start (ACU-58)
+# ---------------------------------------------------------------- start (ACU-74, ACU-58)
 
 def start(cwd, args):
-    if any(a.strip() for a in args):
-        raise Stop("takes no argument")
-    where = locate(cwd)
-    root, acc_name, norms_name = where["root"], where["acceptance_repository"], where["norms_repository"]
-    npath = where["norms_repository_path"]
-    if not norms_repository_present(where):
-        raise Stop(f"{norms_name} not found at {npath}; run: git clone https://github.com/{norms_name} {npath}")
-    if git(root, "fetch", "-q", "origin").returncode != 0:
-        raise Stop(f"cannot fetch {acc_name}")
-    if git(npath, "fetch", "-q", "origin").returncode != 0:
-        raise Stop(f"cannot fetch {norms_name}")
-    branch = default_branch(root)
-    if not branch:
-        raise Stop(f"cannot find the default branch of {acc_name}")
-    norms_branch = default_branch(npath)
-    norms_commit = norms_branch and out(npath, "rev-parse", "--verify", "-q",
-                                        f"refs/remotes/origin/{norms_branch}^{{commit}}")
-    if not norms_commit:
-        raise Stop(f"cannot find the default branch of {norms_name}")
-    tree = show(npath, norms_commit, "data/tree.jsonl")
-    if tree is None:
-        raise Stop(f"{norms_name} has no data/tree.jsonl on {norms_branch}")
-    try:
-        read_tree(tree)
-    except (ValueError, UnicodeDecodeError):
-        raise Stop(f"{norms_name}: data/tree.jsonl is not valid")
-    copy = show(npath, norms_commit, "specs-repo-annotated/project.json")
-    if copy is None:
-        raise Stop(f"{norms_name} has no specs-repo-annotated/project.json on {norms_branch}")
-    if copy != where["project_bytes"]:
-        raise Stop(f"project.json differs from that of {norms_name}; run /project-management:sync")
-    if out(root, "symbolic-ref", "-q", "--short", "HEAD") != branch:
-        raise Stop(f"the acceptance repository is not on {branch}")
-    upstream = f"refs/remotes/origin/{branch}"
-    if out(root, "rev-parse", "--verify", "-q", upstream) is None:
-        raise Stop(f"the acceptance repository has commits that are not on origin/{branch}")
-    if out(root, "rev-list", "--count", f"{upstream}..HEAD") != "0":
-        raise Stop(f"the acceptance repository has commits that are not on origin/{branch}")
-    if out(root, "rev-list", "--count", f"HEAD..{upstream}") != "0":
-        raise Stop(f"the acceptance repository is behind origin/{branch}; run git pull")
+    """ACU-74, then ACU-58: the checks, in their order; the first that fails ends the skill."""
+    where, message = checks.run_checks(cwd, args)
+    if message is not None:
+        raise Stop(message)
+    root = where["root"]
     changed, untracked = status(root)
     if changed:
-        raise Stop(f"uncommitted change in {changed[0]}")
+        raise Stop(f"uncommitted change in {checks.text_of(changed[0])}")
     if untracked:
-        raise Stop(f"untracked file {untracked[0]}")
+        raise Stop(f"untracked file {checks.text_of(untracked[0])}")
     if acceptance_ok(show(root, "HEAD", "acceptance.json") or b"") is None:
         raise Stop("acceptance.json does not meet ACU-6")
-    inv = inventory(where, norms_commit)
-    return {"acceptance_repository": acc_name, "norms_repository": norms_name,
-            "specs_repository": where["specs_repository"], "acceptance_default_branch": branch,
-            "norms_default_branch": norms_branch, "norms_commit": norms_commit,
+    inv = inventory(where, where["norms_commit"])
+    return {"acceptance_repository": where["acceptance_repository"], "norms_repository": where["norms_repository"],
+            "specs_repository": where["specs_repository"],
+            "acceptance_default_branch": where["acceptance_default_branch"],
+            "norms_default_branch": where["norms_default_branch"], "norms_commit": where["norms_commit"],
             "acceptance_commit": inv["acceptance_commit"], "summary": summary(inv)}
 
 
 def status(root):
-    """ACU-58: the paths with an uncommitted change among acceptance.json, areas/ and units/, and the untracked
-    files under areas/ and units/, each in sorted order."""
+    """ACU-58, after the checks of ACU-74: the paths with an uncommitted change among acceptance.json, areas/ and units/, and the untracked
+    files under areas/ and units/, each in sorted order. An untracked file that a .gitignore names is untracked too
+    (--ignored=traditional, which with --untracked-files=all lists each file of an ignored folder), since the
+    inventory of the working tree reads it and the command stages it with -f."""
     done = git(root, "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all",
-               "--", "acceptance.json", "areas", "units", binary=True)
+               "--ignored=traditional", "--", "acceptance.json", "areas", "units", binary=True)
     changed, untracked = [], []
     for entry in done.stdout.split(b"\0"):
         if len(entry) < 4:
             continue
         code, path = entry[:2].decode(), entry[3:].decode("utf-8", "surrogateescape")
-        if code == "??":
+        if code in ("??", "!!"):
             (changed if path == "acceptance.json" else untracked).append(path)
-        elif code != "!!":
+        else:
             changed.append(path)
     return sorted(changed), sorted(untracked)
 
@@ -942,10 +739,13 @@ def set_ids(root):
     disk = Layer3(root, None)
     present = {kind: [] for kind, _, _ in ID_FIELDS}
     for p in disk.paths():
-        m_unit, m_area = ACCEPTANCE_UNIT_FILE.fullmatch(p), ACCEPTANCE_AREA_FILE.fullmatch(p)
-        if not (m_unit or m_area):
+        match_of_acceptance_unit_file = ACCEPTANCE_UNIT_FILE.fullmatch(p)
+        match_of_acceptance_area_file = ACCEPTANCE_AREA_FILE.fullmatch(p)
+        if not (match_of_acceptance_unit_file or match_of_acceptance_area_file):
             continue
-        present["acceptance_unit" if m_unit else "acceptance_area"].append(((m_unit or m_area).group(1), p, None))
+        found = match_of_acceptance_unit_file or match_of_acceptance_area_file
+        present["acceptance_unit" if match_of_acceptance_unit_file else "acceptance_area"].append(
+            (found.group(1), p, None))
         try:
             present["scenario"] += [(s.scenario_id, p, s.line) for s in hashes.scenarios(disk.read(p) or b"")
                                     if s.scenario_id]
@@ -1094,18 +894,27 @@ def strays(root, changes, files):
     return found
 
 
-def commit(where, norms_commit, change_texts):
-    """ACU-71: the diff, the message and the one command that fetches, stages, commits and pushes."""
+def commit(where, norms_commit, change_texts, expected_head):
+    """ACU-71: the diff, the message and the one command that fetches, stages, commits and pushes.
+
+    `expected_head` is the expected head of ACU-71: the proposal was made from it, and a commit that another session
+    adds to HEAD after it must never be pushed with the commit of define."""
     root = where["root"]
     changes = parse_changes(change_texts)
     if not changes:
         raise Stop("no change given")
-    branch = default_branch(root)
-    if not branch:
-        raise Stop(f"cannot find the default branch of {where['acceptance_repository']}")
+    # ACU-75, in its order: the fetch, then the default branch, so that an unreachable origin gives the message of the
+    # fetch; every row exits 3, so that the skill puts back what it wrote.
     if git(root, "fetch", "-q", "origin").returncode != 0:
         raise Stop(f"cannot fetch {where['acceptance_repository']}", code=3)
+    branch = default_branch(root)
+    if not branch:
+        raise Stop(f"cannot find the default branch of {where['acceptance_repository']}", code=3)
     if out(root, "rev-list", "--count", f"HEAD..refs/remotes/origin/{branch}") != "0":
+        raise Stop(f"origin/{branch} moved; run the skill again", code=3)
+    if out(root, "rev-list", "--count", f"refs/remotes/origin/{branch}..HEAD") != "0":
+        raise Stop(f"the acceptance repository has commits that are not on origin/{branch}", code=3)
+    if out(root, "rev-parse", "HEAD") != expected_head:
         raise Stop(f"origin/{branch} moved; run the skill again", code=3)
     result = check(where, norms_commit)
     if result["problems"]:
@@ -1126,7 +935,7 @@ def commit(where, norms_commit, change_texts):
             raise Stop(f"delete {an_id}: tests/{an_id}/ is not deleted (ACU-70)")
     stray = strays(root, changes, files)
     if stray:
-        raise Stop(f"{stray[0]} differs from HEAD, and no change of the commit names it (ACU-71)")
+        raise Stop(f"{checks.text_of(stray[0])} differs from HEAD, and no change of the commit names it (ACU-71)")
     tests = deleted_tests(root, changes)
     paths = sorted({p for p, _, _ in files} | set(tests))
     subject, body = message(changes)
@@ -1136,12 +945,24 @@ def commit(where, norms_commit, change_texts):
     cannot = shlex.quote(PREFIX + f"cannot fetch {where['acceptance_repository']}")
     moved = shlex.quote(PREFIX + f"origin/{branch} moved; run the skill again")
     behind = shlex.quote(f"HEAD..refs/remotes/origin/{branch}")
-    # ACU-71: the command fetches again first, so that a move of the default branch while the requester reads the
-    # diff stops it, with status 3, before it stages anything.
-    command = (f"{{ git -C {r} fetch -q origin || {{ echo {cannot}; (exit 3); }}; }}"
+    ahead = shlex.quote(f"refs/remotes/origin/{branch}..HEAD")
+    not_on_origin = shlex.quote(PREFIX + f"the acceptance repository has commits that are not on origin/{branch}")
+    rejected_before = shlex.quote(PREFIX + "push rejected; commit ")
+    rejected_after = shlex.quote(f" is not on origin/{branch}; run git pull --rebase, then git push, and run the "
+                                 "skill again")
+    # ACU-71: the command fetches again first, so that a move of the default branch, or a commit that another session
+    # adds to HEAD, while the requester reads the diff stops it, with status 3, before it stages anything. A rejected
+    # push exits 4 with its message; a pushed commit prints its 40 hex digits, the expected head of the next command.
+    command = (f"{{ git -C {r} fetch -q origin 2>/dev/null || {{ echo {cannot}; (exit 3); }}; }}"
                f" && {{ test \"$(git -C {r} rev-list --count {behind})\" = 0 || {{ echo {moved}; (exit 3); }}; }}"
-               f" && {g} add -- {ps} && {g} commit -q -m {shlex.quote(subject)} -m {shlex.quote(body)} -- {ps}"
-               f" && git -C {r} push -q origin {shlex.quote('HEAD:' + branch)}")
+               f" && {{ test \"$(git -C {r} rev-list --count {ahead})\" = 0"
+               f" || {{ echo {not_on_origin}; (exit 3); }}; }}"
+               f" && {{ test \"$(git -C {r} rev-parse HEAD)\" = {shlex.quote(expected_head)}"
+               f" || {{ echo {moved}; (exit 3); }}; }}"
+               f" && {g} add -f -- {ps} && {g} commit -q -m {shlex.quote(subject)} -m {shlex.quote(body)} -- {ps}"
+               f" && {{ git -C {r} push -q origin {shlex.quote('HEAD:' + branch)} 2>/dev/null || {{ echo {rejected_before}"
+               f"\"$(git -C {r} rev-parse HEAD | cut -c1-7)\"{rejected_after}; (exit 4); }}; }}"
+               f" && git -C {r} rev-parse HEAD")
     diffs = [unified(p, old, new) for p, old, new in files]
     diffs += [unified(p, show(root, "HEAD", p), None) for p in tests]
     display = "\n".join(["Diff:", ""] + diffs + ["Commit:", f"    {subject}", ""] +
@@ -1170,37 +991,60 @@ def rollback(root, change_texts):
         with open(full, "wb") as f:
             f.write(show(root, "HEAD", path))
         restored.append(path)
+    for path in restored:
+        _index_as_at_head(root, path)
     return sorted(restored)
 
 
+def _index_as_at_head(root, path):
+    """ACU-71: the entry of one path in the index as HEAD holds it, after a command that staged it and whose commit
+    was refused; "git update-index --cacheinfo" and "git rm --cached" change the index of that path alone (ACU-73)."""
+    entry = out(root, "--literal-pathspecs", "ls-tree", "HEAD", "--", path)
+    if entry:
+        mode, _, blob = entry.split("\t")[0].split()
+        git(root, "update-index", "--cacheinfo", f"{mode},{blob},{path}")
+    elif git(root, "--literal-pathspecs", "ls-files", "--error-unmatch", "--", path).returncode == 0:
+        git(root, "--literal-pathspecs", "rm", "-q", "--cached", "--", path)
+
+
 def next_line(root, since):
-    """ACU-72: the line "Next: ..." for the commits from `since` to HEAD, or None."""
-    old, new = Layer3(root, since), Layer3(root, "HEAD")
+    """ACU-72: the line "Next: ..." for the commits from `since` to HEAD, or None.
+
+    The part of the implementation planner applies when the commits added or deleted an acceptance unit, or changed
+    its unit hash; a change of the title, of "Area:" or of "Profile:" alone, which no hash holds (ACU-52), names
+    nobody."""
+    since_commit = out(root, "rev-parse", "-q", "--verify", f"{since}^{{commit}}")
+    if since_commit is None or git(root, "merge-base", "--is-ancestor", since_commit, "HEAD").returncode != 0:
+        raise Stop(f"--since {since} is not a commit of HEAD")
+    old, new = Layer3(root, since_commit), Layer3(root, "HEAD")
     paths = sorted(set(old.paths()) | set(new.paths()))
-    acceptance_units_touched, ids = False, []
+    acceptance_units_planned, ids = False, []
     for path in paths:
-        m_unit, m_area = ACCEPTANCE_UNIT_FILE.fullmatch(path), ACCEPTANCE_AREA_FILE.fullmatch(path)
-        if not (m_unit or m_area):
+        match_of_acceptance_unit_file = ACCEPTANCE_UNIT_FILE.fullmatch(path)
+        match_of_acceptance_area_file = ACCEPTANCE_AREA_FILE.fullmatch(path)
+        if not (match_of_acceptance_unit_file or match_of_acceptance_area_file):
             continue
         a, b = old.read(path), new.read(path)
         if a == b:
             continue
-        if m_unit:
-            acceptance_units_touched = True
+        if match_of_acceptance_unit_file and (a is None or b is None):
+            acceptance_units_planned = True
         if b is None:
             continue
-        compute = hashes.unit_hash if m_unit else hashes.area_hash
+        compute = hashes.unit_hash if match_of_acceptance_unit_file else hashes.area_hash
         try:
             before = compute(a) if a is not None else None
             after = compute(b)
         except UnicodeDecodeError:
             continue
         if after is not None and after != before:
-            ids.append((m_unit or m_area).group(1))
+            ids.append((match_of_acceptance_unit_file or match_of_acceptance_area_file).group(1))
+            if match_of_acceptance_unit_file:
+                acceptance_units_planned = True
     ids.sort(key=lambda x: (x[:2] != "AA", number(x)))
     parts = []
-    if acceptance_units_touched:
-        parts.append("the implementation planner updates plan.json")
+    if acceptance_units_planned:
+        parts.append("the implementation planner updates plan.json with /acceptance-management:plan")
     if ids:
         parts.append(f"the test agent updates the acceptance tests of {', '.join(ids)}")
     return f"Next: {'; '.join(parts)}." if parts else None
@@ -1268,7 +1112,8 @@ def main(argv):
         print(json.dumps(delete_tests(root, rest[0])))
         return 0
     if command == "commit":
-        result = commit(where, norms_commit_of(where, rest), option(rest, "--change", many=True))
+        result = commit(where, norms_commit_of(where, rest), option(rest, "--change", many=True),
+                        option(rest, "--expected-head"))
         print(json.dumps(result, ensure_ascii=False))
         return 0
     if command == "rollback":

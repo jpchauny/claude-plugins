@@ -12,12 +12,13 @@ A use case of the module `acceptance-management`, specified in [module.md](../..
 |---|---|
 | Skill | The skill `define` of the plugin `acceptance-management`, invoked as `/acceptance-management:define`; it acts as the acceptance architect, and is the actor of every rule that names no other. |
 | Default branch | Of a repository: the branch that `git ls-remote --symref origin HEAD`, run in that repository, names. |
-| Norms commit | The head of the default branch of the remote `origin` of the norms repository, after the fetch of ACU-58. |
+| Norms commit | The head of the default branch of the remote `origin` of the norms repository, after the fetch of [ACU-74](../../../specs/module.md#the-files-of-the-acceptance-repository). |
 | Inventory | The JSON object that the script of ACU-60 prints. |
 | Citation status | What the norms commit says of one norm citation of `## Norms` of an acceptance unit: `current`, `changed` or `retired` (ACU-62). |
 | Change | One item of the proposal: to add, change or delete one acceptance area or one acceptance unit, with every other file that ACU-10 and ACU-70 make it touch, and the file of each acceptance unit out of which it moves a scenario or a norm citation (ACU-67). |
 | Proposal | The numbered list of changes that the skill shows to the requester (ACU-64). |
 | Acceptance unit with evidence | An acceptance unit whose record holds at least one line. |
+| Expected head | Of a command of ACU-71: the commit from which the requester saw the acceptance repository, which the command must find at `HEAD`: `acceptance_commit` of the inventory for the first command of the invocation, and for each later one the commit that the command before it pushed, whose 40 hex digits that command prints as its last line. |
 
 The terms norm, norm ID, norm hash, derived norm, specs repository, norms repository, acceptance repository and code repository are those of [layers.md](../../../../development-methodology/specs/layers.md#terms); a norm, its norm ID and its norm hash are those of the norms commit. The form of a norm ID is that of [ACU-56](../../../specs/module.md#hashes-and-citations). The terms requester, acceptance area, acceptance unit, work item, increment, unit ID, area ID, scenario ID, title, fingerprint, unit hash, area hash, scenario hash, citation, norm citation, scenario, external interface, gap of layer 1, acceptance test, acceptance architect, implementation planner, test agent, evidence, record, done profile, default done profile, state and stale are those of [module.md](../../../specs/module.md#terms). The terms run and step are those of [flow.md](../../../../development-methodology/specs/flow.md#terms). The fingerprints are computed as [ACU-51 to ACU-54](../../../specs/module.md#hashes-and-citations) say. A commit of layer 3 follows [LAY-9](../../../../development-methodology/specs/layers.md#rules).
 
@@ -30,6 +31,7 @@ Feature: Define the acceptance areas and acceptance units
   I want the AI to analyse every norm against every acceptance area and acceptance unit, and to propose the acceptance areas, the acceptance units and their scenarios that I approve
 
   Rule: ACU-57 The skill runs when the user asks for it or as the step of layer 3 of a run, only from the acceptance repository, and takes no argument
+    Rationale: the acceptance areas and the acceptance units decide what layer 4 builds and what the requester accepts, so they change only when a person or a run asks for it; run from another repository, or with an argument it does not read, the skill would analyse or write the wrong files, and the checks that refuse both are shared by every use case of the module (ACU-74).
 
     Scenario: Invoked by the user
       When the user types "/acceptance-management:define", or asks in words to define, change or delete acceptance areas or acceptance units
@@ -44,38 +46,29 @@ Feature: Define the acceptance areas and acceptance units
       Then the model does not start the skill
 
     Scenario: The refusals
-      Then an argument, and a repository other than the acceptance repository, end the skill as ACU-58 says
+      Then an argument, and a repository other than the acceptance repository, end the skill as ACU-74 says
 
-  Rule: ACU-58 Before it reads anything else, a script with no model makes these checks, in this order, and the first that fails ends the skill with its message (complete list)
+  Rule: ACU-58 Before it reads anything else, the skill makes the checks of ACU-74, and then a script with no model makes these checks, in this order, and the first that fails ends the skill with its message (complete list)
+    Rationale: the files that define writes must start from what "HEAD" holds, so an uncommitted or untracked file of an acceptance area or an acceptance unit, which the skill would overwrite or commit by mistake, stops it; an "acceptance.json" it cannot read gives no next IDs (ACU-55). The checks that every use case of the module shares are written once, in ACU-74.
 
-    Scenario Outline: A check fails
-      Given <condition>
+    Scenario: The checks of the module
+      When the skill starts
+      Then it makes the checks of ACU-74 first, with "define" as the use case, and the first that fails ends the skill as ACU-74 says
+
+    Scenario Outline: A check of define fails
+      Given every check of ACU-74 passed
+      And <condition>
       When the skill starts
       Then the skill writes nothing
       And it says "acceptance-management:define: <message>"
+      And the message binds byte for byte once filled, where "units/AU-3.md" and "units/AU-4.md" stand for the path found
+      And a path is printed as it is when it holds no control character (Unicode category Cc), no line separator (U+2028), no paragraph separator (U+2029) and no byte that is not UTF-8; otherwise it is printed as its JSON text, between double quotes, where a double quote and a backslash are escaped as \" and \\, the line feed, the carriage return, the tab, the backspace and the form feed as \n, \r, \t, \b and \f, and every other such character, and each byte that is not UTF-8 as the code point U+DC00 plus that byte, as \u followed by 4 lower-case hex digits; so no path forges a line of the output (ACU-8); an untracked file "units/a", a line feed and "b.md" gives "untracked file \"units/a\\nb.md\""
 
       Examples:
         | condition | message |
-        | the user gave an argument | takes no argument |
-        | the working directory is in no git repository; or its repository has at its root no "project.json" that ORC-21 can read, or not exactly one entry of it matches its remote "origin" (ORC-21), or its entry has a layer other than 3, or the "path" of its entry is not valid (ORC-20), or the folder of the repository does not end with that "path" (ORC-21) | runs only from the acceptance repository |
-        | "project.json" has not exactly one entry with "layer" 2, or the "path" of that entry is not valid (ORC-20) | project.json has not exactly one entry of layer 2, the norms repository, with a valid path |
-        | the norms repository "acme/billing-norms" is not at "/p/billing-norms" (ORC-22) | acme/billing-norms not found at /p/billing-norms; run: git clone https://github.com/acme/billing-norms /p/billing-norms |
-        | "git fetch origin" fails in the acceptance repository "acme/billing-acceptance" | cannot fetch acme/billing-acceptance |
-        | "git fetch origin" fails in the norms repository | cannot fetch acme/billing-norms |
-        | "git ls-remote --symref origin HEAD" names no branch in the acceptance repository | cannot find the default branch of acme/billing-acceptance |
-        | "git ls-remote --symref origin HEAD" names no branch in the norms repository | cannot find the default branch of acme/billing-norms |
-        | the norms commit holds no "data/tree.jsonl" | acme/billing-norms has no data/tree.jsonl on main |
-        | "data/tree.jsonl" of the norms commit is not UTF-8, or a line of it cannot be read as R23 and R61 say | acme/billing-norms: data/tree.jsonl is not valid |
-        | the norms commit holds no "specs-repo-annotated/project.json" | acme/billing-norms has no specs-repo-annotated/project.json on main |
-        | "project.json" differs from "specs-repo-annotated/project.json" of the norms commit, byte for byte (ORC-24) | project.json differs from that of acme/billing-norms; run /project-management:sync |
-        | the acceptance repository is not on its default branch "main" | the acceptance repository is not on main |
-        | its "HEAD" holds a commit that "origin/main" does not | the acceptance repository has commits that are not on origin/main |
-        | "origin/main" holds a commit that its "HEAD" does not | the acceptance repository is behind origin/main; run git pull |
         | "units/AU-3.md" is the first path, in sorted order, with an uncommitted change among "acceptance.json" and the files of "areas/" and "units/" | uncommitted change in units/AU-3.md |
-        | "units/AU-4.md" is the first path, in sorted order, of an untracked file under "areas/" or "units/" | untracked file units/AU-4.md |
+        | "units/AU-4.md" is the first path, in sorted order, of an untracked file under "areas/" or "units/", a file that a ".gitignore" names included | untracked file units/AU-4.md |
         | "acceptance.json" is not one JSON object with the fields of ACU-6, each of its type | acceptance.json does not meet ACU-6 |
-
-      And "main" stands for the default branch of the repository that the row names
 
     Scenario: Other uncommitted changes
       Given the acceptance repository has an uncommitted change in "tests/AU-3/test_export.py" or in "records/AU-3.jsonl"
@@ -84,11 +77,12 @@ Feature: Define the acceptance areas and acceptance units
       And the skill never stages, commits or changes that file
 
   Rule: ACU-59 The skill reads layer 2 at the norms commit and layer 3 at its "HEAD", and never changes the working tree of the norms repository
+    Rationale: the acceptance units must cite the norms that layer 2 committed, and be written from what layer 3 committed, which is what every other session reads (ACU-41); reading a working tree would cite a norm that no commit holds, and changing the working tree of the norms repository would destroy the work of another session in it.
 
     Scenario: The commits read
       Given every check of ACU-58 passed
       Then the skill reads the norms repository only at the norms commit, with "git show" and "git ls-tree" of that commit
-      And it reads the acceptance repository at its "HEAD", which ACU-58 made equal to "origin/main"
+      And it reads the acceptance repository at its "HEAD", which ACU-74 made equal to "origin/main"
       And in a run it reads the same commits
 
     Scenario: The working tree of the norms repository (must not)
@@ -98,6 +92,7 @@ Feature: Define the acceptance areas and acceptance units
       And no file of its working tree is read
 
   Rule: ACU-60 The script prints the inventory: one JSON object on its standard output, computed with no model (complete list of fields)
+    Rationale: the facts that the analysis starts from (the norms, the files, their hashes, their errors, their evidence and the next IDs) must be exact and the same on every run; a script with no model computes them, and only the judgement of ACU-63 is left to the model.
 
     Scenario: The fields of the inventory (complete list)
       Then the inventory holds these fields:
@@ -147,6 +142,7 @@ Feature: Define the acceptance areas and acceptance units
       And it adds the errors of ACU-61 that compare the working tree with "HEAD"
 
   Rule: ACU-61 The script reports each format error of ACU-6, ACU-7, ACU-8, ACU-50, ACU-54, ACU-55 and ACU-56 (complete list)
+    Rationale: a file that breaks the format of the module gives the scripts that read it, and layer 4, no single reading; reported by a script, with its path and line, every format error is found on every run, and the proposal can fix it (ACU-63).
 
     Scenario Outline: A format error
       Given <file> where <condition>
@@ -156,7 +152,7 @@ Feature: Define the acceptance areas and acceptance units
       Examples:
         | file                 | condition                                                                                            | message                                                                     |
         | "units/AU-3.md"      | its bytes are not UTF-8                                                                              | not UTF-8                                                                   |
-        | "units/AU-3.md"      | the first line is not "# AU-3 " followed by a title                                                  | heading is not "# AU-3 <title>"                                             |
+        | "units/AU-3.md"      | the first line is not "# AU-3 " followed by a title, or the title holds a character that ACU-8 forbids in a title | heading is not "# AU-3 <title>"                                             |
         | "units/AU-3.md"      | the first line after the heading that is not empty is not "Area: <area ID>"                         | no line "Area: <area ID>"                                                   |
         | "units/AU-3.md"      | its line "Area:" names "AA-7", which has no file                                                     | acceptance area AA-7 has no file                                                       |
         | "units/AU-3.md"      | its line "Profile:" is "Profile: gold"                                                               | done profile gold is not prototype, product or critical                          |
@@ -170,7 +166,7 @@ Feature: Define the acceptance areas and acceptance units
         | "units/AU-3.md"      | a scenario has the tag "@INV-99", which "## Norms" does not cite                                     | tag @INV-99 is not in ## Norms                                              |
         | "units/AU-3.md"      | "## Non-goals" or "## Assumptions" is neither a list nor the line "None."                            | ## Non-goals is not a list or None.                                         |
         | "units/AU-3.md"      | an assumption ends neither with "(<norm ID>)" of a norm nor with "(environment)"                     | assumption rests on no norm and not on (environment)                        |
-        | "areas/AA-1.md"      | the first line is not "# AA-1 " followed by a title                                                  | heading is not "# AA-1 <title>"                                             |
+        | "areas/AA-1.md"      | the first line is not "# AA-1 " followed by a title, or the title holds a character that ACU-8 forbids in a title | heading is not "# AA-1 <title>"                                             |
         | "areas/AA-1.md"      | its parts are not those of ACU-7 in their order, or "## Purpose" holds no text                       | parts are not those of ACU-7                                                |
         | "areas/AA-1.md"      | a scenario has fewer than two tags "@unit:<unit ID>"                                                 | scenario SC-9 crosses fewer than two acceptance units                                  |
         | "areas/AA-1.md"      | a scenario has the tag "@unit:AU-8", and the line "Area:" of AU-8 does not name AA-1                 | AU-8 is not an acceptance unit of AA-1                                                  |
@@ -195,6 +191,7 @@ Feature: Define the acceptance areas and acceptance units
       Then its "errors" hold only "not UTF-8", and its "title", "area_id" and "unit_hash" are null, and it has no norm citation and no scenario
 
   Rule: ACU-62 Each norm citation of "## Norms" gets one citation status, from the norms commit, where a retired node of "data/tree.jsonl" is not a norm (complete list)
+    Rationale: an acceptance unit that cites a norm hash that layer 2 no longer holds is behind layer 2, and layer 4 does not implement it (ACU-41); a status computed from the norms commit tells the skill exactly which norm citations to review, and a retired node counts as no norm, since layer 2 no longer states it.
 
     Scenario Outline: The citation status of a norm citation
       Given "units/AU-3.md" cites "INV-12@0c1d2e3f: amounts with two decimals"
@@ -209,6 +206,7 @@ Feature: Define the acceptance areas and acceptance units
         | "data/tree.jsonl" has no node "INV-12"                     | retired         |
 
   Rule: ACU-63 Each time the skill runs, it analyses every norm against every acceptance area and every acceptance unit, and is not bound to group every norm (ACU-2, ACU-32)
+    Rationale: a norm of layer 2 can touch any acceptance area or acceptance unit, and an analysis that reads only what changed misses the acceptance units that a new norm should change; a norm that fits no acceptance unit yet is left out, since grouping it by force would make an acceptance unit that no requester can accept as one thing (ACU-2, ACU-32).
 
     Scenario: The analysis is always whole
       Given the norms commit adds only "INV-20" to the commit that the acceptance units cite
@@ -238,6 +236,7 @@ Feature: Define the acceptance areas and acceptance units
       Then it shows no list and no count of the norms that no acceptance unit groups
 
   Rule: ACU-64 The skill shows a proposal, and revises it with the requester until the requester accepts it as final
+    Rationale: what the requester accepts is the requester's decision (LAY-9); a proposal revised until the requester says it is final keeps every file unwritten until then, and a summary first tells the requester what the analysis starts from.
 
     Scenario: The summary of the inventory
       Given the inventory
@@ -289,6 +288,7 @@ Feature: Define the acceptance areas and acceptance units
       And it says "acceptance-management:define: no change to propose"
 
   Rule: ACU-65 New IDs follow the next IDs of the inventory; an ID never changes and is never given again, and a title may change (ACU-5, ACU-55)
+    Rationale: an ID is what every other file, test, record and commit uses to name an acceptance area, an acceptance unit or a scenario (ACU-5); an ID that changed or was given again would make an old record or test name another thing, while a title only describes, and may change freely (ACU-5).
 
     Scenario: New IDs in the final proposal
       Given "next_ids" holds "AU-4", and the final proposal adds two acceptance units
@@ -313,6 +313,7 @@ Feature: Define the acceptance areas and acceptance units
       Then the same commit sets "last_unit_id" to 4 and "last_scenario_id" to 11, and changes no other field of "acceptance.json"
 
   Rule: ACU-66 The proposal says which evidence each change makes stale; it avoids touching acceptance units with evidence; deleting or splitting one needs its own yes
+    Rationale: evidence of an acceptance unit is the work of layer 4 and of the test agent, and a change of its unit hash makes it stale (ACU-27); the requester must see that cost before accepting the change, and deleting or splitting an acceptance unit with evidence loses that work, so it needs its own yes.
 
     Scenario Outline: The evidence that a change makes stale (complete list)
       Given <ID> has evidence
@@ -345,6 +346,7 @@ Feature: Define the acceptance areas and acceptance units
         | moves a scenario or a norm citation of AU-2 to another acceptance unit | Split it?      |
 
   Rule: ACU-67 The skill writes the scenarios of each acceptance unit and the scenarios that cross the acceptance units of an acceptance area, as ACU-7, ACU-8 and ACU-50 say
+    Rationale: the scenarios are what the acceptance tests check and what the requester accepts (ACU-11); each norm of an acceptance unit needs a scenario that shows it from outside, and a norm seen only when several acceptance units work together needs a scenario of their acceptance area, or no test ever checks it.
 
     Scenario: The scenarios of an acceptance unit
       Given a change adds or changes an acceptance unit
@@ -371,6 +373,7 @@ Feature: Define the acceptance areas and acceptance units
       Then that change also writes "units/AU-3.md" without them, so that no commit holds SC-5 twice
 
   Rule: ACU-68 A gap of layer 1 becomes an issue of the specs repository after the requester's yes, and its scenario is left out (ACU-4, LAY-5)
+    Rationale: layer 3 must not invent behaviour that no norm states (ACU-4); a gap of layer 1 is fixed where the norms are written, so it becomes an issue of the specs repository (LAY-5), and a scenario for it would make layer 4 build what nobody specified.
 
     Scenario: A gap of layer 1
       Given the skill needs for AU-4 a scenario of what is shown when an email is already registered, and no norm states it
@@ -399,6 +402,7 @@ Feature: Define the acceptance areas and acceptance units
       Then the skill opens no issue
 
   Rule: ACU-69 Every file that a commit writes passes the checks of the script before the commit
+    Rationale: every reader of the acceptance repository, the scripts of the module and layer 4 among them, must be able to read every committed file; checked by the script before the commit, no commit of define adds a format error or a norm citation that is not current, while an error already at HEAD that the commit does not touch does not block it.
 
     Scenario: The files written
       When the skill has written the files of a commit
@@ -414,6 +418,7 @@ Feature: Define the acceptance areas and acceptance units
       Then the skill fixes the files it wrote and runs the script again, and commits nothing while that error is left
 
   Rule: ACU-70 A deleted acceptance unit follows ACU-10, and an acceptance area left with no acceptance unit is proposed for deletion
+    Rationale: a deleted acceptance unit leaves tests, scenarios of its acceptance area and tags that name it, and those would name something that no longer exists (ACU-10); the record stays, since it is the history of the evidence (ACU-35); an acceptance area with no acceptance unit holds nothing to accept, so its deletion is proposed, and the requester decides it.
 
     Scenario: An acceptance unit is deleted
       Given the final proposal deletes AU-2, and SC-9 of AA-1 crosses AU-1, AU-2 and AU-3
@@ -431,6 +436,7 @@ Feature: Define the acceptance areas and acceptance units
       Then the proposal also holds "delete acceptance area AA-1", and the requester may reject it
 
   Rule: ACU-71 The requester chooses one commit for the whole proposal or one commit per change; each commit follows LAY-9
+    Rationale: the requester approves each commit (LAY-9), and may want one commit to review or one per change to keep each apart; a command that stages only the files of its changes keeps the work of other sessions out of the commit, and the checks that the repository did not move since the start keep the command from publishing what the requester never saw.
 
     Scenario: The choice
       Given the requester has said that the proposal is final, and answered every question of ACU-66 and ACU-68
@@ -438,7 +444,7 @@ Feature: Define the acceptance areas and acceptance units
 
     Scenario: One commit with every change
       Given the requester answers 1
-      Then the skill writes every change, runs the checks of ACU-69, shows the whole diff, and shows one command that stages each file it wrote or deleted by its path, commits, and pushes to the default branch, here "origin main"
+      Then the skill writes every change, runs the checks of ACU-69, shows the whole diff, and shows one command that stages each file it wrote or deleted by its path, even when a ".gitignore" names it, commits, and pushes to the default branch, here "origin main"
       And it runs that command only when the requester approves it
 
     Scenario: One commit per change
@@ -471,6 +477,7 @@ Feature: Define the acceptance areas and acceptance units
     Scenario: A file that belongs to no change of the commit (must not)
       Given "units/AU-1.md" and "areas/AA-1.md" differ from "HEAD", and the only change of the commit is "change AU-1", which moves nothing out of "areas/AA-1.md"
       Then the script builds no command, and says "areas/AA-1.md differs from HEAD, and no change of the commit names it (ACU-71)"
+      And the path in that message is printed as ACU-58 says for the path found
       And a file belongs to a change as the term change says: the file of its ID, the files of "tests/<unit ID>/" of a deleted acceptance unit, "acceptance.json", the file out of which it moves a scenario or a norm citation (ACU-67), and the file of an acceptance area with a scenario at "HEAD" that crosses an acceptance unit that the change deletes, moves to another acceptance area, or makes no longer cite a norm of a tag of that scenario (ACU-10, ACU-70)
 
     Scenario: The requester refuses the command of the one commit
@@ -483,39 +490,54 @@ Feature: Define the acceptance areas and acceptance units
       And it goes on with the next change that is left, which, with the later ones, takes the IDs that follow those already committed (ACU-65)
       And the changes already pushed stay
 
-    Scenario: The default branch moved
-      Given "git fetch origin", run when the script builds a command and again as the first step of that command, shows that "origin/main" holds a commit that "HEAD" does not, or fails
-      Then the command stages and commits nothing, and the skill puts each file it wrote and did not commit back as it is at "HEAD", and commits nothing more
-      And it says "acceptance-management:define: origin/main moved; run the skill again", or, when the fetch failed, "acceptance-management:define: cannot fetch acme/billing-acceptance"
+    Scenario: The repository moved since the start
+      Then the script, when it builds a command, and the command, before it stages anything, make the checks of [ACU-75](../../../specs/module.md#the-files-of-the-acceptance-repository), whose commit seen by the requester is the expected head
+      And when one fails, the command stages and commits nothing, exits with the status 3 and says the message of ACU-75, and the skill puts each file it wrote and did not commit back as it is at "HEAD", and commits nothing more
+      And the command prints nothing of the output of its "git fetch" and its "git push", their errors included, so that a failed fetch or a rejected push prints only the message of ACU-75; the output of its "git add" and its "git commit" is printed as git gives it
+
+    Scenario: The command pushed
+      Given the push of a command succeeds
+      Then the last line of the output of the command is the 40 hex digits of the commit it pushed, which is the expected head of the next command
 
     Scenario: The push is rejected
       Given the push of a command is rejected
-      Then the skill stops, and says "acceptance-management:define: push rejected; commit 1a410ef is not on origin/main"
+      Then the command exits with the status 4 and says the message of ACU-75, here "acceptance-management:define: push rejected; commit 1a410ef is not on origin/main; run git pull --rebase, then git push, and run the skill again"
+      And the skill says that line as it is and stops; the commit stays on the local default branch, and nothing is put back
+
+    Scenario: Git or a hook refuses the commit
+      Given the command staged its files, and git or a hook refuses the commit, so that the command exits with a status other than 0, 3 and 4
+      Then the skill says the output of the command as it is, puts each file it wrote and did not commit back as it is at "HEAD", and stops
+
+    Scenario: The stand-ins of the messages of ACU-71
+      Then the messages of ACU-75 that ACU-71 says bind byte for byte once filled with the stand-ins that ACU-75 states
 
   Rule: ACU-72 After its commits the skill names the agents that come next, and in a run it hands off as ACU-41 says
+    Rationale: the commits of define are worth nothing to layer 4 until the plan of implementation and the acceptance tests follow them (ACU-37); naming each agent with its command tells the requester where to go, and naming none when nothing they read changed sends nobody to work for nothing.
 
     Scenario: The line after the commits
       Given the commits are pushed
       Then the skill says one line "Next: <parts>.", where the parts are joined by "; ", in this order (complete list):
         | part                                                     | when                                                                                   |
-        | the implementation planner updates plan.json             | the commits added, changed or deleted an acceptance unit                                           |
+        | the implementation planner updates plan.json with /acceptance-management:plan | the commits added or deleted an acceptance unit, or changed the unit hash of one |
         | the test agent updates the acceptance tests of <IDs>     | the commits created or changed the area hash or the unit hash of an acceptance area or an acceptance unit     |
       And "<IDs>" are those acceptance areas and acceptance units, the acceptance areas first, each in the order of the numbers, joined by ", "
       And when no part applies, the skill says no line "Next:"
 
     Scenario: Two parts
       Given the commits changed the unit hash of AU-3 and added AU-4
-      Then the skill says "Next: the implementation planner updates plan.json; the test agent updates the acceptance tests of AU-3, AU-4."
+      Then the skill says "Next: the implementation planner updates plan.json with /acceptance-management:plan; the test agent updates the acceptance tests of AU-3, AU-4."
 
     Scenario: Only a title
       Given the commits changed only the title of AU-3
-      Then the skill says "Next: the implementation planner updates plan.json."
+      Then the skill says no line "Next:", since no unit hash and no area hash changed (ACU-52)
 
     Scenario: In a run
       Given the skill runs as the step of layer 3 of a run
-      Then it does as ACU-64 to ACU-71 say, and the run goes on only once the requester has decided on every change (ACU-37, ACU-41)
+      Then it does as ACU-64 to ACU-71 say, and the step goes on only once the requester has decided on every change (ACU-37, ACU-41)
+      And when its line "Next:" holds the part of the implementation planner, the step goes on with /acceptance-management:plan (ACU-37, PLN-1)
 
   Rule: ACU-73 The skill writes only the files of the acceptance areas and the acceptance units, the ID fields of acceptance.json and the deletion of the tests of a deleted acceptance unit (must not)
+    Rationale: the acceptance architect decides only what an acceptance area and an acceptance unit are (ACU-44, ACU-48); keeping it to its own files keeps a change of define from changing the plan of implementation, the evidence or the tests of the test agent, and the commands that may change the files or the index of many paths would destroy the work of other sessions.
 
     Scenario: What the skill writes (complete list)
       Then the skill writes only "areas/<area ID>.md", "units/<unit ID>.md", the fields "last_area_id", "last_unit_id" and "last_scenario_id" of "acceptance.json", and the deletion of the files of "tests/<unit ID>/" of an acceptance unit that it deletes

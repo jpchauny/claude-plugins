@@ -4,8 +4,8 @@ The module `acceptance-management` of Indra Software Factory, layer 3,
 enabled in the repository of layer 3 only
 ([APP-6](../development-methodology/specs/layers.md#where-each-module-is-installed)):
 the acceptance areas and the acceptance units of a project, their acceptance
-tests, the plan of implementation, and when a unit, an area and an increment
-are done. It is specified in [specs/](specs/module.md).
+tests, the plan of implementation, and when an acceptance unit, an acceptance
+area and an increment are done. It is specified in [specs/](specs/module.md).
 
 Four agents of layer 3 work from the norms of layer 2, without reading the
 code ([LAY-8](../development-methodology/specs/layers.md#rules)), and a person
@@ -64,6 +64,22 @@ could read it. Its tests run with the command above.
   errors, and the checks, the ID fields and the commit command of each
   change. Its tests are `tests/test_define.py`, and run with the command
   above.
+- `/acceptance-management:plan`
+  ([plan.md](use-cases/plan/specs/plan.md)): the implementation planner
+  reviews the whole plan of implementation against every acceptance unit and
+  proposes the increments, their acceptance units, their order, their
+  dependencies and their groups of components, changing as little of the
+  current plan as it can; it commits only `plan.json`, after the requester's
+  yes. Its skill is [use-cases/plan/SKILL.md](use-cases/plan/SKILL.md); its
+  script, `use-cases/plan/plan.py`, computes with no model the checks before
+  the skill starts, the inventory of the plan, the errors of a plan, the
+  rendering of each draft and its changes of the plan, and writes and checks
+  `plan.json` and builds its commit command. Its tests are
+  `tests/test_plan.py`, and run with the command above.
+
+The checks that both use cases make before they read anything else
+([ACU-74](specs/module.md#the-files-of-the-acceptance-repository)) are
+written once, in `scripts/acceptance_repository_checks.py`.
 
 ## Not built yet
 
