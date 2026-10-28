@@ -169,6 +169,42 @@ def test_rerun_identical_keeps_ids_and_reports_nothing(tmp_path: Path) -> None:
     assert path.read_bytes() == path2.read_bytes()
 
 
+def test_meta_foundation_commit_reads_as_specs_commit(tmp_path: Path) -> None:
+    """A meta line written before the rename gives its foundation_commit as specs_commit.
+
+    Spec: R61
+    """
+    store1, _ = run({TYP: types_tree()}, Store(), "c1")
+    path = tmp_path / "tree.jsonl"
+    write_store(path, store1)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    meta = json.loads(lines[0])
+    meta["foundation_commit"] = meta.pop("specs_commit")
+    lines[0] = json.dumps(meta, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    previous = read_store(path)
+    assert previous.specs_commit == "c1"
+    write_store(path, previous)
+    meta = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
+    assert meta["specs_commit"] == "c1" and "foundation_commit" not in meta
+
+
+def test_meta_specs_commit_wins_over_foundation_commit(tmp_path: Path) -> None:
+    """With both fields, specs_commit is the one read.
+
+    Spec: R61
+    """
+    store1, _ = run({TYP: types_tree()}, Store(), "c2")
+    path = tmp_path / "tree.jsonl"
+    write_store(path, store1)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    meta = json.loads(lines[0])
+    meta["foundation_commit"] = "old"
+    lines[0] = json.dumps(meta, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    assert read_store(path).specs_commit == "c2"
+
+
 def test_jsonl_format(tmp_path: Path) -> None:
     """The JSONL's lines, keys and fields.
 

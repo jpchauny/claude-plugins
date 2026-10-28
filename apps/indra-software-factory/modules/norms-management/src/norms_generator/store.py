@@ -601,7 +601,9 @@ def _read_line(store: Store, obj: dict[str, Any]) -> None:
     kind = obj.get("type")
     # R61: a second meta line, or a second file or copy line for one path, replaces the first
     if kind == "meta":
-        store.specs_commit = _field(obj, "specs_commit", _is_str, "")
+        # R61: "foundation_commit" is the name of "specs_commit" before the rename
+        legacy = _field(obj, "foundation_commit", _is_str, "")
+        store.specs_commit = _field(obj, "specs_commit", _is_str, legacy)
         store.generator_version = _field(obj, "generator_version", _is_str, "")
         store.retired_prefix_list = list(
             _field(obj, "retired_prefixes", lambda v: isinstance(v, list) and all(map(_is_prefix, v)), [])

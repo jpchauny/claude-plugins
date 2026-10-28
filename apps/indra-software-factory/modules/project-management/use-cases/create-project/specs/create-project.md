@@ -4,7 +4,7 @@
 
 **Audience:** The people who start a project; whoever builds the skill `create-project` of the plugin `project-management`
 
-**Scope:** The use case that creates the repositories of the five layers of a new project, and its `project.json`. Out of scope: the files of the acceptance repository that this use case does not write, such as its areas, units, tests and records ([ACU-6](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository))
+**Scope:** The use case that creates the repositories of the five layers of a new project, and its `project.json`. Out of scope: the files of the acceptance repository that this use case does not write, such as its acceptance areas, acceptance units, acceptance tests and records ([ACU-6](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository))
 
 A use case of the module `project-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 

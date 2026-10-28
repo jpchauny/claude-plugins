@@ -1219,7 +1219,7 @@ Tests:
 - `tests/test_review6.py`: `test_a_lone_cr_does_not_split_lines_r61`, `test_a_cr_inside_a_line_is_json_whitespace_r61`, `test_a_lone_surrogate_is_refused_and_the_jsonl_kept_r61`
 - `tests/test_review7.py`: `test_a_file_path_of_another_form_makes_the_jsonl_unreadable_r61`, `test_build_never_removes_a_file_outside_the_output_folder_r62`, `test_build_refuses_a_jsonl_that_is_not_consistent_r34`, `test_nan_and_infinity_make_the_jsonl_unreadable_r61`, `test_a_line_of_unicode_white_space_is_skipped_r61`, `test_an_id_numbered_0_or_with_a_leading_zero_is_refused_r61`, `test_the_meta_line_holds_the_full_sha_and_the_package_version_r61`, `test_a_short_sha_in_the_meta_line_is_not_a_rebuild_r60`, `test_every_other_selected_file_is_a_plain_copy_r61_r62`, `test_a_copy_line_reads_back_and_its_path_has_the_form_r61`
 - `tests/test_review8.py`: `test_a_md_path_holding_a_control_character_is_refused_r34`, `test_a_stored_path_holding_a_control_character_has_not_the_form_r61`, `test_a_repeated_name_keeps_its_last_value_and_the_earlier_is_not_checked_r61`
-- `tests/test_store.py`: `(module)`, `test_rerun_identical_keeps_ids_and_reports_nothing`, `test_jsonl_format`, `test_retired_number_never_reused`, `test_read_store_keeps_line_separators_in_text`
+- `tests/test_store.py`: `(module)`, `test_rerun_identical_keeps_ids_and_reports_nothing`, `test_meta_foundation_commit_reads_as_specs_commit`, `test_meta_specs_commit_wins_over_foundation_commit`, `test_jsonl_format`, `test_retired_number_never_reused`, `test_read_store_keeps_line_separators_in_text`
 
 Examples: none
 
