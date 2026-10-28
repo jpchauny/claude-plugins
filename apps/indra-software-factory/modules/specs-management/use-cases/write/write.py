@@ -7,7 +7,6 @@ Usage (python3 -I, from any folder):
 
     write.py locate   <repo> [-- <path>]
     write.py check    <repo> -- <path>
-    write.py scope    <repo> -- <path>
     write.py diff     <repo> <case> -- <path>
     write.py commit   <repo> <case> <layer> --fingerprint F -- <path>
     write.py links    <repo> -- <path>
@@ -20,8 +19,6 @@ change-draft, change-spec or delete (ORC-60); <layer> is 0 or 1.
 - `locate` writes nothing. It prints the case of ORC-60 as JSON, or the
   refusal of ORC-59 or ORC-60 and exits 1.
 - `check` writes nothing. It prints the checks of ORC-65 as JSON.
-- `scope` writes nothing. It prints the files of layers 0 and 1 that the full
-  check of ORC-67 reads (consistency.js).
 - `diff` writes nothing. It prints the whole diff of the change (ORC-66, and
   of both layers for a deletion, ORC-68), its commits and one fingerprint per
   layer.
@@ -299,14 +296,6 @@ def check(repo, path):
                             sorted(neighbours.items(), key=lambda x: (x[0][0], x[0][1].encode("utf-8", "surrogateescape")))])
 
 
-def scope(repo, path):
-    repos, trees = repos_and_trees(repo)
-    check_path(path, trees)
-    files = [dict(layer=layer, path=p) for (layer, p) in sorted(md_files(repos, trees))
-             if (layer, p) != (0, path)]
-    return dict(roots={"0": str(repos[0]), "1": str(repos[1])}, draft=path, files=files)
-
-
 # ---------------------------------------------------------------- the deletion (ORC-68)
 
 def link_spans(file, text, path):
@@ -570,7 +559,7 @@ def dumps(value, **kw):
 
 
 def main(argv):
-    cmds = ("locate", "check", "scope", "diff", "commit", "links", "delete", "rollback")
+    cmds = ("locate", "check", "diff", "commit", "links", "delete", "rollback")
     if len(argv) < 2 or argv[0] not in cmds:
         print(__doc__, file=sys.stderr)
         return 2
@@ -607,8 +596,6 @@ def main(argv):
             result = locate(repo, path)
         elif cmd == "check":
             result = check(repo, path)
-        elif cmd == "scope":
-            result = scope(repo, path)
         elif cmd in ("diff", "commit"):
             plan = change(repo, case, path)
             if cmd == "commit":
@@ -636,7 +623,7 @@ def main(argv):
         print(say(f"git failed: {e}"))
         return 1
     text = dumps(result, indent=1)
-    if cmd in ("check", "scope", "diff", "links") and len(text) > PART:
+    if cmd in ("check", "diff", "links") and len(text) > PART:
         # Long outputs come in parts, so that the tool shows each whole: the display, or the JSON text.
         key = "display" if "display" in result else None
         whole = result[key] if key else text

@@ -1,6 +1,6 @@
 ---
 name: write
-description: Interview the user about what they want and write it as a draft spec of layer 0 that follows writing-specs.md - a new draft spec, a change to a draft spec, or a change to or the deletion of a spec of layer 1 after its demote; checks the draft against layers 0 and 1 after each change, commits each change after the user's yes, and, when the user says the draft is ready, runs the audit and a full check of consistency before it proposes the promote. Use only when the user types /specs-management:write, or asks in words to write, change or delete a spec ("escribe una spec", "cambia la spec", "borra la spec", "write a spec"). Never on your own when the user only talks about a spec.
+description: Interview the user about what they want and write it as a draft spec of layer 0 that follows writing-specs.md - a new draft spec, a change to a draft spec, or a change to or the deletion of a spec of layer 1 after its demote; checks the draft against layers 0 and 1 after each change, commits each change after the user's yes, and, when the user says the draft is ready, runs the audit before it proposes the promote. Use only when the user types /specs-management:write, or asks in words to write, change or delete a spec ("escribe una spec", "cambia la spec", "borra la spec", "write a spec"). Never on your own when the user only talks about a spec.
 argument-hint: "[<path>]"
 ---
 
@@ -200,46 +200,27 @@ End with one line per layer, layer 0 first: `<layer>: <commit> pushed`,
 `<layer>: <commit> committed, not pushed: <error>`, `<layer>: nothing
 committed: <error>` or `<layer>: not run`.
 
-## 9. Ready: audit and full check (ORC-67)
+## 9. Ready: audit (ORC-67)
 
 Only when the user says the draft is ready. First run
 `WRITE diff REPO <case> -- '<path>'`: when it does not exit 1 with exactly
 `specs-management:write: <path>: nothing to commit`, the draft is not at
 `HEAD` of layer 0, and the promote would not move it (ORC-39); say so and go
-back to step 7 to commit it, without running the audit or the full check.
+back to step 7 to commit it, without running the audit.
 
 1. Run the audit of the draft as [the audit skill](../audit/SKILL.md) says,
    for `<path>`, with layer 0 as its working directory: prefix each `audit.py`
    command with `cd '<repos.0>' &&`. Keep its report and its number of
    findings.
-2. Run `WRITE scope REPO -- '<path>'`, and `WRITE check REPO -- '<path>'`.
-3. Call the Workflow tool (load it with ToolSearch if it is deferred) with
-   `scriptPath` `<plugin root>/use-cases/write/consistency.js`, the absolute
-   path, and `args` `{"roots", "draft", "files"}` from `scope`, plus
-   `"language"` and `"stage": "find"`. When `parts` is more than 1, call it
-   again with `resumeFromRunId` and `"part": k`, and join the `items`. Keep
-   `failed` (the finders that failed, did not finish, or gave a place
-   outside the files of the check) of the last part: every part carries the
-   same total.
-4. Add one item per row of `broken_links`:
-   `{"kind": "broken link", "places": [{"layer": 0, "path": "<path>",
-   "line": <line>, "quote": "<the line>"}], "problem": "<target> exists in
-   neither layer"}`.
-5. When there are items, call the Workflow tool again with the same
-   `scriptPath` and the same `args` as item 3 (`roots`, `draft`, `files`,
-   `language`), with `"stage": "verify"`, `"findings"` the items, and no
-   `part`. When its `parts` is more than 1, call it again with
-   `resumeFromRunId` and `"part": k`, and join the `items` (the verdicts) in
-   order. Each verdict,
-   in order, is `refuted`, `confirmed`, or null (not verified: count it as
-   confirmed).
-6. Show the audit's report and each confirmed inconsistency, with
-   `<path>:<line>` of each place.
-   - `failed` greater than 0: part of the layers was not checked. Do not
-     propose the promote; say how many finders failed, and offer to run the
-     full check again from item 3.
-   - None confirmed, and `failed` 0: propose `/specs-management:promote <path>`, saying the
-     number of findings of the audit. On a yes, follow
-     [the promote skill](../promote/SKILL.md) from its step 1 (ORC-35).
-   - At least one confirmed: do not propose the promote; go back to step 3 on
-     the confirmed inconsistencies.
+2. Run `WRITE check REPO -- '<path>'`.
+3. Show the audit's report and each row of `broken_links`, with
+   `<path>:<line>`.
+   - No row in `broken_links`: propose `/specs-management:promote <path>`,
+     saying the number of findings of the audit, which never stop it. On a
+     yes, follow [the promote skill](../promote/SKILL.md) from its step 1
+     (ORC-35).
+   - At least one row: do not propose the promote; go back to step 3 on the
+     broken links.
+
+Never check the draft against the whole of layers 0 and 1 with agents
+(ORC-67).
