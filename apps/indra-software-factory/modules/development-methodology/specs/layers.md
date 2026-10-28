@@ -14,16 +14,18 @@ A spec of the module `development-methodology` of the app Indra Software Factory
 |---|---|
 | Draft spec | A spec of layer 0: not yet ready to be the source of truth, because it is incomplete or not yet reviewed. |
 | Spec | A spec of layer 1, the source of truth. |
-| Norm | A part of a spec of layer 1 with a stable norm ID, as the norms generator annotates it in layer 2. A spec annotated with norm IDs is made of norms. |
-| Derived norm | A norm of layer 2 that a project's own generator derives from the norms, to make the implementation clearer to an agent, such as a rule of a grammar or of a formal semantics, or an example of a corpus. |
+| Spec part | A part of a spec that holds information, at any depth: a section, a paragraph, a list or one of its items, a table or one of its rows or cells, a code block, a block quote ([R1 and R7](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/norms-tree.md#the-specs)). A spec part has no ID in layer 1: an ID that its author writes in it, such as `**LAY-2.**`, is part of its text. Citing a spec part cites every spec part below it. |
+| Norm | A spec or a spec part as layer 2 gives it: with its norm ID and its norm hash, in `specs-repo-annotated/` and `data/tree.jsonl`. Each spec and each spec part is one norm, which keeps its norm ID when it moves or is edited ([R11](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/norms-tree.md#the-tree-in-layer-2)). |
+| Derived norm | An item of the output of a type, in `specs-derived/<type>/` of layer 2, that a derived-norms generator derives from the norms, to make the implementation clearer to an agent: a rule of a grammar or of a formal semantics, an example of a corpus. It cites every norm it comes from, and decides nothing that the norms do not decide (LAY-3). What one item is, and how it is identified, is in the spec of its generator. |
 | Acceptance unit | The smallest part of the product that the person who asks for it can recognise and validate end to end, as [acceptance-management](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/acceptance-management/specs/module.md) specifies it. |
 | Acceptance area | An observable area of the product, made of acceptance units, as [acceptance-management](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/acceptance-management/specs/module.md) specifies it. |
 | Acceptance test | A test of layer 3 that runs one scenario of an acceptance unit or an acceptance area through the external interface of the product only, as [acceptance-management](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/acceptance-management/specs/module.md) specifies it. |
 | Unit hash | The fingerprint of what an acceptance unit asks, which changes whenever it changes, as [acceptance-management](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/acceptance-management/specs/module.md#hashes-and-citations) specifies it (ACU-52). |
 
-The first four terms are not used for one another. A draft spec becomes a spec
-when it is promoted, and a spec becomes norms when it is annotated. "Norm"
-alone means a norm annotated from layer 1, never a derived norm.
+The first five terms are not used for one another. A draft spec becomes a spec
+when it is promoted, a spec is made of spec parts, and each spec and spec part
+becomes a norm when it is annotated. "Norm" alone means a norm annotated from
+layer 1, never a derived norm.
 
 ## The five layers
 
