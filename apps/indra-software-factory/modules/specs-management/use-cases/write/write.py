@@ -51,6 +51,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "scripts
 import layers  # noqa: E402
 import mdlinks  # noqa: E402
 import move  # noqa: E402
+from spec_paths import is_folder, md_paths, valid_spec_path  # noqa: E402
 from move import LAYER, Refused, blobs, decode, default_branch, encode, git, head_files, rev  # noqa: E402
 
 UC = "write"
@@ -61,7 +62,6 @@ SUBJECTS = {"new": "docs: add draft spec", "change-draft": "docs: change draft s
 LINKS_SUBJECT = "docs: delete links to a deleted spec"
 CASE_NAMES = {"new": "new draft spec", "change-draft": "change of a draft spec",
               "change-spec": "change of a spec", "delete": "deletion of a spec"}
-SPECIAL = ("120000", "160000")  # a symbolic link, a submodule
 
 
 def say(text):
@@ -69,16 +69,6 @@ def say(text):
 
 
 # ---------------------------------------------------------------- the path (ORC-60)
-
-def valid(path):
-    """ORC-38, which ORC-60 reuses for its invalid path; and the draft is a .md file."""
-    return bool(path) and not path.startswith("/") and not any(x in (".", "..", "") for x in path.split("/")) \
-        and path.endswith(".md")
-
-
-def is_folder(tree, path):
-    return any(p.startswith(path + "/") for p in tree)
-
 
 def repos_and_trees(repo):
     repos = move.find_repos(repo, UC)
@@ -90,7 +80,7 @@ def layer_of(repo, repos):
 
 
 def check_path(path, trees):
-    if not valid(path) or is_folder(trees[0], path) or is_folder(trees[1], path):
+    if not valid_spec_path(path) or is_folder(trees[0], path) or is_folder(trees[1], path):
         raise Refused([say(f"{path}: invalid path")])
     # ORC-60: a path that a layer tracks with other case is that file on a file system that ignores case
     # (macOS): never written as another (as ORC-39 condition 4 and ORC-48).
@@ -141,7 +131,7 @@ def md_files(repos, trees, draft=None):
     texts = {}
     for layer in (0, 1):
         tree = trees[layer]
-        paths = [p for p in tree if p.endswith(".md") and tree[p][0] not in SPECIAL]
+        paths = md_paths(tree)
         data = blobs(repos[layer], {tree[p][1] for p in paths})
         for p in paths:
             texts[(layer, p)] = decode(data[tree[p][1]])
@@ -245,7 +235,7 @@ def check(repo, path):
         neighbours.setdefault((layer, p), set()).add(why)
 
     # Each link of the draft whose link target does not exist; each file it links to.
-    # The links as the audit reads them (layers.layer_links): an absent link in angle brackets too (AUD-56).
+    # The links as the check of writing reads them (layers.layer_links): an absent link in angle brackets too (AUD-56).
     broken = []
     for l, absent, t in layers.layer_links(path, draft):
         if not exists_anywhere(trees, t, path):
@@ -300,7 +290,7 @@ def check(repo, path):
 
 def link_spans(file, text, path):
     """(open, end, line) of each link of `file` whose link target is `path`, absent or plain, as move.links
-    or as the audit (layers.layer_links) reads it: an absent link in angle brackets goes too (AUD-56)."""
+    or as the check of writing (layers.layer_links) reads it: an absent link in angle brackets goes too (AUD-56)."""
     opens = {l["open"] for l in move.links(file, text) if l["target"] == path}
     opens |= {l["open"] for l, _, t in layers.layer_links(file, text) if t == path}
     return [(l["open"], l["end"], l["line"]) for l in mdlinks.find_links(text) if l["open"] in opens]
@@ -553,7 +543,7 @@ PART = 20000
 
 def dumps(value, **kw):
     """JSON with each non-ASCII character as it is; a lone surrogate, a byte of a path or a text that
-    is not UTF-8, keeps its \\u escape, so that print() never fails on it (as audit.py compact)."""
+    is not UTF-8, keeps its \\u escape, so that print() never fails on it (as check_writing.py compact)."""
     text = json.dumps(value, ensure_ascii=False, **kw)
     return re.sub("[\ud800-\udfff]", lambda m: "\\u%04x" % ord(m.group(0)), text)
 

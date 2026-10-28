@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Deterministic parts of /specs-management:audit (spec: use-cases/audit/specs/audit.md).
+"""Deterministic parts of /specs-management:check-writing (spec: use-cases/check-writing/specs/check-writing.md).
 
-Commands, run as `python3 audit.py <command>`:
+Commands, run as `python3 check_writing.py <command>`:
 
   prepare [--part N] [--] [arg]       the arguments, already split (AUD-11)
-  prepare [--part N] --raw '<words>'  the words after /specs-management:audit, split here (AUD-11)
+  prepare [--part N] --raw '<words>'  the words after /specs-management:check-writing, split here (AUD-11)
   prepare [--part N] --raw-stdin      the same words, read from stdin
   filter [--part N]          AUD-29 steps 2 and 3, and the placement of AUD-19;
                              JSON on stdin and stdout; `spec_files` (from
@@ -70,14 +70,14 @@ RULE_ORDER = {rule: index for index, rule in enumerate(BINDING_RULES)}
 CONDITIONAL_RULES = ["SPC-%d" % i for i in range(13, 21)]
 QUESTION_IDS = ["SPC-Q%d" % i for i in range(1, 18)]
 
-# AUD-42: the labels and reasons of the passes under "Not audited".
+# AUD-42: the labels and reasons of the passes under "Not checked".
 ACROSS_LABEL = "across files (SPC-3, SPC-11, SPC-13, SPC-14, SPC-Q4, SPC-Q12)"
 ACROSS_REASON = "the pass failed or did not finish"
 READERS_LABEL = "readers (SPC-Q2, SPC-Q3)"
 READERS_REASON = "a reader failed or did not finish"
 CONTEXT_REASON = "could not be read (context only)"
 FOLDER_REASON = "could not be searched"
-FILE_REASONS = ("could not be read", "the auditor failed or did not finish", "the run was stopped", CONTEXT_REASON)
+FILE_REASONS = ("could not be read", "the checker failed or did not finish", "the run was stopped", CONTEXT_REASON)
 LINKS_LABEL = "links between layers"
 # AUD-59: the reasons of the line of LINKS_LABEL, in the order of its conditions.
 LINKS_REASONS = re.compile(
@@ -393,9 +393,9 @@ def list_spec_files(root, guideline_bytes):
     """AUD-12, AUD-42: (spec files in code point order, unreadable ones, {path: bytes}, folders git could not search)."""
     status, out, err = run_git(["ls-files", "-z", "--cached", "--others", "--exclude-standard"], root)
     if status is None:
-        raise Refusal("specs-management:audit: git failed: git could not be started")
+        raise Refusal("specs-management:check-writing: git failed: git could not be started")
     if status != 0:
-        raise Refusal("specs-management:audit: git failed: " + git_error(err))
+        raise Refusal("specs-management:check-writing: git failed: " + git_error(err))
     unsearchable = unsearchable_folders(err)
     names = sorted(set(os.fsdecode(p) for p in out.split(b"\0") if p))
     spec, unreadable, contents = [], [], {}
@@ -800,29 +800,29 @@ def prepare(argv):
 
     # AUD-40, in this order.
     if len(args) > 1:
-        raise Refusal("specs-management:audit: expected at most one path, got %d arguments" % len(args))
+        raise Refusal("specs-management:check-writing: expected at most one path, got %d arguments" % len(args))
     try:
         guideline_bytes = read_bytes(GUIDELINE)
     except OSError:
-        raise Refusal("specs-management:audit: writing-specs.md is missing from the plugin specs-management")
+        raise Refusal("specs-management:check-writing: writing-specs.md is missing from the plugin specs-management")
     if args:
         shown = args[0]
         if not shown:
-            raise Refusal("specs-management:audit: %s: no such file or folder" % shown)
+            raise Refusal("specs-management:check-writing: %s: no such file or folder" % shown)
         if os.path.isabs(shown):
             full = shown  # needs no working directory, which may have been deleted
         else:
             try:
                 full = os.path.join(os.getcwd(), shown)
             except OSError:
-                raise Refusal("specs-management:audit: %s: no such file or folder" % shown)
+                raise Refusal("specs-management:check-writing: %s: no such file or folder" % shown)
         if not path_exists(full):
-            raise Refusal("specs-management:audit: %s: no such file or folder" % shown)
+            raise Refusal("specs-management:check-writing: %s: no such file or folder" % shown)
     else:
         try:
             full = os.getcwd()
         except OSError:
-            raise Refusal("specs-management:audit: %s: no such file or folder" % os.environ.get("PWD", "."))
+            raise Refusal("specs-management:check-writing: %s: no such file or folder" % os.environ.get("PWD", "."))
         shown = full
     # AUD-11: the argument with its symbolic links resolved.
     resolved = os.path.realpath(full)
@@ -851,23 +851,23 @@ def prepare(argv):
     # AUD-11: the innermost git repository, a submodule included.
     status, out, err = run_git(["rev-parse", "--show-toplevel"], folder)
     if status is None:
-        raise Refusal("specs-management:audit: git failed: git could not be started")
+        raise Refusal("specs-management:check-writing: git failed: git could not be started")
     if status != 0:
         # Only git's discovery message: a broken .git file ("not a git repository: <gitdir>")
         # is inside the working tree of the repository around it, so git failed.
         if NOT_IN_REPOSITORY.search(err):
-            raise Refusal("specs-management:audit: %s: not inside a git repository" % shown)
-        raise Refusal("specs-management:audit: git failed: " + git_error(err))
+            raise Refusal("specs-management:check-writing: %s: not inside a git repository" % shown)
+        raise Refusal("specs-management:check-writing: git failed: " + git_error(err))
     top = os.fsdecode(out.rstrip(b"\n"))
     if not top:
-        raise Refusal("specs-management:audit: %s: not inside a git repository" % shown)
+        raise Refusal("specs-management:check-writing: %s: not inside a git repository" % shown)
     root = os.path.realpath(top)
 
     spec_files, unreadable, contents, unsearchable = list_spec_files(root, guideline_bytes)
     # AUD-13: without argument, every spec file, whatever the working directory.
     selected = select(root, spec_files, resolved) if args else list(spec_files)
     if not selected:
-        raise Refusal("specs-management:audit: %s: no spec file found" % shown)
+        raise Refusal("specs-management:check-writing: %s: no spec file found" % shown)
     n = len(spec_files)
     link_reports, links_not_checked = check_links(root, selected, contents)
     return {
@@ -1224,20 +1224,20 @@ def filter_findings(data):
     root = data.get("repo_root")
     selected = data.get("selected")
     findings = data.get("findings")
-    audited = data.get("audited")
+    checked = data.get("checked")
     spec_files = data.get("spec_files")
     spc14 = data.get("spc14_applies_to")
     if not isinstance(root, str) or not is_str_list(selected) or not isinstance(findings, list):
         raise BadInput("filter needs repo_root, selected and findings")
-    if audited is not None and not is_str_list(audited):
-        raise BadInput("audited must be a list of paths")
+    if checked is not None and not is_str_list(checked):
+        raise BadInput("checked must be a list of paths")
     if spec_files is not None and not is_str_list(spec_files):
         raise BadInput("spec_files must be a list of paths")
     if spc14 is not None and not is_str_list(spc14):
         raise BadInput("spc14_applies_to must be a list of paths")
     selected = set(selected)
-    # AUD-35: a file not audited is listed under "Not audited" only, so no finding may go to it.
-    eligible = selected if audited is None else selected & set(audited)
+    # AUD-35: a file not checked is listed under "Not checked" only, so no finding may go to it.
+    eligible = selected if checked is None else selected & set(checked)
     # Refuse the whole input on a wrong type before dropping anything (SKILL.md, section 3).
     for i, f in enumerate(findings):
         if isinstance(f, dict) and "involved" in f:
@@ -1265,11 +1265,11 @@ def filter_findings(data):
                              if p["path"] in spec and quote_matches(files.lines(p["path"]), p["line"], p["quote"])]
             f = place_across(f, eligible, set(spc14 or []))
             if f is None:
-                dropped.append({"index": position, "reason": "no involved line is in a selected file that was audited"})
+                dropped.append({"index": position, "reason": "no involved line is in a selected file that was checked"})
                 continue
         reason = step2_reason(f, selected, files)
         if reason is None and f["path"] not in eligible:
-            reason = "file was not audited"
+            reason = "file was not checked"
         if reason:
             dropped.append({"index": position, "reason": reason})
             continue
@@ -1392,9 +1392,9 @@ def render(data):
         if key not in data:
             raise BadInput("render needs " + key)
     questions_text = questions_from_guideline()
-    audited = sorted(set(data.get("audited") or []))
+    checked = sorted(set(data.get("checked") or []))
     findings = data.get("findings") or []
-    not_audited = data.get("not_audited") or []
+    not_checked = data.get("not_checked") or []
     unreadable = data.get("unreadable") or []
     unsearchable = data.get("unsearchable") or []
     n, s = int(data["n"]), int(data["s"])
@@ -1411,7 +1411,7 @@ def render(data):
     link_reports, links_not_checked = check_link_reports(data, sel)
 
     files_out, passes = [], {}
-    for entry in not_audited:
+    for entry in not_checked:
         if entry.get("pass") == "across" or entry.get("what") == ACROSS_LABEL:
             passes["across"] = (ACROSS_LABEL, ACROSS_REASON)
         elif entry.get("pass") == "readers" or entry.get("what") == READERS_LABEL:
@@ -1421,31 +1421,31 @@ def render(data):
             # AUD-42: a selected file with one of its three reasons, or another spec file that
             # could not be read; each file once (AUD-35).
             if reason not in FILE_REASONS:
-                raise BadInput("not_audited %s: the reason must be one of %s" % (esc(str(what)), ", ".join(FILE_REASONS)))
+                raise BadInput("not_checked %s: the reason must be one of %s" % (esc(str(what)), ", ".join(FILE_REASONS)))
             if reason == CONTEXT_REASON:
                 if what in sel or what not in spec:
-                    raise BadInput("not_audited %s: %r is for a spec file that is not selected" % (esc(str(what)), reason))
+                    raise BadInput("not_checked %s: %r is for a spec file that is not selected" % (esc(str(what)), reason))
             elif what not in sel:
-                raise BadInput("not_audited %s: not a selected file" % esc(str(what)))
+                raise BadInput("not_checked %s: not a selected file" % esc(str(what)))
             if what in {w for w, _ in files_out}:
-                raise BadInput("not_audited %s: listed twice" % esc(str(what)))
+                raise BadInput("not_checked %s: listed twice" % esc(str(what)))
             files_out.append((what, reason))
     # AUD-42: each spec file that prepare could not read, unless the input lists it already.
     listed = {w for w, _ in files_out}
     for path in unreadable:
-        if path not in listed and path not in audited:
+        if path not in listed and path not in checked:
             files_out.append((path, "could not be read" if path in sel else CONTEXT_REASON))
-    # AUD-35: each selected file under "Findings" or under "Not audited", never both.
-    both = sorted(set(audited) & {w for w, _ in files_out})
+    # AUD-35: each selected file under "Findings" or under "Not checked", never both.
+    both = sorted(set(checked) & {w for w, _ in files_out})
     if both:
-        raise BadInput("listed as audited and not audited: " + ", ".join(both))
-    outside = sorted(set(audited) - sel)
+        raise BadInput("listed as checked and not checked: " + ", ".join(both))
+    outside = sorted(set(checked) - sel)
     if outside:
-        raise BadInput("audited but not selected: " + ", ".join(outside))
-    missing = sorted(sel - set(audited) - {w for w, _ in files_out})
+        raise BadInput("checked but not selected: " + ", ".join(outside))
+    missing = sorted(sel - set(checked) - {w for w, _ in files_out})
     if missing:
-        raise BadInput("selected but neither audited nor not audited: " + ", ".join(missing))
-    by_file = {path: [] for path in audited}
+        raise BadInput("selected but neither checked nor not checked: " + ", ".join(missing))
+    by_file = {path: [] for path in checked}
     if not isinstance(findings, list):
         raise BadInput("findings must be a list")
     files = Files(data["repo_root"])
@@ -1485,20 +1485,20 @@ def render(data):
                                "included" % (label(i, f), reason))
             f["quote"] = proven
         if f["path"] not in by_file:
-            raise BadInput("%s: a finding on a file that is not audited" % label(i, f))
+            raise BadInput("%s: a finding on a file that is not checked" % label(i, f))
         by_file[f["path"]].append(f)
 
     out = []
     # AUD-30, AUD-31: the summary line.
     out.append(
-        "Audit of %s against writing-specs.md: %d of %d selected spec %s audited, %d %s. Spec set: %d spec %s. Mode: %s."
-        % (esc(data["repo_root"]), len(audited), s, plural(s, "file"), len(findings), plural(len(findings), "finding"),
+        "Check of writing of %s against writing-specs.md: %d of %d selected spec %s checked, %d %s. Spec set: %d spec %s. Mode: %s."
+        % (esc(data["repo_root"]), len(checked), s, plural(s, "file"), len(findings), plural(len(findings), "finding"),
            n, plural(n, "file"), data["mode"])
     )
     out += ["", "## Findings", ""]
-    if not audited:
+    if not checked:
         out.append("None.")
-    for fi, path in enumerate(audited):  # AUD-34: file sections by path
+    for fi, path in enumerate(checked):  # AUD-34: file sections by path
         if fi:
             out.append("")  # AUD-33: one empty line before each repeated `### <path>`
         out += ["### " + esc(path), ""]
@@ -1532,7 +1532,7 @@ def render(data):
                     out.append("  Rewrite at %s: %s" % (place, rewrite_line(r["rewrite"])))
     out += ["", "## Links between layers", ""]
     if links_not_checked is not None:
-        out.append("Not checked.")  # AUD-35: AUD-59 skipped the check
+        out.append("Skipped.")  # AUD-35: AUD-59 skipped the check
     elif not link_reports:
         out.append("None.")
     # AUD-34: by path, then by line, then by link.
@@ -1578,7 +1578,7 @@ def render(data):
         suffix = " (not independent)" if ev["not_independent"] else ""  # AUD-27
         for p, line, text in sorted(set(items)):  # AUD-34: by path, then line, then text
             out.append("  Evidence: %s:%d %s%s" % (esc(p), line, text, suffix))
-    out += ["", "## Not audited", ""]
+    out += ["", "## Not checked", ""]
     # AUD-42: files and folders in code point order of path, then the pass across files, then the readers.
     na = sorted(set(files_out) | {(folder, FOLDER_REASON) for folder in unsearchable})
     for key in ("across", "readers"):
@@ -1768,7 +1768,7 @@ def write(text):
 
 def main(argv):
     if not argv or argv[0] not in ("prepare", "filter", "render"):
-        sys.stderr.write("usage: audit.py prepare [--part N] [arg] | prepare [--part N] --raw '<words>' | "
+        sys.stderr.write("usage: check_writing.py prepare [--part N] [arg] | prepare [--part N] --raw '<words>' | "
                          "prepare [--part N] --raw-stdin | filter [--part N] | render [--part N]\n")
         return 2
     command, rest = argv[0], argv[1:]
@@ -1788,7 +1788,7 @@ def main(argv):
         write(str(exc) + "\n")  # AUD-40: only its message
         return 1
     except (BadInput, KeyError, TypeError, ValueError, AttributeError) as exc:
-        sys.stderr.write("audit.py %s: %s\n" % (command, exc))
+        sys.stderr.write("check_writing.py %s: %s\n" % (command, exc))
         return 2
     return 0
 

@@ -16,7 +16,7 @@ developed in [specs/development.md](specs/development.md), and this app in
 |--------|----------|
 | `development-methodology` | None: it gives every session an index of the development methodology (the five layers, the flow, their terms) |
 | `project-management` | Create a project (`/project-management:create-project`) |
-| `specs-management` | Recommend improvements to the specs (`/specs-management:audit`); write draft specs from an interview (`/specs-management:write`); move specs between layers 0 and 1 (`/specs-management:promote`, `/specs-management:demote`) |
+| `specs-management` | Recommend improvements to the writing of the specs (`/specs-management:check-writing`); check one spec against layers 0 and 1, on request only (`/specs-management:check-consistency`); write draft specs from an interview (`/specs-management:write`); move specs between layers 0 and 1 (`/specs-management:promote`, `/specs-management:demote`) |
 | `norms-management` | Regenerate the norms (`/norms-management:build`, `/norms-management:verify`) |
 | `acceptance-management` | Define the acceptance areas and the acceptance units (`/acceptance-management:define`); their acceptance tests, and when a unit, an area and an increment are done; a hook that keeps layer 3 out of the code repositories |
 | `code-implementation` | Implement an acceptance unit (not yet built); a hook that keeps layer 4 from writing in the acceptance repository |

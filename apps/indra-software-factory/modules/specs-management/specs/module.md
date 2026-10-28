@@ -2,7 +2,7 @@
 
 **Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `specs-management`
 
-**Scope:** Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write, writes draft specs from an interview of a person, and moves specs between the two layers when a person asks for it
+**Scope:** Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write, checks one spec against the whole of the two layers when a person asks for it, writes draft specs from an interview of a person, and moves specs between the two layers when a person asks for it
 
 The module `specs-management` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md).
 
@@ -10,14 +10,15 @@ The module `specs-management` of the app Indra Software Factory, listed in [app.
 
 | Use case | Spec |
 |---|---|
-| `audit` | [audit.md](../use-cases/audit/specs/audit.md) |
+| `check-writing` | [check-writing.md](../use-cases/check-writing/specs/check-writing.md) |
+| `check-consistency` | [check-consistency.md](../use-cases/check-consistency/specs/check-consistency.md) |
 | `promote` | [promote.md](../use-cases/promote/specs/promote.md) |
 | `demote` | [demote.md](../use-cases/demote/specs/demote.md) |
 | `write` | [write.md](../use-cases/write/specs/write.md) |
 
 ## Recommend improvements to the specs
 
-- **ORC-7.** The draft specs and the specs are free: nothing restricts what the authors write ([LAY-2](../../development-methodology/specs/layers.md#rules)). The audit, `/specs-management:audit`, recommends how to improve the draft specs of layer 0 and the specs of layer 1, and changes nothing; its specification is [audit.md](../use-cases/audit/specs/audit.md). No use case of this module writes the content of a spec, except `/specs-management:write`, which writes a draft spec of layer 0 from the interview of the user, after the user's yes, and deletes the links to a spec that the user deletes, and rewrites the sentences they leave broken as the user accepts ([write.md](../use-cases/write/specs/write.md)). Promote and demote (ORC-35) only move the files that a person names, and rewrite the links that point at them.
+- **ORC-7.** The draft specs and the specs are free: nothing restricts what the authors write ([LAY-2](../../development-methodology/specs/layers.md#rules)). The check of writing, `/specs-management:check-writing`, recommends how to improve the draft specs of layer 0 and the specs of layer 1, and changes nothing; its specification is [check-writing.md](../use-cases/check-writing/specs/check-writing.md). The check of consistency, `/specs-management:check-consistency`, checks one spec of layer 0 or of layer 1 against the whole of the two layers, reports each inconsistency it confirms, and changes nothing; its specification is [check-consistency.md](../use-cases/check-consistency/specs/check-consistency.md). Both run only when the user asks for them, no other use case runs them, and their reports stop nothing. No use case of this module writes the content of a spec, except `/specs-management:write`, which writes a draft spec of layer 0 from the interview of the user, after the user's yes, and deletes the links to a spec that the user deletes, and rewrites the sentences they leave broken as the user accepts ([write.md](../use-cases/write/specs/write.md)). Promote and demote (ORC-35) only move the files that a person names, and rewrite the links that point at them.
 
 ## Move specs between layers 0 and 1
 

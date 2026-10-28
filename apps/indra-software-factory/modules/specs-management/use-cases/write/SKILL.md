@@ -1,6 +1,6 @@
 ---
 name: write
-description: Interview the user about what they want and write it as a draft spec of layer 0 that follows writing-specs.md - a new draft spec, a change to a draft spec, or a change to or the deletion of a spec of layer 1 after its demote; checks the draft against layers 0 and 1 after each change, commits each change after the user's yes, and, when the user says the draft is ready, runs the audit before it proposes the promote. Use only when the user types /specs-management:write, or asks in words to write, change or delete a spec ("escribe una spec", "cambia la spec", "borra la spec", "write a spec"). Never on your own when the user only talks about a spec.
+description: Interview the user about what they want and write it as a draft spec of layer 0 that follows writing-specs.md - a new draft spec, a change to a draft spec, or a change to or the deletion of a spec of layer 1 after its demote; checks the draft against layers 0 and 1 after each change, commits each change after the user's yes, and, when the user says the draft is ready, runs the cheap checks once more and proposes the promote; it never runs /specs-management:check-writing or /specs-management:check-consistency. Use only when the user types /specs-management:write, or asks in words to write, change or delete a spec ("escribe una spec", "cambia la spec", "borra la spec", "write a spec"). Never on your own when the user only talks about a spec.
 argument-hint: "[<path>]"
 ---
 
@@ -200,27 +200,24 @@ End with one line per layer, layer 0 first: `<layer>: <commit> pushed`,
 `<layer>: <commit> committed, not pushed: <error>`, `<layer>: nothing
 committed: <error>` or `<layer>: not run`.
 
-## 9. Ready: audit (ORC-67)
+## 9. Ready: the cheap checks and the promote (ORC-67)
 
 Only when the user says the draft is ready. First run
 `WRITE diff REPO <case> -- '<path>'`: when it does not exit 1 with exactly
 `specs-management:write: <path>: nothing to commit`, the draft is not at
 `HEAD` of layer 0, and the promote would not move it (ORC-39); say so and go
-back to step 7 to commit it, without running the audit.
+back to step 7 to commit it.
 
-1. Run the audit of the draft as [the audit skill](../audit/SKILL.md) says,
-   for `<path>`, with layer 0 as its working directory: prefix each `audit.py`
-   command with `cd '<repos.0>' &&`. Keep its report and its number of
-   findings.
-2. Run `WRITE check REPO -- '<path>'`.
-3. Show the audit's report and each row of `broken_links`, with
-   `<path>:<line>`.
-   - No row in `broken_links`: propose `/specs-management:promote <path>`,
-     saying the number of findings of the audit, which never stop it. On a
-     yes, follow [the promote skill](../promote/SKILL.md) from its step 1
-     (ORC-35).
+1. Run `WRITE check REPO -- '<path>'`.
+2. Show each row of `broken_links`, with `<path>:<line>`.
+   - No row in `broken_links`: propose `/specs-management:promote <path>`.
+     You may add one line: the user can first run
+     `/specs-management:check-writing <path>` or
+     `/specs-management:check-consistency <path>`. On a yes, follow
+     [the promote skill](../promote/SKILL.md) from its step 1 (ORC-35).
    - At least one row: do not propose the promote; go back to step 3 on the
      broken links.
 
-Never check the draft against the whole of layers 0 and 1 with agents
-(ORC-67).
+Never run `/specs-management:check-writing` or
+`/specs-management:check-consistency` yourself, and never check the draft
+against the whole of layers 0 and 1 with agents (ORC-67).

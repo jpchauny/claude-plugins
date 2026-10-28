@@ -23,7 +23,7 @@
     {
       "name": "specs-management",
       "source": "./apps/indra-software-factory/modules/specs-management",
-      "description": "Module specs-management, layers 0 and 1: the AI recommends how to improve the specs that the authors write (/specs-management:audit), writes draft specs of layer 0 from an interview of the user (/specs-management:write), and moves specs between layers 0 and 1 (/specs-management:promote, /specs-management:demote)"
+      "description": "Module specs-management, layers 0 and 1: the AI recommends how to improve the writing of the specs that the authors write (/specs-management:check-writing), checks one spec against the whole of layers 0 and 1 when the user asks for it, a very costly check (/specs-management:check-consistency), writes draft specs of layer 0 from an interview of the user (/specs-management:write), and moves specs between layers 0 and 1 (/specs-management:promote, /specs-management:demote)"
     },
     {
       "name": "norms-management",

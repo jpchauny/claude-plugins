@@ -1,6 +1,6 @@
-"""Tests of use-cases/audit/audit.py, the deterministic parts of /specs-management:audit.
+"""Tests of use-cases/check-writing/check_writing.py, the deterministic parts of /specs-management:check-writing.
 
-Spec: use-cases/audit/specs/audit.md. Each test names the AUD-n or
+Spec: use-cases/check-writing/specs/check-writing.md. Each test names the AUD-n or
 AUD-En it checks. Run with:
 
     python3 -m unittest discover -s apps/indra-software-factory/modules/specs-management/tests
@@ -16,12 +16,12 @@ import tempfile
 import unittest
 
 PLUGIN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCRIPT = os.path.join(PLUGIN, "use-cases", "audit", "audit.py")
+SCRIPT = os.path.join(PLUGIN, "use-cases", "check-writing", "check_writing.py")
 GUIDELINE = os.path.join(PLUGIN, "writing-specs.md")
 
 sys.dont_write_bytecode = True  # no __pycache__ inside the plugin
 sys.path.insert(0, os.path.dirname(SCRIPT))
-import audit  # noqa: E402
+import check_writing  # noqa: E402
 
 
 def git(cwd, *args):
@@ -36,10 +36,10 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = os.path.realpath(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.tmp, True)
-        # A copy of the plugin: audit.py and the guideline two folders above it (AUD-15).
+        # A copy of the plugin: check_writing.py and the guideline two folders above it (AUD-15).
         self.plugin = os.path.join(self.tmp, "plugin")
-        os.makedirs(os.path.join(self.plugin, "use-cases", "audit"))
-        self.script = os.path.join(self.plugin, "use-cases", "audit", "audit.py")
+        os.makedirs(os.path.join(self.plugin, "use-cases", "check-writing"))
+        self.script = os.path.join(self.plugin, "use-cases", "check-writing", "check_writing.py")
         shutil.copy(SCRIPT, self.script)
         # AUD-54: the shared scripts of the plugin, mdlinks.py and layers.py among them.
         shutil.copytree(os.path.join(PLUGIN, "scripts"), os.path.join(self.plugin, "scripts"),
@@ -90,35 +90,35 @@ class SplitWords(unittest.TestCase):
 
     def test_blanks_and_quotes(self):
         """AUD-11: blanks split; single and double quotes keep blanks and are removed."""
-        self.assertEqual(audit.split_words(""), [])
-        self.assertEqual(audit.split_words("  specs/a.md  "), ["specs/a.md"])
-        self.assertEqual(audit.split_words("'my specs/a b.md'"), ["my specs/a b.md"])
-        self.assertEqual(audit.split_words('"my specs"/x.md'), ["my specs/x.md"])
-        self.assertEqual(audit.split_words("a b"), ["a", "b"])
-        self.assertEqual(audit.split_words("''"), [""])
+        self.assertEqual(check_writing.split_words(""), [])
+        self.assertEqual(check_writing.split_words("  specs/a.md  "), ["specs/a.md"])
+        self.assertEqual(check_writing.split_words("'my specs/a b.md'"), ["my specs/a b.md"])
+        self.assertEqual(check_writing.split_words('"my specs"/x.md'), ["my specs/x.md"])
+        self.assertEqual(check_writing.split_words("a b"), ["a", "b"])
+        self.assertEqual(check_writing.split_words("''"), [""])
 
     def test_backslash(self):
         """AUD-11: an unquoted backslash keeps the next character; in double quotes only before $ ` \" \\ newline."""
-        self.assertEqual(audit.split_words(r"my\ specs"), ["my specs"])
-        self.assertEqual(audit.split_words(r'"a\"b\x"'), ['a"b\\x'])
-        self.assertEqual(audit.split_words("a\\\nb"), ["ab"])
-        self.assertEqual(audit.split_words(r"'a\b'"), [r"a\b"])
+        self.assertEqual(check_writing.split_words(r"my\ specs"), ["my specs"])
+        self.assertEqual(check_writing.split_words(r'"a\"b\x"'), ['a"b\\x'])
+        self.assertEqual(check_writing.split_words("a\\\nb"), ["ab"])
+        self.assertEqual(check_writing.split_words(r"'a\b'"), [r"a\b"])
 
     def test_operators_and_comments(self):
         """AUD-11: operators are tokens of their own; `#` starts a comment only at the start of a word."""
-        self.assertEqual(audit.split_words("a>b"), ["a", ">", "b"])
-        self.assertEqual(audit.split_words("a&&b"), ["a", "&&", "b"])
-        self.assertEqual(audit.split_words("a#b # c d"), ["a#b"])
-        self.assertEqual(audit.split_words("'$HOME' $x"), ["$HOME", "$x"])
+        self.assertEqual(check_writing.split_words("a>b"), ["a", ">", "b"])
+        self.assertEqual(check_writing.split_words("a&&b"), ["a", "&&", "b"])
+        self.assertEqual(check_writing.split_words("a#b # c d"), ["a#b"])
+        self.assertEqual(check_writing.split_words("'$HOME' $x"), ["$HOME", "$x"])
 
     def test_substitutions_are_one_token(self):
         """AUD-11, 2.3 rule 5: a backquote, `$(` or `${` runs to its matching end inside one word, verbatim."""
-        self.assertEqual(audit.split_words("`specs/my file.md`"), ["`specs/my file.md`"])
-        self.assertEqual(audit.split_words("a$(b c)"), ["a$(b c)"])
-        self.assertEqual(audit.split_words("${x y} z"), ["${x y}", "z"])
-        self.assertEqual(audit.split_words("a$(b ')' $(c d)) e"), ["a$(b ')' $(c d))", "e"])
-        self.assertEqual(audit.split_words('"x$(a "b c")y"'), ['x$(a "b c")y'])
-        self.assertEqual(audit.split_words("`a b"), ["`a b"])
+        self.assertEqual(check_writing.split_words("`specs/my file.md`"), ["`specs/my file.md`"])
+        self.assertEqual(check_writing.split_words("a$(b c)"), ["a$(b c)"])
+        self.assertEqual(check_writing.split_words("${x y} z"), ["${x y}", "z"])
+        self.assertEqual(check_writing.split_words("a$(b ')' $(c d)) e"), ["a$(b ')' $(c d))", "e"])
+        self.assertEqual(check_writing.split_words('"x$(a "b c")y"'), ['x$(a "b c")y'])
+        self.assertEqual(check_writing.split_words("`a b"), ["`a b"])
 
 
 class Refusals(Base):
@@ -127,33 +127,33 @@ class Refusals(Base):
     def test_more_than_one_argument(self):
         """AUD-40: more than one argument, tested first, before the guideline."""
         os.remove(self.guideline)
-        self.assertEqual(self.prepare("a", "b"), (1, "specs-management:audit: expected at most one path, got 2 arguments\n"))
+        self.assertEqual(self.prepare("a", "b"), (1, "specs-management:check-writing: expected at most one path, got 2 arguments\n"))
         self.assertEqual(self.prepare("--raw", "a 'b c' d"),
-                         (1, "specs-management:audit: expected at most one path, got 3 arguments\n"))
+                         (1, "specs-management:check-writing: expected at most one path, got 3 arguments\n"))
 
     def test_guideline_missing(self):
         """AUD-40, AUD-15: the guideline missing, tested before the path."""
         os.remove(self.guideline)
-        self.assertEqual(self.prepare("nope.md"), (1, "specs-management:audit: writing-specs.md is missing from the plugin specs-management\n"))
+        self.assertEqual(self.prepare("nope.md"), (1, "specs-management:check-writing: writing-specs.md is missing from the plugin specs-management\n"))
 
     def test_guideline_unreadable(self):
         """AUD-40: a guideline that cannot be read (a folder at its path)."""
         os.remove(self.guideline)
         os.makedirs(self.guideline)
-        self.assertEqual(self.prepare(), (1, "specs-management:audit: writing-specs.md is missing from the plugin specs-management\n"))
+        self.assertEqual(self.prepare(), (1, "specs-management:check-writing: writing-specs.md is missing from the plugin specs-management\n"))
 
     def test_no_such_path(self):
         """AUD-40: the path does not exist; <path> is the argument after quote removal."""
-        self.assertEqual(self.prepare("--raw", "'no such.md'"), (1, "specs-management:audit: no such.md: no such file or folder\n"))
-        self.assertEqual(self.prepare(""), (1, "specs-management:audit: : no such file or folder\n"))
+        self.assertEqual(self.prepare("--raw", "'no such.md'"), (1, "specs-management:check-writing: no such.md: no such file or folder\n"))
+        self.assertEqual(self.prepare(""), (1, "specs-management:check-writing: : no such file or folder\n"))
 
     def test_not_inside_git(self):
         """AUD-40: the path is not inside a git repository."""
         outside = os.path.join(self.tmp, "outside")
         self.write("a.md", "# A\n", base=outside)
         self.assertEqual(self.prepare(os.path.join(outside, "a.md")),
-                         (1, "specs-management:audit: %s: not inside a git repository\n" % os.path.join(outside, "a.md")))
-        self.assertEqual(self.prepare(cwd=outside), (1, "specs-management:audit: %s: not inside a git repository\n" % outside))
+                         (1, "specs-management:check-writing: %s: not inside a git repository\n" % os.path.join(outside, "a.md")))
+        self.assertEqual(self.prepare(cwd=outside), (1, "specs-management:check-writing: %s: not inside a git repository\n" % outside))
 
     def test_git_fails(self):
         """AUD-40, AUD-53: a git that fails gives the first line of its error output."""
@@ -163,40 +163,40 @@ class Refusals(Base):
         os.chmod(os.path.join(fake, "git"), 0o755)
         env = dict(os.environ, PATH=fake)
         self.write("a.md", "# A\n")
-        self.assertEqual(self.prepare(env=env), (1, "specs-management:audit: git failed: fatal: something broke\n"))
+        self.assertEqual(self.prepare(env=env), (1, "specs-management:check-writing: git failed: fatal: something broke\n"))
 
     def test_git_cannot_start(self):
         """AUD-40, AUD-53: git that cannot be started."""
         empty = os.path.join(self.tmp, "empty")
         os.makedirs(empty)
         self.assertEqual(self.prepare(env=dict(os.environ, PATH=empty)),
-                         (1, "specs-management:audit: git failed: git could not be started\n"))
+                         (1, "specs-management:check-writing: git failed: git could not be started\n"))
 
     def test_no_spec_file(self):
         """AUD-40, AUD-13: the argument selects no spec file; without argument <path> is the working directory."""
         self.write("notes.txt", "x\n")
         self.write("CLAUDE.md", "# agents\n")
         self.write("docs/x.txt", "x\n")
-        self.assertEqual(self.prepare(), (1, "specs-management:audit: %s: no spec file found\n" % self.repo))
-        self.assertEqual(self.prepare("CLAUDE.md"), (1, "specs-management:audit: CLAUDE.md: no spec file found\n"))
-        self.assertEqual(self.prepare("docs"), (1, "specs-management:audit: docs: no spec file found\n"))
-        self.assertEqual(self.prepare("notes.txt"), (1, "specs-management:audit: notes.txt: no spec file found\n"))
+        self.assertEqual(self.prepare(), (1, "specs-management:check-writing: %s: no spec file found\n" % self.repo))
+        self.assertEqual(self.prepare("CLAUDE.md"), (1, "specs-management:check-writing: CLAUDE.md: no spec file found\n"))
+        self.assertEqual(self.prepare("docs"), (1, "specs-management:check-writing: docs: no spec file found\n"))
+        self.assertEqual(self.prepare("notes.txt"), (1, "specs-management:check-writing: notes.txt: no spec file found\n"))
 
     def test_inside_git_directory(self):
         """AUD-11, AUD-13, AUD-40: a path inside the git directory selects no spec file; git does not fail."""
         self.write("a.md", "# a\n")
         git(self.repo, "add", "a.md")
         git(self.repo, "commit", "-q", "-m", "x")
-        self.assertEqual(self.prepare(".git"), (1, "specs-management:audit: .git: no spec file found\n"))
-        self.assertEqual(self.prepare(".git/HEAD"), (1, "specs-management:audit: .git/HEAD: no spec file found\n"))
-        self.assertEqual(self.prepare(".git/objects"), (1, "specs-management:audit: .git/objects: no spec file found\n"))
+        self.assertEqual(self.prepare(".git"), (1, "specs-management:check-writing: .git: no spec file found\n"))
+        self.assertEqual(self.prepare(".git/HEAD"), (1, "specs-management:check-writing: .git/HEAD: no spec file found\n"))
+        self.assertEqual(self.prepare(".git/objects"), (1, "specs-management:check-writing: .git/objects: no spec file found\n"))
         self.assertEqual(self.prepare("refs", cwd=os.path.join(self.repo, ".git")),
-                         (1, "specs-management:audit: refs: no spec file found\n"))
+                         (1, "specs-management:check-writing: refs: no spec file found\n"))
 
     def test_backquoted_path(self):
         """AUD-11, AUD-40: a path in Markdown backquotes is one argument (2.3 rule 5), so the message is about the path."""
         self.assertEqual(self.prepare("--raw", "`specs/my file.md`"),
-                         (1, "specs-management:audit: `specs/my file.md`: no such file or folder\n"))
+                         (1, "specs-management:check-writing: `specs/my file.md`: no such file or folder\n"))
 
     @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root searches every folder")
     def test_folder_that_cannot_be_searched(self):
@@ -225,12 +225,12 @@ class Refusals(Base):
         git(self.repo, "commit", "-q", "-m", "x")
         git(self.repo, "submodule", "add", "-q", src, "mod")
         git(self.repo, "worktree", "add", "-q", os.path.join(self.tmp, "wt"))
-        self.assertEqual(self.prepare(".git/worktrees/wt"), (1, "specs-management:audit: .git/worktrees/wt: no spec file found\n"))
+        self.assertEqual(self.prepare(".git/worktrees/wt"), (1, "specs-management:check-writing: .git/worktrees/wt: no spec file found\n"))
         # Without argument, from inside those git directories: the outer repository, all its spec files (AUD-13).
         for cwd in (os.path.join(self.repo, ".git", "worktrees", "wt"), os.path.join(self.repo, ".git", "modules", "mod")):
             status, out = self.prepare(cwd=cwd)
             self.assertEqual((status, out["repo_root"], out["spec_files"]), (0, self.repo, ["outer.md"]), cwd)
-        self.assertEqual(self.prepare(".git/modules/mod"), (1, "specs-management:audit: .git/modules/mod: no spec file found\n"))
+        self.assertEqual(self.prepare(".git/modules/mod"), (1, "specs-management:check-writing: .git/modules/mod: no spec file found\n"))
 
     def test_hard_link_to_spec_file(self):
         """AUD-13: an ignored or R62-excluded name hard-linked to a spec file selects no file."""
@@ -239,8 +239,8 @@ class Refusals(Base):
         os.makedirs(os.path.join(self.repo, "ign"))
         os.link(os.path.join(self.repo, "b.md"), os.path.join(self.repo, "ign", "c.md"))
         os.link(os.path.join(self.repo, "b.md"), os.path.join(self.repo, "CLAUDE.md"))
-        self.assertEqual(self.prepare("ign/c.md"), (1, "specs-management:audit: ign/c.md: no spec file found\n"))
-        self.assertEqual(self.prepare("CLAUDE.md"), (1, "specs-management:audit: CLAUDE.md: no spec file found\n"))
+        self.assertEqual(self.prepare("ign/c.md"), (1, "specs-management:check-writing: ign/c.md: no spec file found\n"))
+        self.assertEqual(self.prepare("CLAUDE.md"), (1, "specs-management:check-writing: CLAUDE.md: no spec file found\n"))
         self.assertEqual(self.prepare("b.md")[1]["selected"], ["b.md"])
 
 
@@ -300,7 +300,7 @@ class SpecFiles(Base):
         self.assertEqual(out["spec_files"], ["b.md"])
         self.assertEqual(out["word_counts"], {"b.md": 1})
         self.assertEqual(self.prepare(os.path.join("docs", "a.md")),
-                         (1, "specs-management:audit: %s: not inside a git repository\n" % os.path.join("docs", "a.md")))
+                         (1, "specs-management:check-writing: %s: not inside a git repository\n" % os.path.join("docs", "a.md")))
 
     def test_case_insensitive_name(self):
         """AUD-13: on a case-insensitive file system, another spelling of a spec file's path selects it."""
@@ -406,11 +406,11 @@ class SpecFiles(Base):
 
     def test_words_code_spans_per_paragraph(self):
         """AUD-36: a code span cannot cross a blank line, and an escaped backtick opens none."""
-        self.assertEqual(audit.count_words(
+        self.assertEqual(check_writing.count_words(
             b"Use the ` key to quote.\n\nLas reglas del sistema de reservas se aplican a todos los clientes y "
             b"empleados del hotel.\n\nRun `x` now.\n"), 23)
-        self.assertEqual(audit.count_words(b"\\`not code` real words here`\n"), 2)
-        self.assertEqual(audit.count_words(b"One `two\nthree` four ``five ` six`` seven\n"), 3)
+        self.assertEqual(check_writing.count_words(b"\\`not code` real words here`\n"), 2)
+        self.assertEqual(check_writing.count_words(b"One `two\nthree` four ``five ` six`` seven\n"), 3)
 
     def test_guideline_path_and_words(self):
         """AUD-15: the guideline is writing-specs.md at the plugin root; AUD-36: words outside code spans and literal blocks."""
@@ -576,24 +576,24 @@ class Filter(Base):
         # No involved line in a selected file: not reported.
         out = self.run_filter([f], selected=["specs/other.md"])
         self.assertEqual((out["findings"], out["dropped"][0]["reason"]),
-                         ([], "no involved line is in a selected file that was audited"))
+                         ([], "no involved line is in a selected file that was checked"))
 
-    def test_across_files_audited_only(self):
-        """AUD-19, AUD-35: a finding across files goes to the first selected file that was audited."""
+    def test_across_files_checked_only(self):
+        """AUD-19, AUD-35: a finding across files goes to the first selected file that was checked."""
         self.write("specs/a.md", "Member: a person with a card.\n")
         self.write("specs/b.md", "A user borrows.\n")
         f = {"rule": "SPC-3", "problem": "p", "involved": [
             {"path": "specs/a.md", "line": 1, "quote": ["Member: a person with a card."], "rewrite": "r"},
             {"path": "specs/b.md", "line": 1, "quote": ["A user borrows."], "rewrite": "r"}]}
-        out = self.run_filter([f], selected=["specs/a.md", "specs/b.md"], audited=["specs/b.md"])
+        out = self.run_filter([f], selected=["specs/a.md", "specs/b.md"], checked=["specs/b.md"])
         got = out["findings"][0]
         self.assertEqual((got["path"], got["line"], got["see_also"]), ("specs/b.md", 1, ["specs/a.md:1"]))
-        out = self.run_filter([f], selected=["specs/a.md", "specs/b.md"], audited=[])
+        out = self.run_filter([f], selected=["specs/a.md", "specs/b.md"], checked=[])
         self.assertEqual(out["findings"], [])
-        # A finding of a single file on a file that was not audited is dropped too.
-        out = self.json_cmd("filter", {"repo_root": self.repo, "selected": ["specs/a.md"], "audited": [],
+        # A finding of a single file on a file that was not checked is dropped too.
+        out = self.json_cmd("filter", {"repo_root": self.repo, "selected": ["specs/a.md"], "checked": [],
                                        "findings": [self.finding("specs/a.md", 1, "SPC-2", ["Member: a person with a card."])]})
-        self.assertEqual(out["dropped"][0]["reason"], "file was not audited")
+        self.assertEqual(out["dropped"][0]["reason"], "file was not checked")
 
     def test_types_refused(self):
         """SKILL.md section 3: quote a list of strings, rewrite one string, see_also "path:line" strings; else exit 2."""
@@ -689,7 +689,7 @@ class Filter(Base):
         self.assertEqual(out["findings"][0]["see_also"], ["specs/other.md:1"])
         status, report, err = self.run_script("render", stdin=json.dumps({
             "repo_root": self.repo, "n": 2, "s": 1, "mode": "session", "spec_files": spec, "selected": sel,
-            "audited": sel, "findings": out["findings"]}).encode())
+            "checked": sel, "findings": out["findings"]}).encode())
         self.assertEqual(status, 0, err)
         self.assertIn("  See also: specs/other.md:1\n", report)
         # Without spec_files, a finding across files is refused: its places cannot be checked.
@@ -750,13 +750,13 @@ class Render(Base):
 
     def base(self, **extra):
         data = {
-            "repo_root": self.repo, "n": 1, "s": 1, "mode": "session", "audited": [], "findings": [],
+            "repo_root": self.repo, "n": 1, "s": 1, "mode": "session", "checked": [], "findings": [],
             "conditional": [{"rule": "SPC-%d" % i, "applies_to": [], "why": "No line meets it."} for i in range(13, 21)],
-            "questions": [], "not_audited": [],
+            "questions": [], "not_checked": [],
         }
         data.update(extra)
         if "selected" not in extra:
-            data["selected"] = sorted(set(data["audited"]) | {e["what"] for e in data["not_audited"]
+            data["selected"] = sorted(set(data["checked"]) | {e["what"] for e in data["not_checked"]
                                                               if "what" in e and e["reason"] != "could not be read (context only)"})
         if "spec_files" not in extra:
             data["spec_files"] = sorted(set(data["selected"]) | set(self.SPEC_FILES))
@@ -779,7 +779,7 @@ class Render(Base):
         q12 = ["Large orders get free shipping, etc."]
         out = self.report(
             n=2, s=2,
-            audited=["specs/shipping.md", "specs/a.md"],
+            checked=["specs/shipping.md", "specs/a.md"],
             findings=[
                 {"path": "specs/shipping.md", "line": 12, "rule": "SPC-2", "quote": q12,
                  "problem": "The list ends in etc.", "rewrite": "An order of 50.00 EUR or more must ship free.", "see_also": []},
@@ -788,7 +788,7 @@ class Render(Base):
             ],
         )
         expected = [
-            "Audit of %s against writing-specs.md: 2 of 2 selected spec files audited, 2 findings. Spec set: 2 spec files. Mode: session." % self.repo,
+            "Check of writing of %s against writing-specs.md: 2 of 2 selected spec files checked, 2 findings. Spec set: 2 spec files. Mode: session." % self.repo,
             "",
             "## Findings",
             "",
@@ -808,24 +808,24 @@ class Render(Base):
             "  > Large orders get free shipping, etc.",
             "  Problem: The list ends in etc.",
             "  Rewrite: An order of 50.00 EUR or more must ship free.",
-        ] + self.tail() + ["", "## Not audited", "", "None."]
+        ] + self.tail() + ["", "## Not checked", "", "None."]
         self.assertEqual(out, "\n".join(expected) + "\n")
 
     def test_singular(self):
         """AUD-32, AUD-E1: `file` when <s> or <n> is 1, `finding` when <f> is 1; Mode: session."""
-        out = self.report(audited=["a.md"], findings=[{"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"],
+        out = self.report(checked=["a.md"], findings=[{"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"],
                                                        "problem": "p", "rewrite": "r"}])
-        self.assertTrue(out.startswith("Audit of " + self.repo + " against writing-specs.md: 1 of 1 selected spec file audited, "
+        self.assertTrue(out.startswith("Check of writing of " + self.repo + " against writing-specs.md: 1 of 1 selected spec file checked, "
                                        "1 finding. Spec set: 1 spec file. Mode: session.\n"))
-        out = self.report(audited=["a.md"], n=4, s=1, mode="workflow")
-        self.assertTrue(out.startswith("Audit of " + self.repo + " against writing-specs.md: 1 of 1 selected spec file audited, "
+        out = self.report(checked=["a.md"], n=4, s=1, mode="workflow")
+        self.assertTrue(out.startswith("Check of writing of " + self.repo + " against writing-specs.md: 1 of 1 selected spec file checked, "
                                        "0 findings. Spec set: 4 spec files. Mode: workflow.\n"))
 
     def test_finding_order(self):
         """AUD-34: file sections by path; findings by rule (SPC-1..SPC-20, then the decisions), then by line."""
         def f(path, line, rule):
             return {"path": path, "line": line, "rule": rule, "quote": ["x"], "problem": "p", "rewrite": "r"}
-        out = self.report(n=2, s=2, audited=["b.md", "B.md"], findings=[
+        out = self.report(n=2, s=2, checked=["b.md", "B.md"], findings=[
             f("b.md", 1, "SPC-T4"), f("b.md", 5, "SPC-10"), f("b.md", 9, "SPC-2"), f("b.md", 2, "SPC-2"),
             f("b.md", 1, "SPC-T15"), f("b.md", 1, "SPC-T11"), f("B.md", 3, "SPC-20")])
         firsts = [l for l in out.splitlines() if l.startswith("- ") and "SPC-Q" not in l]
@@ -836,7 +836,7 @@ class Render(Base):
         """AUD-E9, AUD-31, AUD-34: See also places by path then line, separated by `, `."""
         self.write("specs/b.md", "x\n" * 10)
         self.write("specs/c.md", "x\n" * 2)
-        out = self.report(n=3, audited=["specs/a.md"], spec_files=["specs/a.md", "specs/b.md", "specs/c.md"], findings=[{
+        out = self.report(n=3, checked=["specs/a.md"], spec_files=["specs/a.md", "specs/b.md", "specs/c.md"], findings=[{
             "path": "specs/a.md", "line": 4, "rule": "SPC-3", "quote": ["Member: a person with a card."],
             "problem": "p", "rewrite": "r", "see_also": ["specs/c.md:2", "specs/b.md:10", "specs/b.md:9"]}])
         self.assertIn("- specs/a.md:4 · SPC-3\n  > Member: a person with a card.\n  Problem: p\n  Rewrite: r\n"
@@ -844,25 +844,25 @@ class Render(Base):
 
     def test_not_verified(self):
         """AUD-43: a finding whose skeptic failed ends its first line with ` · not verified`."""
-        out = self.report(audited=["a.md"], findings=[
+        out = self.report(checked=["a.md"], findings=[
             {"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"], "problem": "p", "rewrite": "r", "verified": False},
             {"path": "a.md", "line": 1, "rule": "SPC-2", "quote": ["# A"], "problem": "p", "rewrite": "r", "verified": True}])
         self.assertIn("- a.md:1 · SPC-1 · not verified\n", out)
         self.assertIn("- a.md:1 · SPC-2\n", out)
         self.assertIn("2 findings", out)
 
-    def test_failed_auditor(self):
-        """AUD-E8, AUD-35, AUD-42: 4 of 5 audited; the failed file only under Not audited."""
+    def test_failed_checker(self):
+        """AUD-E8, AUD-35, AUD-42: 4 of 5 checked; the failed file only under Not checked."""
         files = ["specs/a.md", "specs/b.md", "specs/c.md", "specs/d.md", "specs/e.md"]
-        out = self.report(n=5, s=5, mode="workflow", selected=files, audited=[f for f in files if f != "specs/b.md"],
-                          not_audited=[{"what": "specs/b.md", "reason": "the auditor failed or did not finish"}])
-        self.assertIn(": 4 of 5 selected spec files audited, 0 findings.", out)
-        self.assertTrue(out.endswith("## Not audited\n\n- specs/b.md — the auditor failed or did not finish\n"))
+        out = self.report(n=5, s=5, mode="workflow", selected=files, checked=[f for f in files if f != "specs/b.md"],
+                          not_checked=[{"what": "specs/b.md", "reason": "the checker failed or did not finish"}])
+        self.assertIn(": 4 of 5 selected spec files checked, 0 findings.", out)
+        self.assertTrue(out.endswith("## Not checked\n\n- specs/b.md — the checker failed or did not finish\n"))
         self.assertNotIn("### specs/b.md", out)
 
-    def test_not_audited_order(self):
+    def test_not_checked_order(self):
         """AUD-42: files in code point order of path, then the pass across files, then the readers; Q2 and Q3 hold only Evidence: none."""
-        out = self.report(n=4, s=2, audited=[], findings=[], not_audited=[
+        out = self.report(n=4, s=2, checked=[], findings=[], not_checked=[
             {"pass": "readers"},
             {"what": "z.md", "reason": "the run was stopped"},
             {"pass": "across"},
@@ -873,7 +873,7 @@ class Render(Base):
             {"id": "SPC-Q4", "evidence": [{"path": "a.md", "line": 2, "text": "No error path."}]},
         ])
         self.assertTrue(out.endswith(
-            "## Not audited\n\n"
+            "## Not checked\n\n"
             "- B.md — could not be read\n"
             "- a.md — could not be read (context only)\n"
             "- z.md — the run was stopped\n"
@@ -910,7 +910,7 @@ class Render(Base):
 
     def test_conditional_rules(self):
         """AUD-31, AUD-34, AUD-35: one row per SPC-13 to SPC-20 in order; paths in code point order, or none."""
-        out = self.report(audited=["specs/a.md", "specs/b.md"], conditional=[
+        out = self.report(checked=["specs/a.md", "specs/b.md"], conditional=[
             {"rule": "SPC-17", "applies_to": ["specs/b.md", "specs/a.md"], "why": "It reads | files."},
         ] + [{"rule": "SPC-%d" % i, "applies_to": [], "why": "No."} for i in range(13, 21) if i != 17])
         rows = [l for l in out.splitlines() if l.startswith("| SPC-")]
@@ -919,16 +919,16 @@ class Render(Base):
         self.assertIn("| SPC-13 | none | No. |", rows)
 
     def test_partition_enforced(self):
-        """AUD-35: a selected file never appears both under Findings and under Not audited."""
-        data = self.base(audited=["a.md"], not_audited=[{"what": "a.md", "reason": "could not be read"}])
+        """AUD-35: a selected file never appears both under Findings and under Not checked."""
+        data = self.base(checked=["a.md"], not_checked=[{"what": "a.md", "reason": "could not be read"}])
         self.assertEqual(self.run_script("render", stdin=json.dumps(data).encode())[0], 2)
-        data = self.base(audited=["a.md"], selected=["a.md", "b.md"])
+        data = self.base(checked=["a.md"], selected=["a.md", "b.md"])
         self.assertEqual(self.run_script("render", stdin=json.dumps(data).encode())[0], 2)
-        data = self.base(audited=[], selected=["a.md"], not_audited=[{"what": "a.md", "reason": "could not be read"}],
+        data = self.base(checked=[], selected=["a.md"], not_checked=[{"what": "a.md", "reason": "could not be read"}],
                          findings=[{"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"], "problem": "p", "rewrite": "r"}])
         status, _, err = self.run_script("render", stdin=json.dumps(data).encode())
         self.assertEqual(status, 2)
-        self.assertIn("not audited", err)
+        self.assertIn("not checked", err)
 
     def test_step2_rerun(self):
         """AUD-46, AUD-29 step 2: render refuses a finding that step 2 drops, naming it, and prints no report."""
@@ -944,12 +944,12 @@ class Render(Base):
             (dict(good, path="b.md", quote=["x"]), "path is not a selected file"),
         ]
         for finding, reason in cases:
-            data = self.base(audited=["a.md"], findings=[good, finding])
+            data = self.base(checked=["a.md"], findings=[good, finding])
             status, out, err = self.run_script("render", stdin=json.dumps(data).encode())
             self.assertEqual((status, out), (2, ""), finding)
             self.assertIn("finding 2 (%s:%d %s)" % (finding["path"], finding["line"], finding["rule"]), err)
             self.assertIn(reason, err)
-        self.assertIn("- a.md:1 · SPC-1\n", self.report(audited=["a.md"], findings=[good]))
+        self.assertIn("- a.md:1 · SPC-1\n", self.report(checked=["a.md"], findings=[good]))
 
     def test_types_refused(self):
         """SKILL.md section 3: render takes only the exact types; a quote string or a rewrite list is refused."""
@@ -963,7 +963,7 @@ class Render(Base):
             (dict(good, involved=[{"path": "a.md", "line": 1, "quote": ["# A"]}]), "unplaced"),
         ]
         for finding, message in cases:
-            data = self.base(audited=["a.md"], findings=[finding])
+            data = self.base(checked=["a.md"], findings=[finding])
             status, out, err = self.run_script("render", stdin=json.dumps(data).encode())
             self.assertEqual((status, out), (2, ""), finding)
             self.assertIn("finding 1", err)
@@ -971,17 +971,17 @@ class Render(Base):
 
     def test_selected_required(self):
         """AUD-35, AUD-46: render needs `selected`, so a selected file left out of the input cannot vanish."""
-        data = self.base(audited=["a.md"])
+        data = self.base(checked=["a.md"])
         del data["selected"]
         self.assertEqual(self.run_script("render", stdin=json.dumps(data).encode())[0], 2)
-        data = self.base(audited=["a.md"], selected=["a.md", "forgotten.md"])
+        data = self.base(checked=["a.md"], selected=["a.md", "forgotten.md"])
         status, _, err = self.run_script("render", stdin=json.dumps(data).encode())
         self.assertEqual(status, 2)
         self.assertIn("forgotten.md", err)
 
     def test_applies_to_only_selected(self):
         """AUD-31: <paths> of a conditional rule lists only selected files."""
-        out = self.report(audited=["a.md"], conditional=[
+        out = self.report(checked=["a.md"], conditional=[
             {"rule": "SPC-15", "applies_to": ["a.md", "other.md"], "why": "It reads the clock."},
             {"rule": "SPC-16", "applies_to": ["other.md"], "why": "No."}])
         self.assertIn("| SPC-15 | a.md | It reads the clock. |", out)
@@ -990,21 +990,21 @@ class Render(Base):
     def test_evidence_places_validated(self):
         """AUD-46, AUD-26: an Evidence line cites a line of a spec file; line 0, negative, past the end,
         a string line and a path outside the spec set are left out."""
-        out = self.report(audited=["a.md"], questions=[{"id": "SPC-Q1", "evidence": [
+        out = self.report(checked=["a.md"], questions=[{"id": "SPC-Q1", "evidence": [
             {"path": "a.md", "line": 0, "text": "zero"}, {"path": "nope.md", "line": -4, "text": "neg"},
             {"path": "a.md", "line": "007", "text": "str"}, {"path": "a.md", "line": 11, "text": "past"},
             {"path": "../../etc/passwd", "line": 1, "text": "outside"}, {"path": "b.md", "line": 9, "text": "kept"}]}])
         self.assertIn("- SPC-Q1 %s\n  Evidence: b.md:9 kept\n- SPC-Q2" % questions()["SPC-Q1"], out)
 
     def test_unreadable_listed(self):
-        """AUD-42, AUD-35: render lists prepare's unreadable files under Not audited, also in workflow mode."""
-        out = self.report(n=4, s=2, mode="workflow", audited=["a.md"], selected=["a.md", "c.md"],
+        """AUD-42, AUD-35: render lists prepare's unreadable files under Not checked, also in workflow mode."""
+        out = self.report(n=4, s=2, mode="workflow", checked=["a.md"], selected=["a.md", "c.md"],
                           unreadable=["c.md", "d.md"])
-        self.assertTrue(out.endswith("## Not audited\n\n- c.md — could not be read\n"
+        self.assertTrue(out.endswith("## Not checked\n\n- c.md — could not be read\n"
                                      "- d.md — could not be read (context only)\n"))
         # Listed by the session too: once.
-        out = self.report(audited=["a.md"], selected=["a.md", "c.md"], unreadable=["c.md"],
-                          not_audited=[{"what": "c.md", "reason": "could not be read"}])
+        out = self.report(checked=["a.md"], selected=["a.md", "c.md"], unreadable=["c.md"],
+                          not_checked=[{"what": "c.md", "reason": "could not be read"}])
         self.assertEqual(out.count("- c.md — could not be read"), 1)
 
     def test_file_changed_after_filter(self):
@@ -1015,7 +1015,7 @@ class Render(Base):
         kept = self.json_cmd("filter", dict(base, findings=[
             {"path": "specs/x.md", "line": 3, "rule": "SPC-2", "quote": ["Large orders ship free, etc."],
              "problem": "p", "rewrite": "r"}]))["findings"]
-        data = dict(base, n=1, s=1, mode="session", audited=["specs/x.md"])
+        data = dict(base, n=1, s=1, mode="session", checked=["specs/x.md"])
         # Round 4, defect 7: a mis-copied quote is repaired from the file, which `check` proves;
         # a finding moved to another line is still refused.
         mangled = [dict(kept[0], quote=["Large orders ship free etc."])]
@@ -1031,20 +1031,20 @@ class Render(Base):
 
     def test_paths_escaped(self):
         """AUD-31, AUD-8, AUD-30: a path with a line feed or `|` cannot add headings, items or table cells."""
-        evil = "x.md\n\n## Not audited\n\n- y.md"
+        evil = "x.md\n\n## Not checked\n\n- y.md"
         try:
             self.write(evil, "# X\n")
         except OSError:
             self.skipTest("the file system refuses a line feed in a name")
         self.write("a|b.md", "# AB\n")
-        out = self.report(n=2, s=2, audited=[evil, "a|b.md"], findings=[
+        out = self.report(n=2, s=2, checked=[evil, "a|b.md"], findings=[
             {"path": evil, "line": 1, "rule": "SPC-1", "quote": ["# X"], "problem": "p", "rewrite": "r",
              "see_also": ["a|b.md:1"]}],
             conditional=[{"rule": "SPC-17", "applies_to": ["a|b.md"], "why": "w"}])
-        shown = "x.md\\u000a\\u000a## Not audited\\u000a\\u000a- y.md"
+        shown = "x.md\\u000a\\u000a## Not checked\\u000a\\u000a- y.md"
         self.assertIn("### %s\n" % shown, out)
         self.assertIn("- %s:1 · SPC-1\n" % shown, out)
-        self.assertEqual(out.count("\n## Not audited\n"), 1)
+        self.assertEqual(out.count("\n## Not checked\n"), 1)
         self.assertNotIn("\n- y.md", out)
         self.assertIn("| SPC-17 | a\\|b.md | w |", out)
         self.assertIn("  See also: a|b.md:1\n", out)
@@ -1055,7 +1055,7 @@ class Render(Base):
         self.assertIn(" Mode: session (workflow not available).\n", out.splitlines(True)[0])
 
 
-WORKFLOW = os.path.join(PLUGIN, "use-cases", "audit", "workflow.js")
+WORKFLOW = os.path.join(PLUGIN, "use-cases", "check-writing", "workflow.js")
 NODE = shutil.which("node")
 
 # Runs workflow.js as the Workflow tool does, with agent() answering from a
@@ -1122,27 +1122,27 @@ class WorkflowScript(unittest.TestCase):
         self.assertNotIn("line does not hold for that file", second)
 
     def test_agents_and_their_inputs(self):
-        """AUD-23, AUD-26, AUD-8: auditors read the spec set as context; both readers share one definition
+        """AUD-23, AUD-26, AUD-8: checkers read the spec set as context; both readers share one definition
         of a behaviour and the guideline's convention; reader places outside the selected files are dropped."""
         reader = {"behaviours": [{"path": "/r/specs/a.md", "line": 1, "behaviour": "b"},
                                  {"path": "specs/b.md", "line": 2, "behaviour": "outside"}],
                   "two_readings": [{"path": "specs/c.md", "line": 1, "text": "outside"}],
                   "gaps": [{"path": "specs/a.md", "line": 1, "text": "g"}]}
-        out = self.run_workflow(dict(self.ARGS, stage="audit"), {
-            "auditor": {"findings": [], "evidence": [],
+        out = self.run_workflow(dict(self.ARGS, stage="check"), {
+            "checker": {"findings": [], "evidence": [],
                         "conditional": {"SPC-%d" % i: {"applies": False, "why": "No."} for i in range(15, 21)}},
             "across files": {"conditional": {"SPC-13": {"applies_to": [], "why": "w"}, "SPC-14": {"applies_to": [], "why": "w"}},
                              "findings": [], "evidence": []},
             "reader": reader})
-        self.assertEqual((out["result"]["auditors"][0]["ok"], out["result"]["cross"] is None), (True, False))
+        self.assertEqual((out["result"]["checkers"][0]["ok"], out["result"]["cross"] is None), (True, False))
         self.assertEqual(out["result"]["readers_ok"], [True, True])
-        auditor = out["prompts"]["auditor specs/a.md"]
+        checker = out["prompts"]["checker specs/a.md"]
         for other in ("README.md", "specs/b.md", "specs/c.md"):
-            self.assertIn(json.dumps("/r/" + other), auditor)
-        self.assertIn("Report only on the spec file you audit", auditor)
+            self.assertIn(json.dumps("/r/" + other), checker)
+        self.assertIn("Report only on the spec file you check", checker)
         a, b = out["prompts"]["reader A (build)"], out["prompts"]["reader B (questions)"]
         definition = "each statement of the selected files that makes the system do, refuse, produce or keep something"
-        for prompt in (a, b, auditor):
+        for prompt in (a, b, checker):
             self.assertIn("CLAUDE.md", prompt)
         for prompt in (a, b):
             self.assertIn(definition, prompt)
@@ -1184,8 +1184,8 @@ class RoundTwoPrepare(Base):
         git(self.repo, "commit", "-q", "-m", "x")
         if not os.path.exists(os.path.join(self.repo, ".GIT")):
             self.skipTest("case-sensitive file system")
-        self.assertEqual(self.prepare(".GIT"), (1, "specs-management:audit: .GIT: no spec file found\n"))
-        self.assertEqual(self.prepare(".GIT/HEAD"), (1, "specs-management:audit: .GIT/HEAD: no spec file found\n"))
+        self.assertEqual(self.prepare(".GIT"), (1, "specs-management:check-writing: .GIT: no spec file found\n"))
+        self.assertEqual(self.prepare(".GIT/HEAD"), (1, "specs-management:check-writing: .GIT/HEAD: no spec file found\n"))
 
     def test_absolute_path_from_deleted_working_directory(self):
         """AUD-40 (round 2, defect 3): an absolute argument does not need the working directory."""
@@ -1201,7 +1201,7 @@ class RoundTwoPrepare(Base):
         os.makedirs(gone)  # a relative argument still needs it
         proc = subprocess.run(["sh", "-c", cmd, "sh", gone, sys.executable, self.script, "docs/a.md"],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.assertEqual((proc.returncode, proc.stdout), (1, b"specs-management:audit: docs/a.md: no such file or folder\n"))
+        self.assertEqual((proc.returncode, proc.stdout), (1, b"specs-management:check-writing: docs/a.md: no such file or folder\n"))
 
     def test_broken_git_file(self):
         """AUD-11, AUD-40 (round 2, defect 4): a folder whose .git file points nowhere is not 'outside any
@@ -1211,7 +1211,7 @@ class RoundTwoPrepare(Base):
         self.write("broken/s.md", "# s\n")
         status, out = self.prepare("broken/s.md")
         self.assertEqual(status, 1)
-        self.assertTrue(out.startswith("specs-management:audit: git failed: fatal: not a git repository: "), out)
+        self.assertTrue(out.startswith("specs-management:check-writing: git failed: fatal: not a git repository: "), out)
 
 
 class RoundTwoWords(unittest.TestCase):
@@ -1219,28 +1219,28 @@ class RoundTwoWords(unittest.TestCase):
 
     def test_backtick_fence_info_string(self):
         """AUD-36 (round 2, defect 5): a backtick line whose info string holds a backtick is a code span, not a fence."""
-        self.assertEqual(audit.count_words(b"```npm install```\n\nEste texto en castellano tiene muchas palabras aqui.\n\n"
+        self.assertEqual(check_writing.count_words(b"```npm install```\n\nEste texto en castellano tiene muchas palabras aqui.\n\n"
                                            b"Otro parrafo largo en castellano.\n"), 13)
 
     def test_closing_fence_indented_four_columns(self):
         """AUD-36 (round 2, defect 5): a closing fence is indented at most 3 columns."""
-        self.assertEqual(audit.count_words(b"Text\n\n```\ncode here\n        ```\nmore code words here\n```\n"), 1)
-        self.assertEqual(audit.count_words(b"Text\n\n```\ncode here\n   ```\nmore words here\n"), 4)
+        self.assertEqual(check_writing.count_words(b"Text\n\n```\ncode here\n        ```\nmore code words here\n```\n"), 1)
+        self.assertEqual(check_writing.count_words(b"Text\n\n```\ncode here\n   ```\nmore words here\n"), 4)
 
     def test_unspaced_scripts(self):
         """AUD-36 (round 2, defect 6): each Han, Hiragana, Katakana or Thai letter counts as one word."""
         zh = "本规范定义了审计工具的行为，以及它如何处理每一个文件和每一条规则。"
-        self.assertEqual(audit.count_words(zh.encode()), 31)
-        self.assertEqual(audit.count_words("このスペックは監査ツールの動作を定義します。".encode()), 21)
-        self.assertEqual(audit.count_words("ภาษาไทย".encode()), 7)
-        self.assertEqual(audit.count_words("The audit 規則 reads.".encode()), 5)
+        self.assertEqual(check_writing.count_words(zh.encode()), 31)
+        self.assertEqual(check_writing.count_words("このスペックは監査ツールの動作を定義します。".encode()), 21)
+        self.assertEqual(check_writing.count_words("ภาษาไทย".encode()), 7)
+        self.assertEqual(check_writing.count_words("The check 規則 reads.".encode()), 5)
 
     def test_crlf_paragraphs(self):
         """AUD-36 (round 2, defect 20): a blank line of a CRLF file ends a paragraph, so a stray backtick
         does not pair with one several paragraphs later."""
         lf = b"# T\n\nUse `x for this.\n\nOne two three four five six seven eight nine ten.\n\nAnother `y` here.\n"
-        self.assertEqual(audit.count_words(lf), 17)
-        self.assertEqual(audit.count_words(lf.replace(b"\n", b"\r\n")), 17)
+        self.assertEqual(check_writing.count_words(lf), 17)
+        self.assertEqual(check_writing.count_words(lf.replace(b"\n", b"\r\n")), 17)
 
 
 class RoundTwoFilter(Base):
@@ -1335,8 +1335,8 @@ class RoundTwoRender(Base):
 
     def data(self, **extra):
         d = {"repo_root": self.repo, "n": 3, "s": 2, "mode": "session", "spec_files": ["README.md", "a.md", "b.md"],
-             "selected": ["a.md", "b.md"], "audited": ["a.md", "b.md"], "findings": [], "conditional": [],
-             "questions": [], "not_audited": []}
+             "selected": ["a.md", "b.md"], "checked": ["a.md", "b.md"], "findings": [], "conditional": [],
+             "questions": [], "not_checked": []}
         d.update(extra)
         return d
 
@@ -1348,13 +1348,13 @@ class RoundTwoRender(Base):
         self.assertIn("  > one\\u000dtwo etc.\\u000dthree\n", out)
         self.assertNotIn("\r", out)
 
-    def test_not_audited_entries_checked(self):
-        """AUD-42, AUD-35 (round 2, defect 9): render refuses a not-audited file that is not selected, a file
+    def test_not_checked_entries_checked(self):
+        """AUD-42, AUD-35 (round 2, defect 9): render refuses a not-checked file that is not selected, a file
         listed twice, and a reason outside AUD-42's list."""
         self.write("README.md", "# R\n")
         stopped = {"what": "b.md", "reason": "the run was stopped"}
         cases = [
-            [{"what": "b.md", "reason": "the auditor failed or did not finish"}, stopped],
+            [{"what": "b.md", "reason": "the checker failed or did not finish"}, stopped],
             [stopped, {"what": "README.md", "reason": "could not be read"}],
             [{"what": "b.md", "reason": "it was too long"}],
             [{"what": "b.md", "reason": "could not be read (context only)"}],
@@ -1362,9 +1362,9 @@ class RoundTwoRender(Base):
         ]
         for entries in cases:
             status, out, err = self.run_script("render", stdin=json.dumps(
-                self.data(audited=["a.md"], not_audited=entries)).encode())
+                self.data(checked=["a.md"], not_checked=entries)).encode())
             self.assertEqual((status, out), (2, ""), entries)
-        out = self.json_cmd("render", self.data(audited=["a.md"], not_audited=[
+        out = self.json_cmd("render", self.data(checked=["a.md"], not_checked=[
             stopped, {"what": "README.md", "reason": "could not be read (context only)"}]))
         self.assertTrue(out.endswith("- README.md — could not be read (context only)\n- b.md — the run was stopped\n"))
 
@@ -1375,7 +1375,7 @@ class RoundTwoWorkflow(unittest.TestCase):
 
     ARGS, run_workflow, verify = WorkflowScript.ARGS, WorkflowScript.run_workflow, WorkflowScript.verify
 
-    AUDITOR_ROWS = {"SPC-%d" % i: {"applies": False, "why": "No."} for i in range(15, 21)}
+    CHECKER_ROWS = {"SPC-%d" % i: {"applies": False, "why": "No."} for i in range(15, 21)}
     CROSS_ROWS = {"SPC-13": {"applies_to": [], "why": "Small."}, "SPC-14": {"applies_to": ["specs/a.md"], "why": "IDs."}}
 
     def test_skeptic_sees_the_problem(self):
@@ -1389,25 +1389,25 @@ class RoundTwoWorkflow(unittest.TestCase):
         self.assertIn("error", self.verify([{k: v for k, v in item.items() if k != "problem"}]))
 
     def test_one_conditional_row_per_rule(self):
-        """AUD-17 (round 2, defect 15): an auditor or pass whose rows do not decide each rule once fails;
+        """AUD-17 (round 2, defect 15): a checker or pass whose rows do not decide each rule once fails;
         rows given one per rule are used."""
         finding = {"line": 2, "rule": "SPC-20", "quote": ["x"], "problem": "p", "rewrite": "r"}
         dup = [{"rule": r, "applies": True, "why": "w"} for r in ("SPC-15", "SPC-15", "SPC-16", "SPC-17", "SPC-18", "SPC-19")]
-        out = self.run_workflow(dict(self.ARGS, stage="audit"), {
-            "auditor": {"findings": [finding], "conditional": dup, "evidence": []},
+        out = self.run_workflow(dict(self.ARGS, stage="check"), {
+            "checker": {"findings": [finding], "conditional": dup, "evidence": []},
             "across files": {"conditional": [{"rule": "SPC-13", "applies_to": [], "why": "w"}] * 2,
                              "findings": [], "evidence": []},
             "reader": None})
-        self.assertEqual(out["result"]["auditors"][0]["ok"], False)
+        self.assertEqual(out["result"]["checkers"][0]["ok"], False)
         self.assertIsNone(out["result"]["cross"])
-        rows = dict(self.AUDITOR_ROWS, **{"SPC-20": {"applies": True, "why": "A model writes the output."}})
-        out = self.run_workflow(dict(self.ARGS, stage="audit"), {
-            "auditor": {"findings": [finding], "conditional": rows, "evidence": []},
+        rows = dict(self.CHECKER_ROWS, **{"SPC-20": {"applies": True, "why": "A model writes the output."}})
+        out = self.run_workflow(dict(self.ARGS, stage="check"), {
+            "checker": {"findings": [finding], "conditional": rows, "evidence": []},
             "across files": {"conditional": self.CROSS_ROWS, "findings": [], "evidence": []},
             "reader": None})
-        auditor = out["result"]["auditors"][0]
-        self.assertEqual((auditor["ok"], [f["rule"] for f in out["result"]["findings"]]), (True, ["SPC-20"]))
-        self.assertEqual([c["rule"] for c in auditor["conditional"]], ["SPC-%d" % i for i in range(15, 21)])
+        checker = out["result"]["checkers"][0]
+        self.assertEqual((checker["ok"], [f["rule"] for f in out["result"]["findings"]]), (True, ["SPC-20"]))
+        self.assertEqual([c["rule"] for c in checker["conditional"]], ["SPC-%d" % i for i in range(15, 21)])
         # Round 5, defect 9: the files of a row are the items of the list applies_to.
         self.assertEqual(out["result"]["cross"]["conditional"][1], {"rule": "SPC-14", "why": "IDs."})
         self.assertEqual(out["result"]["applies_to"], [{"rule": "SPC-14", "path": "specs/a.md"}])
@@ -1429,13 +1429,13 @@ class EndToEnd(Base):
             {"path": "specs/shipping.md", "line": 3, "rule": "SPC-2", "quote": ["invented"], "problem": "p", "rewrite": "r"},
         ]})["findings"]
         out = self.json_cmd("render", {"repo_root": prep["repo_root"], "n": prep["n"], "s": prep["s"], "mode": prep["mode"],
-                                       "audited": prep["selected"], "selected": prep["selected"],
+                                       "checked": prep["selected"], "selected": prep["selected"],
                                        "spec_files": prep["spec_files"], "findings": kept,
-                                       "conditional": [], "questions": [], "not_audited": []})
+                                       "conditional": [], "questions": [], "not_checked": []})
         self.assertIn("- specs/shipping.md:7 · SPC-2\n  > - Large orders get free shipping,\n  >   etc.\n", out)
         self.assertIn("- specs/shipping.md:12 · SPC-2\n  > Large orders get free shipping, etc.\n", out)
         self.assertNotIn("invented", out)
-        self.assertIn(": 1 of 1 selected spec file audited, 2 findings. Spec set: 1 spec file. Mode: session.\n", out)
+        self.assertIn(": 1 of 1 selected spec file checked, 2 findings. Spec set: 1 spec file. Mode: session.\n", out)
 
 
 
@@ -1487,22 +1487,22 @@ class RoundThreePrepare(Base):
         report = self.json_cmd("render", {
             "repo_root": out["repo_root"], "n": out["n"], "s": out["s"], "mode": out["mode"],
             "spec_files": out["spec_files"], "selected": out["selected"], "unreadable": out["unreadable"],
-            "unsearchable": out["unsearchable"], "audited": out["selected"], "findings": []})
-        self.assertTrue(report.endswith("## Not audited\n\n- locked/ — could not be searched\n"), report)
+            "unsearchable": out["unsearchable"], "checked": out["selected"], "findings": []})
+        self.assertTrue(report.endswith("## Not checked\n\n- locked/ — could not be searched\n"), report)
 
     def test_name_too_long_or_looping_link(self):
         """AUD-40 (round 3, defect 3): a path that cannot exist, a name too long or a looping symbolic link,
         is `no such file or folder`, also outside a repository."""
         self.write("a.md", "# a\n")
         long_name = "x" * 300
-        self.assertEqual(self.prepare(long_name), (1, "specs-management:audit: %s: no such file or folder\n" % long_name))
+        self.assertEqual(self.prepare(long_name), (1, "specs-management:check-writing: %s: no such file or folder\n" % long_name))
         os.symlink("loop2", os.path.join(self.repo, "loop1"))
         os.symlink("loop1", os.path.join(self.repo, "loop2"))
-        self.assertEqual(self.prepare("loop1"), (1, "specs-management:audit: loop1: no such file or folder\n"))
+        self.assertEqual(self.prepare("loop1"), (1, "specs-management:check-writing: loop1: no such file or folder\n"))
         outside = os.path.join(self.tmp, "outside")
         os.makedirs(outside)
         self.assertEqual(self.prepare(long_name, cwd=outside),
-                         (1, "specs-management:audit: %s: no such file or folder\n" % long_name))
+                         (1, "specs-management:check-writing: %s: no such file or folder\n" % long_name))
 
 
 class RoundThreeWords(unittest.TestCase):
@@ -1511,25 +1511,25 @@ class RoundThreeWords(unittest.TestCase):
     def test_list_item_fence_and_indented_code_after_heading(self):
         """AUD-36 (round 3, defect 4): a line indented less than a list item's fence ends the item and its fence;
         indented lines right after a heading or a closing fence are an indented code block."""
-        self.assertEqual(audit.count_words(b"- item\n  ```\n  code\n\nUno dos tres cuatro cinco seis siete ocho.\n"), 9)
-        self.assertEqual(audit.count_words(b"- item\n  ```\n  code\n  ```\n  still item\n"), 3)
-        self.assertEqual(audit.count_words(b"# Title\n    alpha beta gamma\n"), 1)
-        self.assertEqual(audit.count_words(b"```\nx\n```\n    alpha beta gamma\n"), 0)
-        self.assertEqual(audit.count_words(b"Para\n    continued line\n"), 3)
+        self.assertEqual(check_writing.count_words(b"- item\n  ```\n  code\n\nUno dos tres cuatro cinco seis siete ocho.\n"), 9)
+        self.assertEqual(check_writing.count_words(b"- item\n  ```\n  code\n  ```\n  still item\n"), 3)
+        self.assertEqual(check_writing.count_words(b"# Title\n    alpha beta gamma\n"), 1)
+        self.assertEqual(check_writing.count_words(b"```\nx\n```\n    alpha beta gamma\n"), 0)
+        self.assertEqual(check_writing.count_words(b"Para\n    continued line\n"), 3)
 
     def test_byte_order_mark_before_fence(self):
         """AUD-36, term "Line" (round 3, defect 17): a byte order mark before a fence on line 1 changes no count."""
         body = b"```\n" + b"the code word here\n" * 5 + b"```\n\n" + "los pedidos grandes tienen envío gratis\n".encode() * 5
-        self.assertEqual(audit.count_words(body), 30)
-        self.assertEqual(audit.count_words(b"\xef\xbb\xbf" + body), 30)
-        self.assertEqual(audit.count_words(b"\xef\xbb\xbf    indented code only\n"), 0)
+        self.assertEqual(check_writing.count_words(body), 30)
+        self.assertEqual(check_writing.count_words(b"\xef\xbb\xbf" + body), 30)
+        self.assertEqual(check_writing.count_words(b"\xef\xbb\xbf    indented code only\n"), 0)
 
     def test_more_unspaced_scripts(self):
         """AUD-36 (round 3, defect 12): each Khmer, Lao, Myanmar or Tibetan letter counts as one word."""
         for text in ("ភាសាខ្មែរ", "ພາສາລາວ", "မြန်မာဘာသာ", "བོད་ཡིག"):
             letters = sum(1 for ch in text if ch.isalpha())
             self.assertGreater(letters, 2, text)
-            self.assertEqual(audit.count_words(text.encode()), letters, text)
+            self.assertEqual(check_writing.count_words(text.encode()), letters, text)
 
 
 class RoundThreeFilterRender(Base):
@@ -1562,7 +1562,7 @@ class RoundThreeFilterRender(Base):
 
     def report(self, **extra):
         data = {"repo_root": self.repo, "n": 2, "s": 2, "mode": "session", "spec_files": self.spec,
-                "selected": self.spec, "audited": self.spec, "findings": []}
+                "selected": self.spec, "checked": self.spec, "findings": []}
         data.update(extra)
         return data
 
@@ -1575,7 +1575,7 @@ class RoundThreeFilterRender(Base):
     def test_rewrite_items_separator(self):
         """AUD-33, AUD-50 (round 3, defect 14): a rewrite's items are joined by ` ¶ `, which no item holds, so
         an item that holds `; ` stays one item."""
-        self.assertEqual(audit.rewrite_line("Parking must cost 2.00 EUR per hour.\n- parking must be free on Sundays;"),
+        self.assertEqual(check_writing.rewrite_line("Parking must cost 2.00 EUR per hour.\n- parking must be free on Sundays;"),
                          "Parking must cost 2.00 EUR per hour. ¶ - parking must be free on Sundays;")
 
     def test_output_in_parts(self):
@@ -1604,7 +1604,7 @@ class RoundThreeFilterRender(Base):
             self.assertEqual((got["part"], got["parts"]), (k, parts))
             kept += got["findings"]
             verify += got["verify"]
-        whole = audit.filter_findings(json.loads(json.dumps(data)))
+        whole = check_writing.filter_findings(json.loads(json.dumps(data)))
         self.assertEqual((kept, verify), (whole["findings"], whole["verify"]))
         rdata = dict(self.report(findings=kept), link_reports=[], links_not_checked=None)
         status, out, err = self.run_script("render", stdin=json.dumps(rdata).encode())
@@ -1621,10 +1621,10 @@ class RoundThreeFilterRender(Base):
             head, _, rest = out.partition("\n")
             self.assertEqual(head, "[part %d of %d, run %s]" % (k, total, run))
             report += rest
-        self.assertEqual(report, audit.render(json.loads(json.dumps(rdata))))
+        self.assertEqual(report, check_writing.render(json.loads(json.dumps(rdata))))
         # A report that fits is printed whole, with no part line.
         out = self.json_cmd("render", self.report())
-        self.assertTrue(out.startswith("Audit of "))
+        self.assertTrue(out.startswith("Check of writing of "))
 
 
 @unittest.skipIf(NODE is None, "node is not installed")
@@ -1632,15 +1632,15 @@ class RoundThreeWorkflow(unittest.TestCase):
     """Round 3 defects of workflow.js (AUD-8, AUD-17, AUD-19, AUD-21, term "Non-binding text")."""
 
     ARGS, run_workflow = WorkflowScript.ARGS, WorkflowScript.run_workflow
-    AUDITOR_ROWS = RoundTwoWorkflow.AUDITOR_ROWS
+    CHECKER_ROWS = RoundTwoWorkflow.CHECKER_ROWS
 
     def test_spc13_every_selected_file_or_none(self):
         """AUD-17 (round 3, defect 7): an SPC-13 decision for some selected files holds for every selected
-        file, so no auditor's SPC-13 finding is dropped for a file left out of the list."""
-        args = dict(self.ARGS, stage="audit", selected=["specs/a.md", "specs/b.md", "specs/c.md"])
+        file, so no checker's SPC-13 finding is dropped for a file left out of the list."""
+        args = dict(self.ARGS, stage="check", selected=["specs/a.md", "specs/b.md", "specs/c.md"])
         finding = {"line": 1, "rule": "SPC-13", "quote": ["x"], "problem": "p", "rewrite": "r"}
         out = self.run_workflow(args, {
-            "auditor": {"findings": [finding], "conditional": self.AUDITOR_ROWS, "evidence": []},
+            "checker": {"findings": [finding], "conditional": self.CHECKER_ROWS, "evidence": []},
             "across files": {"conditional": {"SPC-13": {"applies_to": ["/r/specs/a.md"], "why": "Large."},
                                              "SPC-14": {"applies_to": [], "why": "No."}},
                              "findings": [], "evidence": []},
@@ -1655,8 +1655,8 @@ class RoundThreeWorkflow(unittest.TestCase):
         reference in another file shows SPC-14's condition; AUD-8 (defect 13), the term "Non-binding text"
         (defect 16), AUD-21 (defect 11) and the term "Involved place" (defect 9) reach the agents."""
         place = {"path": "/r/specs/a.md", "line": 1, "quote": ["x"], "rewrite": "rx"}
-        out = self.run_workflow(dict(self.ARGS, stage="audit"), {
-            "auditor": {"findings": [], "conditional": self.AUDITOR_ROWS, "evidence": []},
+        out = self.run_workflow(dict(self.ARGS, stage="check"), {
+            "checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
             "across files": {"conditional": {"SPC-13": {"applies_to": [], "why": "w"},
                                              "SPC-14": {"applies_to": [], "why": "w"}},
                              "findings": [{"rule": "SPC-3", "problem": "p", "involved": [place]}], "evidence": []},
@@ -1664,14 +1664,14 @@ class RoundThreeWorkflow(unittest.TestCase):
         self.assertEqual(out["result"]["findings"],
                          [{"rule": "SPC-3", "problem": "p",
                            "involved": [{"path": "specs/a.md", "line": 1, "quote": ["x"], "rewrite": "rx"}]}])
-        cross, auditor = out["prompts"]["across files"], out["prompts"]["auditor specs/a.md"]
+        cross, checker = out["prompts"]["across files"], out["prompts"]["checker specs/a.md"]
         self.assertIn("refers to an individual statement of", cross)
         self.assertIn("first line of each statement that such a reference points to", cross)
-        for prompt in (cross, auditor):
+        for prompt in (cross, checker):
             self.assertIn(".claude/", prompt)
             self.assertIn("each translation of one of them into the language of the file that holds it", prompt)
             self.assertIn(" ¶ ", prompt)
-        self.assertIn("what is out of scope, what must never happen, the convention for binding words", auditor)
+        self.assertIn("what is out of scope, what must never happen, the convention for binding words", checker)
 
 
 class RoundThreeSkill(unittest.TestCase):
@@ -1679,7 +1679,7 @@ class RoundThreeSkill(unittest.TestCase):
     workflow.js does, so reader items outside the selected files and absolute applies_to paths never reach render."""
 
     def test_stop_path_normalises_like_workflow(self):
-        with open(os.path.join(PLUGIN, "use-cases", "audit", "SKILL.md"), encoding="utf-8") as f:
+        with open(os.path.join(PLUGIN, "use-cases", "check-writing", "SKILL.md"), encoding="utf-8") as f:
             skill = f.read()
         stop = " ".join(skill[skill.index("When the user stops the workflow task"):skill.index("## 5. Render")].split())
         for text in ("relative to `repo_root`", "only the items of the selected files",
@@ -1693,7 +1693,7 @@ class RoundFourWords(unittest.TestCase):
     def test_stray_backtick_stays_in_its_block(self):
         """AUD-36 (round 4, defect 1): a code span cannot cross a list item, a heading or a table cell, so a
         stray backtick never pairs with one of the next item, line or row and never hides the prose between."""
-        count = audit.count_words
+        count = check_writing.count_words
         self.assertEqual(count(b"- AUD-1. a stray ` backtick here\n- one two three four five six seven eight nine ten\n"
                                b"- AUD-3. uses `x` here\n"), 18)
         self.assertEqual(count(b"# Title with ` tick\none two three four five `x`\n"), 8)
@@ -1705,7 +1705,7 @@ class RoundFourWords(unittest.TestCase):
         """AUD-36 (round 4, defect 2): vowel signs, viramas, harakat and niqqud do not split a word."""
         for text, words in (("हिन्दी में लिखा गया नियम", 5), ("தமிழ் மொழி விதி", 3), ("قَالَ الْمُعَلِّمُ", 2),
                             ("שָׁלוֹם עוֹלָם", 2), ("the rule is written here", 5)):
-            self.assertEqual(audit.count_words(text.encode()), words, text)
+            self.assertEqual(check_writing.count_words(text.encode()), words, text)
 
 
 class RoundFourPrepare(Base):
@@ -1772,9 +1772,9 @@ class RoundFourFilterRender(Base):
         data.update(extra)
         return self.json_cmd("filter", data)
 
-    def render_input(self, findings, audited=("specs/a.md",), **extra):
-        data = {"repo_root": self.repo, "n": 3, "s": len(audited), "mode": "session", "spec_files": self.spec,
-                "selected": list(audited), "audited": list(audited), "findings": findings}
+    def render_input(self, findings, checked=("specs/a.md",), **extra):
+        data = {"repo_root": self.repo, "n": 3, "s": len(checked), "mode": "session", "spec_files": self.spec,
+                "selected": list(checked), "checked": list(checked), "findings": findings}
         data.update(extra)
         return data
 
@@ -1802,7 +1802,7 @@ class RoundFourFilterRender(Base):
         out = self.filter([self.across(b_line=8, c_line=1)])
         self.assertEqual(out["findings"][0]["see_also"], [])
         out = self.filter([self.across(a_quote=("Member: a person with a cart.",))],
-                          selected=self.spec, audited=self.spec)
+                          selected=self.spec, checked=self.spec)
         got = out["findings"][0]
         self.assertEqual((got["path"], got["line"], got["see_also"]), ("specs/b.md", 9, ["specs/c.md:2"]))
 
@@ -1890,7 +1890,7 @@ class RoundFourFilterRender(Base):
                 if got["piece"]["number"] == got["piece"]["of"]:
                     findings.append(json.loads("".join(pieces)))
                     pieces = []
-        whole = audit.filter_findings(json.loads(json.dumps(data)))
+        whole = check_writing.filter_findings(json.loads(json.dumps(data)))
         self.assertEqual((findings, verify), (whole["findings"], whole["verify"]))
         rdata = dict(self.render_input(findings), link_reports=[], links_not_checked=None)
         status, out, err = self.run_script("render", stdin=json.dumps(rdata).encode())
@@ -1905,7 +1905,7 @@ class RoundFourFilterRender(Base):
             continued = continued or head.endswith(", continues the line]")
             report += rest
         self.assertTrue(continued)
-        self.assertEqual(report, audit.render(json.loads(json.dumps(rdata))))
+        self.assertEqual(report, check_writing.render(json.loads(json.dumps(rdata))))
 
     def test_parts_carry_the_run(self):
         """AUD-41 (round 4, defect 8): the parts of one output carry the same run, and the parts of an output
@@ -1925,24 +1925,24 @@ class RoundFourWorkflow(unittest.TestCase):
     """Round 4 defects of workflow.js (AUD-38, AUD-26, AUD-21, AUD-18, term "Involved place")."""
 
     ARGS, run_workflow = WorkflowScript.ARGS, WorkflowScript.run_workflow
-    AUDITOR_ROWS = RoundTwoWorkflow.AUDITOR_ROWS
+    CHECKER_ROWS = RoundTwoWorkflow.CHECKER_ROWS
     CROSS = {"conditional": {"SPC-13": {"applies_to": [], "why": "w"}, "SPC-14": {"applies_to": [], "why": "w"}},
              "findings": [], "evidence": []}
 
-    def test_audit_result_in_parts(self):
-        """AUD-38 (round 4, defect 11): the audit stage's result comes in parts of at most about 20000
+    def test_check_result_in_parts(self):
+        """AUD-38 (round 4, defect 11): the check stage's result comes in parts of at most about 20000
         characters, each with the same run, that join list by list; a behaviour that one reader lists alone,
         which is never SPC-Q2 evidence (AUD-26), is left out."""
         findings = [{"line": 1, "rule": "SPC-2", "quote": ["x" * 200], "problem": "p" * 200, "rewrite": "r" * 200}] * 40
         a = {"behaviours": [{"path": "specs/a.md", "line": 1, "behaviour": "A"},
                             {"path": "specs/a.md", "line": 2, "behaviour": "only A"}], "two_readings": [], "gaps": []}
         b = {"behaviours": [{"path": "specs/a.md", "line": 1, "behaviour": "B"}], "two_readings": [], "gaps": []}
-        answers = {"auditor": {"findings": findings, "conditional": self.AUDITOR_ROWS, "evidence": []},
+        answers = {"checker": {"findings": findings, "conditional": self.CHECKER_ROWS, "evidence": []},
                    "across files": self.CROSS, "reader A": a, "reader B": b}
-        args = dict(self.ARGS, stage="audit", selected=["specs/a.md", "specs/b.md", "specs/c.md"])
+        args = dict(self.ARGS, stage="check", selected=["specs/a.md", "specs/b.md", "specs/c.md"])
         first = self.run_workflow(args, answers)["result"]
         self.assertGreater(first["parts"], 1)
-        joined = {"findings": [], "behaviours": [], "auditors": []}
+        joined = {"findings": [], "behaviours": [], "checkers": []}
         for k in range(1, first["parts"] + 1):
             got = self.run_workflow(dict(args, part=k), answers)["result"]
             self.assertLessEqual(len(json.dumps(got, separators=(",", ":"), ensure_ascii=False)), 20000)
@@ -1950,7 +1950,7 @@ class RoundFourWorkflow(unittest.TestCase):
             for key in joined:
                 joined[key] += got[key]
         self.assertEqual(len(joined["findings"]), 120)
-        self.assertEqual([x["path"] for x in joined["auditors"]], args["selected"])
+        self.assertEqual([x["path"] for x in joined["checkers"]], args["selected"])
         self.assertEqual(joined["behaviours"], [{"reader": 0, "path": "specs/a.md", "line": 1, "behaviour": "A"},
                                                 {"reader": 1, "path": "specs/a.md", "line": 1, "behaviour": "B"}])
         self.assertIn("error", self.run_workflow(dict(args, part=first["parts"] + 1), answers))
@@ -1958,16 +1958,16 @@ class RoundFourWorkflow(unittest.TestCase):
     def test_prompts(self):
         """Term "Involved place" (round 4, defects 15 and 16), AUD-21 (defect 14), AUD-18 (defect 18): the
         agents get the extended list, the missing-text rule only where it applies, and SPC-T14 for non-binding text."""
-        out = self.run_workflow(dict(self.ARGS, stage="audit"), {
-            "auditor": {"findings": [], "conditional": self.AUDITOR_ROWS, "evidence": []},
+        out = self.run_workflow(dict(self.ARGS, stage="check"), {
+            "checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
             "across files": self.CROSS, "reader": None})
-        cross, auditor = out["prompts"]["across files"], out["prompts"]["auditor specs/a.md"]
+        cross, checker = out["prompts"]["across files"], out["prompts"]["checker specs/a.md"]
         for text in ("the finding says lacks an identifier", "can collide with no stated winner",
                      "outside literal blocks and user-facing text", "AUD-21 does not apply to a finding across files"):
             self.assertIn(text, cross)
         self.assertNotIn("cites and quotes the heading line of the innermost section", cross)
-        self.assertIn("cites and quotes the heading line of the innermost section", auditor)
-        self.assertIn("SPC-9, SPC-12 and SPC-T14 (AUD-18)", auditor)
+        self.assertIn("cites and quotes the heading line of the innermost section", checker)
+        self.assertIn("SPC-9, SPC-12 and SPC-T14 (AUD-18)", checker)
         item = {"path": "specs/a.md", "line": 3, "lines": 1, "see_also": [], "problem": "p"}
         out = WorkflowScript.verify(self, [dict(item, rule="SPC-14"), dict(item, rule="SPC-1")])
         across, one = (out["prompts"][k] for k in sorted(out["prompts"]))
@@ -1984,7 +1984,7 @@ class RoundFiveWords(unittest.TestCase):
         """AUD-36 (round 5, defect 1): a setext underline and a thematic break end a block, so a stray backtick
         never pairs across them; block-quote markers are left out first, so a heading in a quote is a block and
         a fence in a quote is a literal block."""
-        count = audit.count_words
+        count = check_writing.count_words
         tail = b"uno dos tres cuatro cinco seis siete ocho `x` nueve\n"
         self.assertEqual(count(b"Use the ` key\n=============\n" + tail), 12)
         self.assertEqual(count(b"Use the ` key\n---\n" + tail), 12)
@@ -2015,13 +2015,13 @@ class RoundFivePrepare(Base):
         status, out = self.prepare()
         self.assertEqual(status, 0, out)
         self.assertEqual((out["spec_files"], out["unsearchable"]), (["t.md"], ["./"]))
-        self.assertEqual(audit.unsearchable_folders("warning: could not open directory '': Permission denied\n"), ["./"])
+        self.assertEqual(check_writing.unsearchable_folders("warning: could not open directory '': Permission denied\n"), ["./"])
         os.chmod(self.repo, stat.S_IRWXU)
         report = self.json_cmd("render", {
             "repo_root": out["repo_root"], "n": out["n"], "s": out["s"], "mode": out["mode"],
             "spec_files": out["spec_files"], "selected": out["selected"], "unreadable": out["unreadable"],
-            "unsearchable": out["unsearchable"], "audited": out["selected"], "findings": []})
-        self.assertTrue(report.endswith("## Not audited\n\n- ./ — could not be searched\n"), report)
+            "unsearchable": out["unsearchable"], "checked": out["selected"], "findings": []})
+        self.assertTrue(report.endswith("## Not checked\n\n- ./ — could not be searched\n"), report)
 
 
 class RoundFiveFilterRender(Base):
@@ -2077,7 +2077,7 @@ class RoundFiveFilterRender(Base):
         out = self.json_cmd("filter", data)
         self.assertEqual(out["dropped"], [])
         self.assertEqual([f["quote"] for f in out["findings"]], [["The system should be fast."], ["# Título"], ["Second."]])
-        self.assertEqual(audit.count_words("one two three\n".encode("utf-16")), 3)
+        self.assertEqual(check_writing.count_words("one two three\n".encode("utf-16")), 3)
 
     def test_maximal_subparts(self):
         """Term "Quote", AUD-31 (round 5, defect 6): each maximal subpart of an ill-formed UTF-8 sequence is one
@@ -2115,7 +2115,7 @@ class RoundFiveFilterRender(Base):
         findings = [dict(base, problem="b", rewrite="r"), dict(base, problem="a", rewrite="z"),
                     dict(base, problem="a", rewrite="y")]
         data = {"repo_root": self.repo, "n": 1, "s": 1, "mode": "session", "spec_files": ["specs/a.md"],
-                "selected": ["specs/a.md"], "audited": ["specs/a.md"], "findings": findings}
+                "selected": ["specs/a.md"], "checked": ["specs/a.md"], "findings": findings}
         one = self.json_cmd("render", data)
         two = self.json_cmd("render", dict(data, findings=list(reversed(findings))))
         self.assertEqual(one, two)
@@ -2128,7 +2128,7 @@ class RoundFiveSkill(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        with open(os.path.join(PLUGIN, "use-cases", "audit", "SKILL.md"), encoding="utf-8") as f:
+        with open(os.path.join(PLUGIN, "use-cases", "check-writing", "SKILL.md"), encoding="utf-8") as f:
             cls.skill = " ".join(f.read().split())
 
     def section(self, start, end):
@@ -2151,11 +2151,11 @@ class RoundFiveSkill(unittest.TestCase):
         self.assertIn("each part without its `[part …]` line", reply)
         self.assertIn("translated", reply)
 
-    def test_stop_path_gives_auditor_path(self):
-        """AUD-44, AUD-22 (round 5, defect 8): after a stop, each finding and evidence item of an auditor gets
-        that auditor's file as its path, as workflow.js does."""
+    def test_stop_path_gives_checker_path(self):
+        """AUD-44, AUD-22 (round 5, defect 8): after a stop, each finding and evidence item of a checker gets
+        that checker's file as its path, as workflow.js does."""
         stop = self.section("When the user stops the workflow task", "## 5. Render")
-        self.assertIn("each evidence item of `auditor <path>` the path `<path>`", stop)
+        self.assertIn("each evidence item of `checker <path>` the path `<path>`", stop)
 
     def test_verify_parts_resume_from_verify(self):
         """AUD-41, AUD-43 (round 5, defect 11): verify part 1 takes the args of the first audit call without
@@ -2196,14 +2196,14 @@ class RoundFiveWorkflow(unittest.TestCase):
     """Round 5 defects of workflow.js (AUD-38, AUD-28, term "Involved place")."""
 
     ARGS, run_workflow = WorkflowScript.ARGS, WorkflowScript.run_workflow
-    AUDITOR_ROWS = RoundTwoWorkflow.AUDITOR_ROWS
+    CHECKER_ROWS = RoundTwoWorkflow.CHECKER_ROWS
 
     def test_conditional_rows_split_across_parts(self):
         """AUD-38 (round 5, defect 9): the files of the SPC-13 and SPC-14 rows are list items, not copied into
         every part, so a large spec set gives parts that each stay within the limit."""
         files = ["specs/billing/module-%04d.md" % i for i in range(600)]
-        args = dict(self.ARGS, stage="audit", spec_files=files, selected=files)
-        answers = {"auditor": {"findings": [], "conditional": self.AUDITOR_ROWS, "evidence": []},
+        args = dict(self.ARGS, stage="check", spec_files=files, selected=files)
+        answers = {"checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
                    "across files": {"conditional": {"SPC-13": {"applies_to": [files[0]], "why": "Large."},
                                                     "SPC-14": {"applies_to": files, "why": "IDs."}},
                                     "findings": [], "evidence": []},
@@ -2213,7 +2213,7 @@ class RoundFiveWorkflow(unittest.TestCase):
         self.assertEqual(first["cross"], {"conditional": [{"rule": "SPC-13", "why": "Large."},
                                                           {"rule": "SPC-14", "why": "IDs."}]})
         self.assertEqual(joined["applies_to"], [{"rule": r, "path": p} for r in ("SPC-13", "SPC-14") for p in files])
-        self.assertEqual(len(joined["auditors"]), 600)
+        self.assertEqual(len(joined["checkers"]), 600)
 
     def test_item_larger_than_a_part_in_pieces(self):
         """AUD-38, AUD-28 (round 5, defect 10): an item longer than a part comes in pieces, each part within the
@@ -2221,8 +2221,8 @@ class RoundFiveWorkflow(unittest.TestCase):
         files = ["specs/f%03d.md" % i for i in range(200)]
         involved = [{"path": p, "line": 3, "quote": ["Dieser Satz ist auf Deutsch geschrieben, nicht auf Englisch."],
                      "rewrite": "This sentence is written in English, as the rest of the spec set is."} for p in files]
-        args = dict(self.ARGS, stage="audit", spec_files=files, selected=files[:2])
-        answers = {"auditor": {"findings": [], "conditional": self.AUDITOR_ROWS, "evidence": []},
+        args = dict(self.ARGS, stage="check", spec_files=files, selected=files[:2])
+        answers = {"checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
                    "across files": {"conditional": {"SPC-13": {"applies_to": [], "why": "w"},
                                                     "SPC-14": {"applies_to": [], "why": "w"}},
                                     "findings": [{"rule": "SPC-3", "problem": "p \"quoted\" \\ text", "involved": involved}],
@@ -2235,8 +2235,8 @@ class RoundFiveWorkflow(unittest.TestCase):
     def test_involved_places_of_the_finding(self):
         """Term "Involved place", AUD-E13 (round 5, defect 12): the pass gives only the places its finding is
         about; a statement without identifier is involved only when the finding says it lacks one."""
-        out = self.run_workflow(dict(self.ARGS, stage="audit"), {
-            "auditor": {"findings": [], "conditional": self.AUDITOR_ROWS, "evidence": []},
+        out = self.run_workflow(dict(self.ARGS, stage="check"), {
+            "checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
             "across files": RoundFourWorkflow.CROSS, "reader": None})
         cross = out["prompts"]["across files"]
         self.assertIn("each statement that the finding says lacks an identifier", cross)
@@ -2285,8 +2285,8 @@ class LinksBetweenLayers(Base):
         return self.json_cmd("render", {
             "repo_root": prep["repo_root"], "n": prep["n"], "s": prep["s"], "mode": prep["mode"],
             "spec_files": prep["spec_files"], "selected": prep["selected"], "unreadable": prep["unreadable"],
-            "unsearchable": prep["unsearchable"], "audited": prep["selected"], "findings": [], "conditional": [],
-            "questions": [], "not_audited": [], "link_reports": prep["link_reports"],
+            "unsearchable": prep["unsearchable"], "checked": prep["selected"], "findings": [], "conditional": [],
+            "questions": [], "not_checked": [], "link_reports": prep["link_reports"],
             "links_not_checked": prep["links_not_checked"]})
 
     def process(self, line6="See [Fees (not specified yet)](absent:fees.md)."):
@@ -2307,7 +2307,7 @@ class LinksBetweenLayers(Base):
         self.assertEqual(out["link_reports"], [{"path": "specs/process.md", "line": 6, "layer": "layer 1", "case": 2,
                                                 "link": "[Fees (not specified yet)](absent:fees.md)"}])
         report = self.rendered(out)
-        self.assertIn("2 of 2 selected spec files audited, 0 findings.", report)
+        self.assertIn("2 of 2 selected spec files checked, 0 findings.", report)
         self.assertIn(
             "## Links between layers\n\n"
             "- specs/process.md:6 · layer 1\n"
@@ -2315,7 +2315,7 @@ class LinksBetweenLayers(Base):
             "  Problem: absent link whose link target exists neither in layer 1 nor in layer 0\n"
             "  Rewrite: delete the whole link, its text and its destination, and rewrite or delete its sentence\n"
             "\n## Conditional rules", report)
-        self.assertTrue(report.endswith("## Not audited\n\nNone.\n"))
+        self.assertTrue(report.endswith("## Not checked\n\nNone.\n"))
 
     def test_absent_link_to_a_promoted_spec(self):
         """AUD-E16, AUD-56 case 1, AUD-57: the rewrite is the plain link of ORC-41, also when layer 0 holds it too."""
@@ -2337,18 +2337,18 @@ class LinksBetweenLayers(Base):
         self.assertEqual(self.check(0)["link_reports"], [])
 
     def test_repository_with_no_project(self):
-        """AUD-E18, AUD-59 condition 1, AUD-35, AUD-42: no refusal; Not checked., and the line of Not audited, last."""
+        """AUD-E18, AUD-59 condition 1, AUD-35, AUD-42: no refusal; Skipped., and the line of Not checked, last."""
         self.write("specs/a.md", "# A\n")
         status, out = self.prepare()
         self.assertEqual(status, 0, out)
         self.assertEqual((out["link_reports"], out["links_not_checked"]),
                          ([], "project.json is missing or does not have the form of ORC-20"))
-        data = dict(out, audited=[], findings=[], not_audited=[{"what": "specs/a.md", "reason": "could not be read"},
+        data = dict(out, checked=[], findings=[], not_checked=[{"what": "specs/a.md", "reason": "could not be read"},
                                                               {"pass": "readers"}])
         report = self.json_cmd("render", data)
-        self.assertIn("## Links between layers\n\nNot checked.\n\n## Conditional rules", report)
+        self.assertIn("## Links between layers\n\nSkipped.\n\n## Conditional rules", report)
         self.assertTrue(report.endswith(
-            "## Not audited\n\n- specs/a.md — could not be read\n- readers (SPC-Q2, SPC-Q3) — a reader failed or did not finish\n"
+            "## Not checked\n\n- specs/a.md — could not be read\n- readers (SPC-Q2, SPC-Q3) — a reader failed or did not finish\n"
             "- links between layers — project.json is missing or does not have the form of ORC-20\n"))
 
     def reason(self, n):
@@ -2454,7 +2454,7 @@ class LinksBetweenLayers(Base):
 
     def test_no_lazy_fetch(self):
         """AUD-38: git fetches no missing object of a partial clone."""
-        self.assertEqual(audit.git_env()["GIT_NO_LAZY_FETCH"], "1")
+        self.assertEqual(check_writing.git_env()["GIT_NO_LAZY_FETCH"], "1")
 
     def test_what_counts_as_a_link_and_as_existing(self):
         """AUD-56, AUD-54: the destination as the file holds it; working tree read, HEAD for existence; folders exist."""
@@ -2521,7 +2521,7 @@ class LinksBetweenLayers(Base):
         """AUD-56 to AUD-59, AUD-46: render exits 2 on link reports or a reason of another form, and on missing fields."""
         self.process()
         prep = self.check(1)
-        good = dict(prep, audited=prep["selected"], findings=[], not_audited=[])
+        good = dict(prep, checked=prep["selected"], findings=[], not_checked=[])
         report = dict(prep["link_reports"][0])
         for bad in ({"links_not_checked": "some reason"}, {"link_reports": [dict(report, case=3)]},
                     {"link_reports": [dict(report, path="other.md")]}, {"link_reports": [dict(report, line="6")]},
@@ -2529,10 +2529,10 @@ class LinksBetweenLayers(Base):
                     {"link_reports": [report], "links_not_checked": "git failed: x"}, {"link_reports": "none"}):
             status, _, err = self.run_script("render", stdin=json.dumps(dict(good, **bad)).encode())
             self.assertEqual(status, 2, bad)
-        self.assertEqual(audit.render(dict(good))[:5], "Audit")
+        self.assertEqual(check_writing.render(dict(good))[:16], "Check of writing")
         for key in ("link_reports", "links_not_checked"):
-            with self.assertRaises(audit.BadInput):
-                audit.render({k: v for k, v in good.items() if k != key})
+            with self.assertRaises(check_writing.BadInput):
+                check_writing.render({k: v for k, v in good.items() if k != key})
 
 
 if __name__ == "__main__":

@@ -13,10 +13,13 @@ this module apply it.
 
 ## Tools
 
-- `/specs-management:audit`: audits the draft specs of a layer 0 repository or the specs of a
-  layer 1 repository against
-  writing-specs.md and recommends rewrites, in the chat
-  ([specs/audit.md](use-cases/audit/specs/audit.md)).
+- `/specs-management:check-writing [<path>]`: checks the writing of the draft specs of a layer 0
+  repository or the specs of a layer 1 repository against writing-specs.md and recommends rewrites,
+  in the chat ([specs/check-writing.md](use-cases/check-writing/specs/check-writing.md)).
+- `/specs-management:check-consistency <path>`: checks one spec of layer 0 or layer 1 against the
+  whole of layers 0 and 1 (contradictions, repeated facts, terms, broken links), with agents, and
+  reports in the chat; it writes nothing and stops nothing. Very costly: run it only on purpose
+  ([specs/check-consistency.md](use-cases/check-consistency/specs/check-consistency.md)).
 - `/specs-management:promote <path>...`: moves draft specs from layer 0 to
   layer 1, at the same path, and turns the absent links that point at them
   back into plain links ([specs/promote.md](use-cases/promote/specs/promote.md)).
@@ -26,7 +29,7 @@ this module apply it.
   ([specs/demote.md](use-cases/demote/specs/demote.md)).
 
 - `/specs-management:write [<path>]`: interviews the user about what they want, writes it as a
-  draft spec of layer 0, checks it against layers 0 and 1, and proposes its promote; it also
+  draft spec of layer 0, checks it cheaply against layers 0 and 1, and proposes its promote; it also
   changes or deletes a spec of layer 1, after its demote
   ([specs/write.md](use-cases/write/specs/write.md)).
 

@@ -2,9 +2,9 @@
 
 **Audience:** The people who write a project's draft specs and specs; whoever builds the skill `write` of the plugin `specs-management`
 
-**Scope:** The use case in which the AI interviews a person about what they want, and writes it as a draft spec of layer 0: a new draft spec, a change to a draft spec, or a change to or the deletion of a spec of layer 1 after its demote. It checks the draft cheaply against layers 0 and 1 after each change and, when the user says the draft is ready, runs the audit and proposes its promote
+**Scope:** The use case in which the AI interviews a person about what they want, and writes it as a draft spec of layer 0: a new draft spec, a change to a draft spec, or a change to or the deletion of a spec of layer 1 after its demote. It checks the draft cheaply against layers 0 and 1 after each change and, when the user says the draft is ready, proposes its promote
 
-A use case of the module `specs-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). The guideline that every draft spec follows is [writing-specs.md](../../../writing-specs.md). Out of scope: writing a new spec directly in layer 1; changing a spec of layer 1 in place; promoting or demoting without the user's yes; layers 2, 3 and 4.
+A use case of the module `specs-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). The guideline that every draft spec follows is [writing-specs.md](../../../writing-specs.md). Out of scope: writing a new spec directly in layer 1; changing a spec of layer 1 in place; promoting or demoting without the user's yes; running the check of writing ([check-writing.md](../../check-writing/specs/check-writing.md)) or the check of consistency ([check-consistency.md](../../check-consistency/specs/check-consistency.md)), which run only when the user asks for them; layers 2, 3 and 4.
 
 ## Terms
 
@@ -155,16 +155,17 @@ Feature: Write a draft spec
         | change of a spec       | docs: change draft spec    |
         | deletion of a spec     | docs: delete spec          |
 
-  Rule: ORC-67 Before it proposes the promote, the skill runs the audit and the cheap check, and no full check of consistency
+  Rule: ORC-67 Before it proposes the promote, the skill runs only the cheap checks of ORC-65, and never the check of writing or the check of consistency
 
     Scenario: The draft is ready
       Given the user says the draft is ready
-      Then the skill runs "/specs-management:audit <path>" in layer 0, and the checks of ORC-65 once more
-      And it shows the findings of the audit and each link of the draft whose link target does not exist
+      Then the skill runs the checks of ORC-65 once more
+      And it shows each link of the draft whose link target does not exist
 
     Scenario: No broken link
       Given the checks of ORC-65 found no link of the draft whose link target does not exist
-      Then the skill proposes "/specs-management:promote <path>", with the number of findings of the audit
+      Then the skill proposes "/specs-management:promote <path>"
+      And it may say, in one line, that the user can first run "/specs-management:check-writing <path>" or "/specs-management:check-consistency <path>"
       And it runs the promote only after the user's yes
 
     Scenario: A broken link
@@ -172,15 +173,15 @@ Feature: Write a draft spec
       Then the skill does not propose the promote
       And it resumes the interview on that link
 
-    Scenario: No full check of consistency (must not)
-      Then the skill never checks the draft against the whole of layer 0 and the whole of layer 1 with agents before the promote
-      And the findings of the audit do not stop the promote
+    Scenario: The skill never runs the other checks (must not)
+      Then the skill never runs "/specs-management:check-writing" nor "/specs-management:check-consistency", before the promote or at any other time
+      And it never checks the draft against the whole of layer 0 and the whole of layer 1 with agents
 
-    Scenario: The audit runs only when asked (must not)
+    Scenario: The promote is proposed only when the draft is ready (must not)
       Given the user has not said that the draft is ready
-      Then the skill does not run the audit
+      Then the skill does not propose the promote
 
-    Deliberate design: the check of the whole of layers 0 and 1 is left out. Rationale: it cost more than a million tokens for one draft, and it reported inconsistencies of the layers that the change of the draft did not cause, which stopped the promote of a change that had none. The checks of ORC-65 after each change remain.
+    Deliberate design: the check of writing and the check of consistency run only when the user asks for them (ORC-7). Rationale: the check of consistency cost more than a million tokens for one draft, and it reported inconsistencies of the layers that the change of the draft did not cause, which stopped the promote of a change that had none; the check of writing runs several agents. The checks of ORC-65 after each change remain.
 
   Rule: ORC-68 Deleting a spec deletes its draft and every link to it, in both layers
 

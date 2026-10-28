@@ -2,7 +2,7 @@
 
 Spec: use-cases/write/specs/write.md (ORC-59 to ORC-69). Each test names the
 ORC-n it checks. The rules that only the model follows (the interview of
-ORC-63, the writing of ORC-64, the audit and the promote of ORC-67) are in SKILL.md,
+ORC-63, the writing of ORC-64, the proposal of the promote of ORC-67) are in SKILL.md,
 not here. Run with:
 
     python3 -m unittest discover -s apps/indra-software-factory/modules/specs-management/tests
@@ -323,7 +323,7 @@ class Check(Base):
                                        "also": [{"layer": 1, "path": "specs/b.md", "line": 2, "declared": True}]}])
 
     def test_absent_link_in_angle_brackets(self):
-        """ORC-65: an absent link in angle brackets is a link, as the audit reads it (AUD-56): broken, and a
+        """ORC-65: an absent link in angle brackets is a link, as the check of writing reads it (AUD-56): broken, and a
         neighbour that links to the draft."""
         self.commit(1, {"specs/c.md": "[A (not specified yet)](<absent:a.md>)\n"})
         self.write(self.r[0], "specs/a.md", "# A\n\n[B (not specified yet)](<absent:b.md>)\n")
@@ -372,7 +372,7 @@ class Delete(Base):
             self.assertEqual(self.status(layer), "")
 
     def test_absent_link_in_angle_brackets(self):
-        """ORC-68: an absent link whose destination is in angle brackets is a link of the audit, and goes too."""
+        """ORC-68: an absent link whose destination is in angle brackets is a link of the check of writing, and goes too."""
         self.commit(1, {"specs/angle.md": "See [X (not specified yet)](<absent:a.md>) now.\n"})
         _, out = self.flow()
         self.assertIn("specs/angle.md", out["changed"]["1"])
@@ -532,6 +532,19 @@ class Skill(unittest.TestCase):
                       text)
         self.assertIn("never renumber an ID the draft already had", text)
         self.assertNotIn("each ID that collides; renumber it", text)
+
+    def test_ready_runs_only_the_cheap_checks(self):
+        """ORC-67: when the draft is ready, the skill runs `WRITE check` and never the check of writing or the
+        check of consistency, nor their scripts; it may name them to the user."""
+        with open(os.path.join(PLUGIN, "use-cases", "write", "SKILL.md"), encoding="utf-8") as f:
+            text = f.read()
+        step9 = text.split("## 9. ")[1]
+        self.assertIn("WRITE check REPO -- '<path>'", step9)
+        self.assertIn("Never run `/specs-management:check-writing` or\n`/specs-management:check-consistency` yourself", step9)
+        for script in ("check_writing.py", "check-writing/SKILL.md", "check_consistency.py", "workflow.js"):
+            self.assertNotIn(script, text, script)
+        head = text.split("---")[1]
+        self.assertIn("it never runs /specs-management:check-writing or /specs-management:check-consistency", head)
 
 
 if __name__ == "__main__":

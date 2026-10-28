@@ -2,14 +2,14 @@
 
 Specs: specs/module.md, ORC-37 and the terms Path, Exists, Link, Absent link,
 Plain link and Link target; project-management/specs/module.md, ORC-20 to
-ORC-24; use-cases/audit/specs/audit.md, AUD-54 to AUD-59.
+ORC-24; use-cases/check-writing/specs/check-writing.md, AUD-54 to AUD-59.
 
     locate(repo, origin)                 -> (layer, {0: path, 1: path})
     link_reports(layer, texts, trees)    -> [report], the cases of AUD-56
 
 `locate` raises NotFound with the condition that holds, in the order of
 AUD-59; each caller words it (move.find_repos for promote and demote, the
-audit for its "Not audited" line). This module runs no command and writes
+check of writing for its "Not checked" line). This module runs no command and writes
 nothing: the caller gives the URL of the remote `origin` and the trees at
 `HEAD`, so that each use case runs git its own way.
 """
@@ -175,7 +175,7 @@ def link_reports(layer, texts, trees):
                 case = 3
             if case is None:
                 continue
-            # Term Line of audit.md: lines end at each LF only.
+            # Term Line of check-writing.md: lines end at each LF only.
             r = dict(path=path, line=text.count("\n", 0, l["open"]) + 1, open=l["open"], end=l["end"], case=case)
             if case == 1:
                 r["plain"] = plain_link(text, l)
