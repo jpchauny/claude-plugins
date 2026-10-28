@@ -84,7 +84,7 @@ class AcceptanceCI(unittest.TestCase):
     def configure(self, command, entry):
         product = {"acme/billing-code": entry} if entry else {}
         write(os.path.join(self.acc, "acceptance.json"), json.dumps(
-            {"default_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
+            {"default_done_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
              "test_command": command, "product": product}))
         git(self.acc, "add", "-A")
         git(self.acc, "commit", "-q", "-m", "config")
@@ -280,7 +280,7 @@ class AcceptanceCI(unittest.TestCase):
 
     def test_acu6_product_of_an_unknown_repository_is_refused(self):
         write(os.path.join(self.acc, "acceptance.json"), json.dumps(
-            {"default_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
+            {"default_done_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
              "test_command": "true",
              "product": {"acme/other": {"build": "true", "env": "X"}}}))
         r = self.run_ci()
@@ -338,12 +338,12 @@ class AcceptanceCI(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.acc, "records")))
 
     def test_acu6_acceptance_json_of_another_form_is_refused(self):
-        good = {"default_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
+        good = {"default_done_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0,
                 "test_command": "true", "product": {}}
         bad = ["[]", json.dumps(dict(good, test_command=7)), json.dumps(dict(good, test_command=["true"])),
                json.dumps(dict(good, test_command=0)), json.dumps(dict(good, last_unit_id="1")),
                json.dumps(dict(good, last_unit_id=-1)), json.dumps(dict(good, increments=[])),
-               json.dumps(dict(good, product=[])), json.dumps(dict(good, default_profile="gold")), "not json"]
+               json.dumps(dict(good, product=[])), json.dumps(dict(good, default_done_profile="gold")), "not json"]
         for text in bad:
             with self.subTest(text=text):
                 write(os.path.join(self.acc, "acceptance.json"), text)

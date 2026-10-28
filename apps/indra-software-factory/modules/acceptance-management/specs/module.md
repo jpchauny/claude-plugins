@@ -4,9 +4,9 @@
 
 **Audience:** The people who decide what a project delivers and accept it, and the Claude Code sessions of layers 3 and 4; whoever builds the plugin `acceptance-management`
 
-**Scope:** Layer 3: the acceptance areas and the acceptance units of a project, their acceptance tests, how they relate to the norms and to the code, and when a unit, an area and an increment are done. Its use case `define`, with which the acceptance architect creates, changes and deletes the acceptance areas and the acceptance units, is in [define.md](../use-cases/define/specs/define.md). Out of scope: how layer 4 implements a unit, which is in [implement.md](../../code-implementation/use-cases/implement/specs/implement.md); what the five layers are and what each reads, which is in [layers.md](../../development-methodology/specs/layers.md); where this module is installed, which is [APP-6](../../development-methodology/specs/layers.md#where-each-module-is-installed)
+**Scope:** Layer 3: the acceptance areas and the acceptance units of a project, their acceptance tests, how they relate to the norms and to the code, and when an acceptance unit, an acceptance area and an increment are done. Its use case `define`, with which the acceptance architect creates, changes and deletes the acceptance areas and the acceptance units, is in [define.md](../use-cases/define/specs/define.md). Out of scope: how layer 4 implements an acceptance unit, which is in [implement.md](../../code-implementation/use-cases/implement/specs/implement.md); what the five layers are and what each reads, which is in [layers.md](../../development-methodology/specs/layers.md); where this module is installed, which is [APP-6](../../development-methodology/specs/layers.md#where-each-module-is-installed)
 
-The module `acceptance-management` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md). The terms norm, norm ID and norm hash are those of [implement.md](../../code-implementation/use-cases/implement/specs/implement.md#terms).
+The module `acceptance-management` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md). The terms norm, norm ID, norm hash, derived norm, specs repository, norms repository, acceptance repository and code repository are those of [layers.md](../../development-methodology/specs/layers.md#terms); the terms run, step and hand-off are those of [flow.md](../../development-methodology/specs/flow.md#terms).
 
 The norms say what the product must do, rule by rule. They do not say what
 the person receives, nor when it is finished: every norm can hold on its own
@@ -18,54 +18,60 @@ norms it groups, the evidence that it works, and the person's acceptance.
 
 | Term | Meaning |
 |---|---|
-| Acceptance repository | The repository of layer 3 of a project, `<project>-acceptance` by recommendation: one for the whole project ([LAY-1](../../development-methodology/specs/layers.md#rules)). |
-| Code repository | A repository of layer 4. |
 | Requester | The person who asks for the acceptance areas and the acceptance units of a project, approves them and validates them. |
 | Acceptance unit | The smallest part of the product that the requester can recognise and validate end to end (ACU-1). |
 | Work item | A piece of work of layer 4 that the requester cannot judge alone, such as "write the parser". |
 | Acceptance area | An observable area of the product, made of acceptance units, such as "Billing" (ACU-3). |
 | Increment | A set of acceptance units that are delivered together, such as a first release. The implementation planner decides it (ACU-9). |
+| Plan of implementation | The file `plan.json` of the acceptance repository: the increments, and the order in which their acceptance units are implemented (ACU-39). |
 | Unit ID | The ID of an acceptance unit: `AU-` followed by a number, such as `AU-3`. |
 | Area ID | The ID of an acceptance area: `AA-` followed by a number, such as `AA-1`. |
 | Scenario ID | The ID of a scenario: `SC-` followed by a number, such as `SC-5`, written as its tag `@SC-5` (ACU-50). |
+| Title | Of an acceptance unit or an acceptance area: what follows its unit ID or area ID and one space in its heading (ACU-7, ACU-8). |
+| Fingerprint | The 8 hex digits that ACU-51 computes from a range of lines of a file. |
 | Unit hash | The fingerprint of the file of an acceptance unit from its line `## Narrative` to its end, such as `efc7ae86` (ACU-52). |
 | Area hash | The fingerprint of the file of an acceptance area from its line `## Purpose` to its end (ACU-53). |
 | Scenario hash | The fingerprint of the text of one scenario (ACU-54). |
-| Citation | One line `<ID>@<hash>: <text>`, in one of the forms of ACU-56: a norm in `## Norms` of a unit; a unit in the code and the unit tests of layer 4; a unit or an area, and a scenario, in an acceptance test. |
-| Non-goal | One thing that a unit does not do: a list item of its section `## Non-goals` (ACU-8). |
-| Scenario | One example of use of a unit or an area, in Gherkin: a starting state (`Given`), an action through the external interface (`When`) and a result seen from outside (`Then`). |
+| Citation | One line `<ID>@<hash>: <text>`, where `<hash>` is the norm hash, the unit hash, the area hash or the scenario hash of `<ID>`, in one of the forms of ACU-56: a norm citation; an acceptance unit cited in the code and the unit tests of layer 4; an acceptance unit or an acceptance area, and a scenario, cited in an acceptance test. |
+| Norm citation | A citation of a norm, `<norm ID>@<norm hash>: <reason>`: a list item of `## Norms` of an acceptance unit (ACU-8, ACU-56), or a line of a derived norm ([LAY-3](../../development-methodology/specs/layers.md#rules)). Its norm hash is that of the version of the norm that the acceptance unit was written for. |
+| Non-goal | One thing that an acceptance unit does not do: a list item of its section `## Non-goals` (ACU-8). |
+| Scenario | One example of use of an acceptance unit or an acceptance area, in Gherkin: a starting state (`Given`), an action through the external interface (`When`) and a result seen from outside (`Then`). |
 | External interface | What the product shows to the outside: its commands, endpoints, screens, files and public functions. |
+| Gap of layer 1 | An action through the external interface, or a result seen from outside, that a scenario or the code needs and that no norm states; it is fixed in layer 1 first (ACU-4, ACU-17, [LAY-5](../../development-methodology/specs/layers.md#rules)). |
 | Acceptance test | A test of the acceptance repository that runs one scenario through the external interface only. It is evidence of done. |
 | Unit test | A test of a code repository, written by the implementing agent, that knows the code. It serves the implementation and is not evidence of done. |
 | Product build | What a code repository builds and the acceptance tests run against: a binary, a container image, or the URL of a running service. |
-| Demo | A run of the scenarios of a unit that the requester watches, recorded with the commit of each code repository it ran on. |
-| Acceptance architect | A Claude Code session of layer 3: it decides the acceptance areas, the acceptance units and the norms of each unit. |
-| Implementation planner | A Claude Code session of layer 3: it decides the increments and the order in which the acceptance units are implemented (ACU-39, ACU-44). |
+| Demo | A showing of the scenarios of an acceptance unit that the requester watches, recorded with the commit of each code repository it ran on. |
+| Run of the continuous integration | One execution of the workflow of the continuous integration of the acceptance repository, which runs the acceptance tests and records their results (ACU-34). |
+| Acceptance architect | A Claude Code session of layer 3: it decides the acceptance areas, the acceptance units and the norms of each acceptance unit. |
+| Implementation planner | A Claude Code session of layer 3: it decides the increments and the plan of implementation (ACU-39, ACU-44). |
 | Test agent | A Claude Code session of layer 3: it writes the acceptance tests. |
-| Norms reviewer | A Claude Code session of layer 3, other than the acceptance architect: it selects the norms of a unit without seeing its `## Norms`, when the done profile of the unit asks for it (ACU-15). |
+| Norms reviewer | A Claude Code session of layer 3, other than the acceptance architect: it selects the norms of an acceptance unit without seeing its `## Norms`, when the done profile of the acceptance unit asks for it (ACU-15). |
 | Implementing agent | A Claude Code session of layer 4: it writes the code. |
 | Model family | The models of one provider, such as those of Anthropic or those of OpenAI. |
 | Reference commit | For each code repository, the head of its default branch. |
 | Release | A version of the product that reaches its users: a deployment to production for a service, a published version (a tag and its published package) for a library or a compiler. |
 | Decision block | The comment in the code, just above what it decides, that records one AI decision (ACU-17). |
 | Evidence | What shows that a condition of done holds: an acceptance test that passes, a demo, a citation in the code, a decision block, a validation, or an accepted deviation. |
+| Record | The file `records/<unit ID or area ID>.jsonl` of the acceptance repository: the evidence of one acceptance unit or one acceptance area, one line per evidence (ACU-35). |
 | AI decision | A significant choice that the implementing agent made where the norms leave it free (ACU-17). |
-| Deviation | A point where a unit does not meet what was asked and is accepted that way (ACU-18). |
+| Deviation | A point where an acceptance unit does not meet what was asked and is accepted that way (ACU-18). |
 | Done profile | A named level of rigour: `prototype`, `product` or `critical` (ACU-19). |
-| State | Where a unit is on the ladder of done: `pending`, `verified`, `validated` or `in use` (ACU-23). |
+| Default done profile | The done profile that `default_done_profile` of `acceptance.json` names, which each acceptance unit with no line `Profile:` follows (ACU-20). |
+| State | Where an acceptance unit is on the ladder of done: `pending`, `verified`, `validated` or `in use` (ACU-23). |
 | Stale | Said of evidence that no longer holds, because what it was produced for changed (ACU-26). |
 
 ## The acceptance area and the acceptance unit
 
-- **ACU-1.** An acceptance unit has a criterion of its own: the requester can judge it alone, without waiting for another unit. A work item is not an acceptance unit.
+- **ACU-1.** An acceptance unit has a criterion of its own: the requester can judge it alone, without waiting for another acceptance unit. A work item is not an acceptance unit.
 
   Examples (illustrative): "the user exports the invoices to CSV" is an
   acceptance unit; "write the CSV writer" is a work item. In a compiler, "a
   program that multiplies two integers prints their product" is an acceptance
   unit; "write the lexer" is a work item.
 
-- **ACU-2.** The acceptance architect analyses every norm of layer 2 against every area and every unit of the acceptance repository, and proposes the changes of the tree: to add, change or delete an area or a unit. A new spec does not need a new unit. The acceptance architect also decides which norms each unit groups, so that the unit can be implemented. It is not bound to put every norm in a unit: a norm that no unit groups is left out (ACU-32). The requester approves each change as [LAY-9](../../development-methodology/specs/layers.md#rules) says. The acceptance architect reads only layer 2 and the acceptance repository ([LAY-8](../../development-methodology/specs/layers.md#rules)).
-- **ACU-3.** The acceptance areas and the acceptance units form a tree of two levels: the product, its areas, and the units of each area. Each unit belongs to exactly one area. What an area covers is the union of the norms that its units group. Deliberate design: an area holds no other area.
+- **ACU-2.** The acceptance architect analyses every norm of layer 2 against every acceptance area and every acceptance unit of the acceptance repository, and proposes the changes of the tree: to add, change or delete an acceptance area or an acceptance unit. A new spec does not need a new acceptance unit. The acceptance architect also decides which norms each acceptance unit groups, so that the acceptance unit can be implemented. It is not bound to put every norm in an acceptance unit: a norm that no acceptance unit groups is left out (ACU-32). The requester approves each change as [LAY-9](../../development-methodology/specs/layers.md#rules) says. The acceptance architect reads only layer 2 and the acceptance repository ([LAY-8](../../development-methodology/specs/layers.md#rules)).
+- **ACU-3.** The acceptance areas and the acceptance units form a tree of two levels: the product, its acceptance areas, and the acceptance units of each acceptance area. Each acceptance unit belongs to exactly one acceptance area. What an acceptance area covers is the union of the norms that its acceptance units group. Deliberate design: an acceptance area holds no other acceptance area.
 
   Examples (illustrative):
 
@@ -76,25 +82,25 @@ norms it groups, the evidence that it works, and the person's acceptance.
   | A game | The 3D world | Terrain; weather; day and night cycle |
 
 - **ACU-4.** An acceptance area or an acceptance unit decides only how the norms are delivered and accepted, never what the product does. What it may decide (complete list):
-  - which norms each unit groups;
-  - the boundary of each unit, in its non-goals;
-  - the area of each unit;
+  - which norms each acceptance unit groups;
+  - the boundary of each acceptance unit, in its non-goals;
+  - the acceptance area of each acceptance unit;
   - its done profile.
 
-  Which units each increment holds is decided by the implementation planner (ACU-44).
+  Which acceptance units each increment holds is decided by the implementation planner (ACU-44).
 
-  A scenario whose action through the external interface or whose expected result no norm states is a gap of layer 1. The acceptance architect then opens an issue in the repository of layer 1, as [LAY-5](../../development-methodology/specs/layers.md#rules) says, and leaves the scenario out of the change that the requester approves; it adds the scenario in a later change, once layer 2 holds a norm for it.
+  A scenario whose action through the external interface or whose expected result no norm states is a gap of layer 1. The acceptance architect then opens an issue in the specs repository, as [LAY-5](../../development-methodology/specs/layers.md#rules) says, and leaves the scenario out of the change that the requester approves; it adds the scenario in a later change, once layer 2 holds a norm for it.
 
   Rationale: layer 1 is the only source of truth ([LAY-2](../../development-methodology/specs/layers.md#rules)). A scenario that
   invents a command or a result would make layer 3 a second source.
 
-- **ACU-5.** A unit, an area or a scenario keeps its ID forever; its title, or the name of the scenario, may change. An ID is never given again, even after its unit, area or scenario is removed (ACU-55).
-- **ACU-50.** Each scenario, of a unit or of an area, has exactly one tag of the form `@SC-<n>` on its tag lines (ACU-54), where `<n>` is a number without leading zeros: `SC-<n>` is its scenario ID. No two scenarios of the acceptance repository have the same scenario ID. A scenario keeps its scenario ID when its text changes, and when it moves to another unit or area.
+- **ACU-5.** An acceptance unit, an acceptance area or a scenario keeps its ID forever; its title, or the name of the scenario, may change. An ID is never given again, even after its acceptance unit, acceptance area or scenario is removed (ACU-55).
+- **ACU-50.** Each scenario, of an acceptance unit or of an acceptance area, has exactly one tag of the form `@SC-<n>` on its tag lines (ACU-54), where `<n>` is a number without leading zeros: `SC-<n>` is its scenario ID. No two scenarios of the acceptance repository have the same scenario ID. A scenario keeps its scenario ID when its text changes, and when it moves to another acceptance unit or acceptance area.
 - **ACU-55.** The next area ID, unit ID and scenario ID are `AA-`, `AU-` and `SC-` followed by `last_area_id`, `last_unit_id` and `last_scenario_id` of `acceptance.json` (ACU-6), each plus 1. The change that gives an ID sets the field of its kind to the number of that ID, in the same commit. A field never decreases, and is never lower than the number of an ID of its kind in the acceptance repository.
 
-  Example (illustrative): with `last_unit_id` 3, a change that adds two units gives them `AU-4` and `AU-5`, and sets `last_unit_id` to 5; a later change that removes `AU-5` leaves it at 5, and the next unit is `AU-6`.
+  Example (illustrative): with `last_unit_id` 3, a change that adds two acceptance units gives them `AU-4` and `AU-5`, and sets `last_unit_id` to 5; a later change that removes `AU-5` leaves it at 5, and the next acceptance unit is `AU-6`.
 
-  Rationale: a removed area, unit or scenario leaves no file behind, so only a
+  Rationale: a removed acceptance area, acceptance unit or scenario leaves no file behind, so only a
   number that only grows can tell which IDs were already given.
 
 ## The files of the acceptance repository
@@ -103,7 +109,7 @@ norms it groups, the evidence that it works, and the person's acceptance.
   - `README.md`, `CLAUDE.md`, `.claude/settings.json` and `project.json`, which every repository of the project holds, written when the project is created ([ORC-5](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project));
   - `.github/workflows/acceptance.yml`: the continuous integration of ACU-34, written when the project is created ([CRP-1](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project));
   - `acceptance.json`: one object with these fields (complete list):
-    - `default_profile`: a done profile, a string;
+    - `default_done_profile`: a done profile, a string;
     - `last_area_id`, `last_unit_id` and `last_scenario_id`: each an integer, 0 or greater, the number of the latest area ID, unit ID or scenario ID given in the project (ACU-55);
     - `test_command`: a string, a shell command (ACU-34):
       - it runs with the root of the acceptance repository as its working directory;
@@ -114,12 +120,12 @@ norms it groups, the evidence that it works, and the person's acceptance.
       - `env`: a string of `A`-`Z`, `0`-`9` and `_` that does not start with a digit, the name of the environment variable that gives that value to the acceptance tests (ACU-11);
       - `published`: a string, the shell command that, in an empty folder outside every repository of the project, obtains the latest published product build of the code repository, without cloning or fetching the code repository, and prints as the last line of its standard output the value that the acceptance tests use; absent when the code repository publishes no product build (ACU-49 says who runs it). Example (illustrative): a command that downloads a released binary, pulls a container image or prints the URL of a deployed service.
 
-    `last_area_id`, `last_unit_id` and `last_scenario_id` are 0 until the first area, unit or scenario is given its ID; `test_command` is the empty string and `product` the empty object until there is code to test (ACU-43). The file is written when the project is created ([CRP-2](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project)). This clause is the only place that defines the fields of `acceptance.json` and the variables `ACCEPTANCE_TARGET` and `ACCEPTANCE_REPORT`; the script of ACU-34 and [IMP-16](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task) cite it.
+    `last_area_id`, `last_unit_id` and `last_scenario_id` are 0 until the first acceptance area, acceptance unit or scenario is given its ID; `test_command` is the empty string and `product` the empty object until there is code to test (ACU-43). The file is written when the project is created ([CRP-2](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project)). This clause is the only place that defines the fields of `acceptance.json` and the variables `ACCEPTANCE_TARGET` and `ACCEPTANCE_REPORT`; the script of ACU-34 and [IMP-16](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task) cite it.
 
     Binding example; what binds is the keys, their nesting and the types of the values, not the names, the commands or the values:
 
     ```json
-    {"default_profile": "product",
+    {"default_done_profile": "product",
      "last_area_id": 1, "last_unit_id": 3, "last_scenario_id": 9,
      "test_command": "pytest \"$ACCEPTANCE_TARGET\" --junitxml \"$ACCEPTANCE_REPORT\"",
      "product": {"acme/billing-code-api": {"build": "make dist && echo \"$PWD/dist/app\"", "env": "PRODUCT_CMD"},
@@ -127,15 +133,15 @@ norms it groups, the evidence that it works, and the person's acceptance.
     ```
   - `areas/<area ID>.md`: one file per acceptance area;
   - `units/<unit ID>.md`: one file per acceptance unit;
-  - `tests/<area ID or unit ID>/`: the acceptance tests of that area or unit;
-  - `records/<area ID or unit ID>.jsonl`: the record of the evidence of that area or unit (ACU-35);
-  - `plan.json`: the increments, and the order in which their units are implemented (ACU-39), absent until the implementation planner first writes it.
-- **ACU-43.** The acceptance architect fills `test_command` and `product` of `acceptance.json`, and changes them, and changes `default_profile` (ACU-20), in a change that the requester approves as [LAY-9](../../development-methodology/specs/layers.md#rules) says, with the values that the requester states. The acceptance architect does not read a code repository to find them (ACU-12); the requester may take them from what the implementing agent reports.
+  - `tests/<area ID or unit ID>/`: the acceptance tests of that acceptance area or acceptance unit;
+  - `records/<area ID or unit ID>.jsonl`: the record of the evidence of that acceptance area or acceptance unit (ACU-35);
+  - `plan.json`: the increments, and the order in which their acceptance units are implemented (ACU-39), absent until the implementation planner first writes it.
+- **ACU-43.** The acceptance architect fills `test_command` and `product` of `acceptance.json`, and changes them, and changes `default_done_profile` (ACU-20), in a change that the requester approves as [LAY-9](../../development-methodology/specs/layers.md#rules) says, with the values that the requester states. The acceptance architect does not read a code repository to find them (ACU-12); the requester may take them from what the implementing agent reports.
 - **ACU-48.** The implementation planner adds an increment to `increments` of `plan.json` (ACU-39), at the position of its delivery order, in a change of `plan.json` that the requester approves as [LAY-9](../../development-methodology/specs/layers.md#rules) says. The acceptance architect never writes `plan.json`.
 - **ACU-7.** The file of an acceptance area holds these parts, in this order (complete list):
   1. a heading of level 1: `<area ID> <title>`;
-  2. `## Purpose`: what the area gives to the people who use it, in plain prose;
-  3. `## Scenarios`: one `gherkin` code block with the scenarios that cross more than one unit of the area, or the line `None.` when no scenario crosses units. Each scenario has its tag `@SC-<n>` (ACU-50), one tag `@unit:<unit ID>` per unit it crosses, at least two, all of them units of the area, and one tag `@<norm ID>` per norm it checks, each of them in `## Norms` of a unit it crosses, and no other tag.
+  2. `## Purpose`: what the acceptance area gives to the people who use it, in plain prose;
+  3. `## Scenarios`: one `gherkin` code block with the scenarios that cross more than one acceptance unit of the acceptance area, or the line `None.` when no scenario crosses acceptance units. Each scenario has its tag `@SC-<n>` (ACU-50), one tag `@unit:<unit ID>` per acceptance unit it crosses, at least two, all of them acceptance units of the acceptance area, and one tag `@<norm ID>` per norm it checks, each of them in `## Norms` of an acceptance unit it crosses, and no other tag.
 
   Empty lines may stand before and after each part, and no other line stands between two parts.
 
@@ -182,12 +188,12 @@ norms it groups, the evidence that it works, and the person's acceptance.
 
 - **ACU-8.** The file of an acceptance unit holds these parts, in this order (complete list):
   1. a heading of level 1: `<unit ID> <title>`;
-  2. one or two lines, in this order: `Area: <area ID>`, and `Profile: <done profile>` only when the unit does not use `default_profile`;
+  2. one or two lines, in this order: `Area: <area ID>`, and `Profile: <done profile>` only when the acceptance unit does not follow the default done profile;
   3. `## Narrative`: three lines, in this order: `In order to <benefit>`, `As a <role>` or `As an <role>`, `I want <what>`;
-  4. `## Norms`: one list item per norm that the unit groups, at least one, each a citation of a norm (ACU-56). A norm may be grouped by several units;
+  4. `## Norms`: one list item per norm that the acceptance unit groups, at least one, each a norm citation (ACU-56). A norm may be grouped by several acceptance units;
   5. `## Scenarios`: one `gherkin` code block. Each scenario has its tag `@SC-<n>` (ACU-50), one tag `@<norm ID>` per norm it checks, each of them in `## Norms`, and no other tag. Each norm of `## Norms` is checked by at least one scenario;
-  6. `## Non-goals`: one list item per thing the unit does not do, each its own sentence, or the line `None.`;
-  7. `## Assumptions`: one list item per condition of the world that the unit takes as true and does not check, each its own sentence, each followed by the norm ID it rests on in parentheses, or by `(environment)` when it rests on no norm; or the line `None.`.
+  6. `## Non-goals`: one list item per thing the acceptance unit does not do, each its own sentence, or the line `None.`;
+  7. `## Assumptions`: one list item per condition of the world that the acceptance unit takes as true and does not check, each its own sentence, each followed by the norm ID it rests on in parentheses, or by `(environment)` when it rests on no norm; or the line `None.`.
 
   Empty lines may stand before and after each part, and no other line stands between two parts. The lines of part 2 follow one another, and so do the three lines of part 3, with no empty line between them.
 
@@ -288,13 +294,13 @@ norms it groups, the evidence that it works, and the person's acceptance.
   mistake. An assumption that stops being true explains a failure that no
   change of the code caused.
 
-- **ACU-9.** The increments are those of `increments` in `plan.json` (ACU-39), in the order in which they are delivered; no two of them have the same name. A unit is in at most one increment. A unit that no increment holds is not yet planned, and layer 4 does not implement it ([IMP-14](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)). The file of a unit does not name its increment.
+- **ACU-9.** The increments are those of `increments` in `plan.json` (ACU-39), in the order in which they are delivered; no two of them have the same name. An acceptance unit is in at most one increment. An acceptance unit that no increment holds is not yet planned, and layer 4 does not implement it ([IMP-14](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)). The file of an acceptance unit does not name its increment.
 
-  Rationale: which units are delivered together, and when, is planning, not
-  what a unit is; kept out of the file of the unit, a change of the plan
-  changes no unit hash (ACU-52) and sends no evidence stale.
+  Rationale: which acceptance units are delivered together, and when, is planning, not
+  what an acceptance unit is; kept out of the file of the acceptance unit, a change of the plan of
+  implementation changes no unit hash (ACU-52) and sends no evidence stale.
 
-- **ACU-10.** The change that removes a unit also removes its folder `tests/<unit ID>/`; the change that moves a unit to another area keeps that folder, which is named by the unit ID. Either change also changes each scenario of an area that names the unit, so that every area still meets ACU-7. Neither change touches the record `records/<unit ID>.jsonl`: lines are only added to a record (ACU-35), and the unit ID is never given again (ACU-5), so the record of a removed unit stays as its history.
+- **ACU-10.** The change that removes an acceptance unit also removes its folder `tests/<unit ID>/`; the change that moves an acceptance unit to another acceptance area keeps that folder, which is named by the unit ID. Either change also changes each scenario of an acceptance area that names the acceptance unit, so that every acceptance area still meets ACU-7. Neither change touches the record `records/<unit ID>.jsonl`: lines are only added to a record (ACU-35), and the unit ID is never given again (ACU-5), so the record of a removed acceptance unit stays as its history.
 
 ## Hashes and citations
 
@@ -310,21 +316,21 @@ norms it groups, the evidence that it works, and the person's acceptance.
 
   A fingerprint is never stored in the file it is computed from: a script computes it, never the model, in layer 3 and in layer 4 alike.
 
-- **ACU-52.** The unit hash of a unit is the fingerprint (ACU-51) of the range of its file from the first line that is exactly `## Narrative` to the last line of the file. The heading and the lines `Area:` and `Profile:` are outside the range; everything else is inside: the narrative, the citations of `## Norms` with their norm hashes, the scenarios, the non-goals and the assumptions. A file with no line `## Narrative` has no unit hash.
+- **ACU-52.** The unit hash of an acceptance unit is the fingerprint (ACU-51) of the range of its file from the first line that is exactly `## Narrative` to the last line of the file. The heading and the lines `Area:` and `Profile:` are outside the range; everything else is inside: the narrative, the norm citations of `## Norms` with their norm hashes, the scenarios, the non-goals and the assumptions. A file with no line `## Narrative` has no unit hash.
 
   Binding example; what binds is the hash: the file of AU-3 that ACU-8 shows, without the two spaces that start each of its lines here, has the unit hash `efc7ae86`.
 
-  A norm that changes in layer 2 does not change by itself the unit hash of a unit that groups it: the acceptance architect updates its citation in `## Norms`, which changes the unit hash (ACU-28); until then, the old norm hash already makes the evidence of the unit stale (ACU-26).
+  A norm that changes in layer 2 does not change by itself the unit hash of an acceptance unit that groups it: the acceptance architect updates its citation in `## Norms`, which changes the unit hash (ACU-28); until then, the old norm hash already makes the evidence of the acceptance unit stale (ACU-26).
 
-  Rationale: renaming a unit, moving it to another area or changing its
-  profile does not change what must be built, so it must not send the code
+  Rationale: renaming an acceptance unit, moving it to another acceptance area or changing its
+  done profile does not change what must be built, so it must not send the code
   back to review; every other change of the file may.
 
-- **ACU-53.** The area hash of an area is the fingerprint (ACU-51) of the range of its file from the first line that is exactly `## Purpose` to the last line of the file. The heading is outside the range. A file with no line `## Purpose` has no area hash.
+- **ACU-53.** The area hash of an acceptance area is the fingerprint (ACU-51) of the range of its file from the first line that is exactly `## Purpose` to the last line of the file. The heading is outside the range. A file with no line `## Purpose` has no area hash.
 
   Binding example; what binds is the hash: the file of AA-1 that ACU-7 shows, read as in ACU-52, has the area hash `3b0900fb`.
 
-- **ACU-54.** A `Scenario:` line is a line inside the `gherkin` block of `## Scenarios` of a unit or an area whose first characters that are not a space or a tab are exactly `Scenario:`. That block holds no line whose first characters that are not a space or a tab are one of these (complete list): `Feature:`, `Rule:`, `Background:`, `Example:`, `Scenario Outline:`, `Scenario Template:`, `Examples:`, `Scenarios:`. The tag lines of a scenario are the lines just above its `Scenario:` line whose first character that is not a space or a tab is `@`, with no other line between them and the `Scenario:` line. The text of a scenario is its tag lines, its `Scenario:` line, and every line after it up to the first tag line of the next scenario, the next `Scenario:` line or the closing fence of its `gherkin` block, whichever comes first, none of them included. Its name is what follows `Scenario:` on its `Scenario:` line, without the spaces and tabs at either end. The scenario hash of a scenario is the fingerprint (ACU-51) of the range of its file that is its text.
+- **ACU-54.** A `Scenario:` line is a line inside the `gherkin` block of `## Scenarios` of an acceptance unit or an acceptance area whose first characters that are not a space or a tab are exactly `Scenario:`. That block holds no line whose first characters that are not a space or a tab are one of these (complete list): `Feature:`, `Rule:`, `Background:`, `Example:`, `Scenario Outline:`, `Scenario Template:`, `Examples:`, `Scenarios:`. The tag lines of a scenario are the lines just above its `Scenario:` line whose first character that is not a space or a tab is `@`, with no other line between them and the `Scenario:` line. The text of a scenario is its tag lines, its `Scenario:` line, and every line after it up to the first tag line of the next scenario, the next `Scenario:` line or the closing fence of its `gherkin` block, whichever comes first, none of them included. Its name is what follows `Scenario:` on its `Scenario:` line, without the spaces and tabs at either end. The scenario hash of a scenario is the fingerprint (ACU-51) of the range of its file that is its text.
 
   Binding example; what binds is the hash: the scenario `SC-5` of that file of AU-3 (ACU-52) has the scenario hash `147d88d2`.
 
@@ -332,14 +338,14 @@ norms it groups, the evidence that it works, and the person's acceptance.
 
   | Citation of | Form | Where |
   |---|---|---|
-  | a norm | `<norm ID>@<norm hash>: <reason>` | a list item of `## Norms` of a unit (ACU-8) |
-  | a unit, by the code | `<unit ID>@<unit hash>: <reason>` | after the comment mark of the language, in the code and the unit tests of layer 4 ([IMP-6](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)) |
-  | a unit or an area, by an acceptance test | `<unit ID>@<unit hash>: <title of the unit>` or `<area ID>@<area hash>: <title of the area>` | the first comment line of an acceptance test (ACU-11) |
+  | a norm (a norm citation) | `<norm ID>@<norm hash>: <reason>` | a list item of `## Norms` of an acceptance unit (ACU-8) |
+  | an acceptance unit, by the code | `<unit ID>@<unit hash>: <reason>` | after the comment mark of the language, in the code and the unit tests of layer 4 ([IMP-6](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)) |
+  | an acceptance unit or an acceptance area, by an acceptance test | `<unit ID>@<unit hash>: <title of the acceptance unit>` or `<area ID>@<area hash>: <title of the acceptance area>` | the first comment line of an acceptance test (ACU-11) |
   | a scenario | `SC-<n>@<scenario hash>: <name of the scenario>` | the second comment line of an acceptance test (ACU-11) |
 
-  Each `<hash>` of a citation is 8 hex digits in lower case. A norm ID has the form of [R61](../../norms-management/specs/norms-versions.md#data-and-outputs): a prefix of three or more upper-case ASCII letters, alone or followed by `-` and a number from 1 without leading zeros, such as `INV` or `INV-7`. `<reason>` says in a few words what of the norm the unit needs, or what of the unit the code does or the test checks. The title of a unit or an area is what follows its ID and one space in its heading.
+  Each `<hash>` of a citation is 8 hex digits in lower case. A norm ID has the form of [R61](../../norms-management/specs/norms-versions.md#data-and-outputs): a prefix of three or more upper-case ASCII letters, alone or followed by `-` and a number from 1 without leading zeros, such as `INV` or `INV-7`. `<reason>` says in a few words what of the norm the acceptance unit needs, or what of the acceptance unit the code does or the test checks.
 
-  The code and the unit tests of layer 4 cite units only, never a norm ID; a part of the code that serves two units carries one citation of each. The norms that the code implements are those of `## Norms` of the units it cites: the chain goes from the code to a unit and its unit hash, and from the unit to its norms and their norm hashes. Since `## Norms` is inside the unit hash (ACU-52), a citation whose unit hash is the unit hash of its unit names exactly the norms and norm hashes that the code was written for; one whose unit hash differs names code written for another version of the unit, which layer 4 reviews ([ORC-26](../../code-implementation/specs/module.md#implement-the-changed-norms)).
+  The code and the unit tests of layer 4 cite acceptance units only, never a norm ID; a part of the code that serves two acceptance units carries one citation of each. The norms that the code implements are those of `## Norms` of the acceptance units it cites: the chain goes from the code to an acceptance unit and its unit hash, and from the acceptance unit to its norms and their norm hashes. Since `## Norms` is inside the unit hash (ACU-52), a citation whose unit hash is the unit hash of its acceptance unit names exactly the norms and norm hashes that the code was written for; one whose unit hash differs names code written for another version of the acceptance unit, which layer 4 reviews ([ORC-26](../../code-implementation/specs/module.md#implement-the-changed-norms)).
 
   Example (illustrative), in Python:
 
@@ -348,14 +354,14 @@ norms it groups, the evidence that it works, and the person's acceptance.
   def write_row(out, invoice):
   ```
 
-  Rationale: the unit is what the requester accepts; code that cites it is
+  Rationale: the acceptance unit is what the requester accepts; code that cites it is
   tied to what is accepted, and one hash says whether any of it changed. A
   norm cited by the code would say what the code does but not for which
-  unit, nor whether that unit changed around it.
+  acceptance unit, nor whether that acceptance unit changed around it.
 
 ## Acceptance tests and independent evidence
 
-- **ACU-11.** The test agent writes one acceptance test per scenario of a unit or an area, in `tests/<unit ID>/` or `tests/<area ID>/`, without reading layer 4. The test runs the scenario through the external interface of the product build only, which it gets from the environment variable that `product` names, and imports no code of a code repository. Each acceptance test opens with these comment lines, in this order (complete list), each a citation of ACU-56 after the comment mark of the language: the citation of its unit or its area, then the citation of its scenario, with the unit hash or area hash and the scenario hash of the commit of the acceptance repository that the test agent read. An acceptance test cites no norm: the tags `@<norm ID>` of its scenario tie it to the norms of `## Norms`.
+- **ACU-11.** The test agent writes one acceptance test per scenario of an acceptance unit or an acceptance area, in `tests/<unit ID>/` or `tests/<area ID>/`, without reading layer 4. The test runs the scenario through the external interface of the product build only, which it gets from the environment variable that `product` names, and imports no code of a code repository. Each acceptance test opens with these comment lines, in this order (complete list), each a citation of ACU-56 after the comment mark of the language: the citation of its acceptance unit or its acceptance area, then the citation of its scenario, with the unit hash or area hash and the scenario hash of the commit of the acceptance repository that the test agent read. An acceptance test cites no norm: the tags `@<norm ID>` of its scenario tie it to the norms of `## Norms`.
 
   Example (illustrative), in Python:
 
@@ -385,7 +391,7 @@ norms it groups, the evidence that it works, and the person's acceptance.
   interface only, the test needs no code to be written, only the interface
   that the norms fix.
 
-- **ACU-12.** The test agent never reads a code repository ([LAY-8](../../development-methodology/specs/layers.md#rules)). The implementing agent reads the acceptance repository and never writes it ([LAY-4](../../development-methodology/specs/layers.md#rules)). The implementing agent runs the acceptance tests with `test_command`, in a copy of the acceptance repository made outside it ([IMP-16](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)), as often as it needs, and changes its code until they pass. It gives the tests the product builds as ACU-49 says. A run of the acceptance tests by the implementing agent, and a run in the continuous integration of a code repository, are feedback, not evidence (ACU-34). The implementing agent writes unit tests in layer 4, each citing the units it checks (ACU-56) as [IMP-6](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task) says; a unit test is never evidence of done. When the implementing agent holds an acceptance test to be wrong, it reports it to the requester and does not change it; the test agent fixes the test, or the requester sends the norm back to layer 1 ([LAY-5](../../development-methodology/specs/layers.md#rules)).
+- **ACU-12.** The test agent never reads a code repository ([LAY-8](../../development-methodology/specs/layers.md#rules)). The implementing agent reads the acceptance repository and never writes it ([LAY-4](../../development-methodology/specs/layers.md#rules)). The implementing agent runs the acceptance tests with `test_command`, in a copy of the acceptance repository made outside it ([IMP-16](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)), as often as it needs, and changes its code until they pass. It gives the tests the product builds as ACU-49 says. A run of the acceptance tests by the implementing agent, and a run in the continuous integration of a code repository, are feedback, not evidence (ACU-34). The implementing agent writes unit tests in layer 4, each citing the acceptance units it checks (ACU-56) as [IMP-6](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task) says; a unit test is never evidence of done. When the implementing agent holds an acceptance test to be wrong, it reports it to the requester and does not change it; the test agent fixes the test, or the requester sends the norm back to layer 1 ([LAY-5](../../development-methodology/specs/layers.md#rules)).
 
   Rationale: an agent that writes both the code and its tests shares its
   misreading of a norm between them, and every test passes. An agent that may
@@ -404,7 +410,7 @@ norms it groups, the evidence that it works, and the person's acceptance.
   acceptance tests need. A published build may not be the build at the
   reference commit, so a run with it cannot be evidence.
 
-- **ACU-13.** The separation of ACU-12 is enforced at three levels (complete list); which of them a unit requires is fixed by its done profile (ACU-19):
+- **ACU-13.** The separation of ACU-12 is enforced at three levels (complete list); which of them an acceptance unit requires is fixed by its done profile (ACU-19):
   1. in each session, with this access (complete list): a session of layer 3 may neither read nor write a code repository; a session of layer 4 may read the acceptance repository and may not write it. Two means enforce it: rules `deny` of the Claude Code permissions, which create-project writes ([ORC-5](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project)) and sync keeps in step with `project.json` ([SNC-1](../../project-management/use-cases/sync/specs/sync.md#sync-projectjson)); and a hook on the event `PreToolUse`, which the plugin of the role declares: this module in layer 3 (ACU-38), code-implementation in layer 4 ([CIM-1](../../code-implementation/specs/module.md#the-hook-of-the-session));
   2. in the environment: each role works where only the repositories it may read are cloned. Example (illustrative): a container, or a session in the cloud;
   3. on GitHub: the credentials of the implementing agent can read the acceptance repository and cannot push to it; the credentials of the test agent cannot clone or fetch the code repositories; and no code repository, and no workflow of one, holds a credential of the acceptance repository. The continuous integration of ACU-34 is the only holder of both a credential that can write the acceptance repository, its own workflow token, and one that can read the code repositories, `CODE_READ_TOKEN`, which can only read them; the code of layer 4 that it runs gets neither (ACU-34).
@@ -437,59 +443,60 @@ norms it groups, the evidence that it works, and the person's acceptance.
 - **ACU-45.** Each time it runs, the hook of ACU-38 takes as the repository of the session the folder that the environment variable `CLAUDE_PROJECT_DIR` names, or else the field `cwd` of the input of the hook; finds the project folder from it as [ORC-21](../../project-management/specs/module.md#where-the-repositories-are) says; and takes as the path of each code repository the project folder followed by the `path` of an entry of layer 4 of the `project.json` of that repository, with its symbolic links followed. It resolves each path that a field names, `file_path`, `notebook_path` and `path` included, and each word of ACU-46, in this order: it replaces a leading `~` and the environment variables in it, makes it absolute against the field `cwd` when it is relative, and follows its symbolic links. A path names a code repository when the result is the path of that code repository or a path under it. A path that holds `*`, `?` or `[` is a shell pattern, whether a field names it, `pattern` of `Glob` included, or it is a word of ACU-46. Example (illustrative): `../billing-code-a*`. Its parts before the first part that holds one of those characters are resolved as above, and the rest is appended; it names a code repository when its first parts match the parts of the path of that code repository one by one, as the shell matches a pattern against a name, `*` also matching `/`. Example (illustrative): `**/*.py` against the project folder names every code repository. A path holds a code repository when the path of that code repository is under the result. Example (illustrative): the project folder holds every code repository.
 - **ACU-46.** The words of the field `command` of a call of `Bash` are the tokens of a POSIX shell split of it, with quotes removed and `;`, `&`, `|`, `<`, `>` and parentheses as tokens of their own, together with the parts of each token around `=` and `:`. Example (illustrative): `../billing-code-api/bin/app` is a word of `PRODUCT=../billing-code-api/bin/app`. A call of `Bash` names a code repository when its text holds the path of the code repository, with its symbolic links followed, followed by the end of the text, a `/`, a blank or one of `'`, `"`, `;`, `|`, `&`, `<`, `>`, `(`, `)` and `` ` ``, or when one of its words names that code repository (ACU-45). A call of `Bash` also names a code repository when one of its words is a recursive reader and another of its words, not a shell pattern, holds that code repository (ACU-45). Example (illustrative): `..` in `grep -r invoice ..` run from the acceptance repository. The recursive readers are (complete list): `rg`, `ag`, `fd`, `find`, `tree`; and `grep`, `egrep` and `fgrep` when another word is `--recursive` or `--dereference-recursive`, or begins with exactly one `-` and holds `r` or `R`.
 - **ACU-40.** The hook of ACU-38 refuses nothing when it cannot find the paths of the code repositories, which happens in these cases (complete list): the repository of the session is not a git repository; it has no `project.json`; its `project.json` is not valid JSON, or holds no list `repositories`; it has no remote `origin`, or not exactly one entry matches its remote `origin`; the `path` of that entry is not valid ([ORC-20](../../project-management/specs/module.md#where-the-repositories-are)); the folder of the repository does not end with that `path`. It also refuses nothing when its input is not a JSON object, and when it fails in any other way. Rationale: a hook that refused every call in a repository it cannot read would stop a session that is not of a project.
-- **ACU-14.** When the done profile of a unit requires it (ACU-19), the test agent that writes its acceptance tests and the implementing agent of every commit of layer 4 that changes code citing the unit run on models of different families. Rationale: two agents on the same model tend to misread the same sentence in the same way, and their tests and code then agree on the same mistake.
+- **ACU-14.** When the done profile of an acceptance unit requires it (ACU-19), the test agent that writes its acceptance tests and the implementing agent of every commit of layer 4 that changes code citing the acceptance unit run on models of different families. Rationale: two agents on the same model tend to misread the same sentence in the same way, and their tests and code then agree on the same mistake.
 
-- **ACU-34.** The only run of the acceptance tests that is evidence is the run of the continuous integration of the acceptance repository. That continuous integration runs on each of these events (complete list): the times of the schedule that its workflow fixes ([CRP-1](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project)); a push to the default branch of the acceptance repository that changes a file outside `records/`. Each run tests the head of the default branch of the acceptance repository when the run starts; that commit is the `acceptance_commit` of its lines (ACU-35). Each run takes these steps, in this order (complete list):
-  1. When `acceptance.json` is not one JSON object with the fields of ACU-6, each of its type, or the commit that the run tests cannot be read, the run fails and adds no line to `records/`. When `test_command` is the empty string, the run ends successfully and adds no line to `records/`.
-  2. When `product` names a repository that is not of layer 4 in `project.json`, or holds an entry whose fields are not those of ACU-6, the run fails and adds no line to `records/`. Otherwise it reads the reference commit of each code repository of `project.json`. When the reference commit of a code repository cannot be read, the run fails, names that repository and adds no line to `records/`.
-  3. It takes as the last recorded run the lines of kind `test`, across all files of `records/`, whose `date` is the latest `date` of any line of kind `test`. When those lines hold, in `reference_commits` (ACU-35), exactly the reference commits of step 2, and no file outside `records/` differs between their `acceptance_commit` and the commit that the run tests, the run ends successfully and adds no line to `records/`. When `records/` holds no line of kind `test`, or that `acceptance_commit` cannot be read, the run goes on.
-  4. It makes a copy of the code repository of each entry of `product` at its reference commit, all of them before it runs any `build`. Then, for each entry of `product`, it runs `build` at the root of that copy, and gives the last line of its standard output to the acceptance tests in the variable that `env` names. When the copy of a code repository cannot be made, or its build fails, prints nothing or prints an empty last line, the run fails and adds no line to `records/`: a test that cannot reach the product is evidence neither way.
+- **ACU-34.** The only run of the acceptance tests that is evidence is the run of the continuous integration of the acceptance repository. That continuous integration runs on each of these events (complete list): the times of the schedule that its workflow fixes ([CRP-1](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project)); a push to the default branch of the acceptance repository that changes a file outside `records/`. Each run of the continuous integration tests the head of the default branch of the acceptance repository when it starts; that commit is the `acceptance_commit` of its lines (ACU-35). Each run of the continuous integration takes these steps, in this order (complete list):
+  1. When `acceptance.json` is not one JSON object with the fields of ACU-6, each of its type, or the commit that the run of the continuous integration tests cannot be read, the run of the continuous integration fails and adds no line to `records/`. When `test_command` is the empty string, the run of the continuous integration ends successfully and adds no line to `records/`.
+  2. When `product` names a repository that is not of layer 4 in `project.json`, or holds an entry whose fields are not those of ACU-6, the run of the continuous integration fails and adds no line to `records/`. Otherwise it reads the reference commit of each code repository of `project.json`. When the reference commit of a code repository cannot be read, the run of the continuous integration fails, names that repository and adds no line to `records/`.
+  3. It takes as the last recorded run of the continuous integration the lines of kind `test`, across all files of `records/`, whose `date` is the latest `date` of any line of kind `test`. When those lines hold, in `reference_commits` (ACU-35), exactly the reference commits of step 2, and no file outside `records/` differs between their `acceptance_commit` and the commit that the run of the continuous integration tests, the run of the continuous integration ends successfully and adds no line to `records/`. When `records/` holds no line of kind `test`, or that `acceptance_commit` cannot be read, the run of the continuous integration goes on.
+  4. It makes a copy of the code repository of each entry of `product` at its reference commit, all of them before it runs any `build`. Then, for each entry of `product`, it runs `build` at the root of that copy, and gives the last line of its standard output to the acceptance tests in the variable that `env` names. When the copy of a code repository cannot be made, or its build fails, prints nothing or prints an empty last line, the run of the continuous integration fails and adds no line to `records/`: a test that cannot reach the product is evidence neither way.
   5. For each folder `tests/<unit ID or area ID>/`, in the order of the IDs, it runs `test_command` at the root of the acceptance repository, with `ACCEPTANCE_TARGET` set to the path of the folder and `ACCEPTANCE_REPORT` set to a path outside the acceptance repository. Example (illustrative): `tests/AU-3` is the path of the folder of AU-3. When the command wrote there a JUnit XML report that holds at least one test case, each test case is one result: `fail` when it holds a failure or an error, `skipped` when it is skipped, and `pass` otherwise. Otherwise the folder is one result, `pass` when the command ends with status 0 and `fail` otherwise.
   6. It adds to `records/<unit ID or area ID>.jsonl` one line of kind `test` per result (ACU-35), all with the same `date`, commits `records/` and pushes it to the default branch.
 
-  Runs do not overlap: a run that starts while another runs waits until it ends, and of the runs that wait only the latest runs. When the push of step 6 is rejected because the default branch moved, the run rebases its commit onto the default branch and pushes again, at most 3 times; then it fails, and the lines it recorded are lost, so the next run does not take the shortcut of step 3.
+  Runs of the continuous integration do not overlap: one that starts while another is running waits until that one ends, and of those that wait only the latest starts. When the push of step 6 is rejected because the default branch moved, the run of the continuous integration rebases its commit onto the default branch and pushes again, at most 3 times; then it fails, and the lines it recorded are lost, so the next run of the continuous integration does not take the shortcut of step 3.
 
-  The continuous integration reads the code repositories with `CODE_READ_TOKEN` (level 3 of ACU-13), and no session of layer 3 holds it ([LAY-8](../../development-methodology/specs/layers.md#rules)). The run reads the token from a file and deletes the file before step 2. From then on it keeps the token only in its own memory, never in its environment, and passes it only on the command line of the git commands of steps 2 and 4, each of which ends before any `build` runs; once step 4 has made its copies, it forgets the token, before any `build` runs. Rationale: a `build` or `test_command` runs as the same user as the run, so it could read the environment of the run and of every process that the run starts while it lives. The workflow of the acceptance repository is written by create-project ([CRP-1](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project)).
+  The continuous integration reads the code repositories with `CODE_READ_TOKEN` (level 3 of ACU-13), and no session of layer 3 holds it ([LAY-8](../../development-methodology/specs/layers.md#rules)). The run of the continuous integration reads the token from a file and deletes the file before step 2. From then on it keeps the token only in its own memory, never in its environment, and passes it only on the command line of the git commands of steps 2 and 4, each of which ends before any `build` runs; once step 4 has made its copies, it forgets the token, before any `build` runs. Rationale: a `build` or `test_command` runs as the same user as the run of the continuous integration, so it could read the environment of that run and of every process that it starts while it lives. The workflow of the acceptance repository is written by create-project ([CRP-1](../../project-management/use-cases/create-project/specs/create-project.md#create-a-project)).
 
   Rationale: the implementing agent needs to run the tests as often as it
-  likes, but a run it controls cannot be evidence; the run that counts happens
+  likes, but a run of the acceptance tests that it controls cannot be
+  evidence; the run of the continuous integration happens
   where the implementing agent cannot write. The acceptance repository asks
   the code repositories for their reference commits instead of being told,
   because a code repository that could notify it would hold a credential that
-  can also write it; step 3 keeps a run of the schedule cheap when nothing
+  can also write it; step 3 keeps a run of the continuous integration on the schedule cheap when nothing
   changed.
 
 ## The review of the norms selected
 
-- **ACU-15.** When the done profile of a unit requires it (ACU-19), before the requester approves a change to the narrative, the scenarios or `## Norms` of the unit, the norms reviewer selects the norms that the unit needs from its narrative and its scenarios only, without seeing `## Norms`. A script compares the two lists, and each norm that is in one list only is shown to the requester, who decides whether the unit groups it.
+- **ACU-15.** When the done profile of an acceptance unit requires it (ACU-19), before the requester approves a change to the narrative, the scenarios or `## Norms` of the acceptance unit, the norms reviewer selects the norms that the acceptance unit needs from its narrative and its scenarios only, without seeing `## Norms`. A script compares the two lists, and each norm that is in one list only is shown to the requester, who decides whether the acceptance unit groups it.
 
-  Rationale: "every norm holds" is true and misleading when the unit
+  Rationale: "every norm holds" is true and misleading when the acceptance unit
   groups fewer norms than it needs, and no test catches it, since no test is
   written for a norm that was not selected. A second agent that sees the first
   list tends to accept it.
 
-## When a unit is done
+## When an acceptance unit is done
 
-- **ACU-16.** A unit is done when these five conditions hold together (complete list); what each requires is fixed by the unit's done profile (ACU-19):
+- **ACU-16.** An acceptance unit is done when these five conditions hold together (complete list); what each requires is fixed by the acceptance unit's done profile (ACU-19):
   1. **Norms:** each norm of `## Norms` is implemented and checked;
-  2. **End to end:** the scenarios of the unit work through the external interface;
-  3. **Validation:** the requester saw the unit work and accepted it;
-  4. **AI decisions:** each AI decision of the unit is recorded as a decision block;
-  5. **Deviations:** each deviation of the unit is recorded and accepted.
+  2. **End to end:** the scenarios of the acceptance unit work through the external interface;
+  3. **Validation:** the requester saw the acceptance unit work and accepted it;
+  4. **AI decisions:** each AI decision of the acceptance unit is recorded as a decision block;
+  5. **Deviations:** each deviation of the acceptance unit is recorded and accepted.
 
-  The unit is not done while one of them fails, even when the other four hold.
+  The acceptance unit is not done while one of them fails, even when the other four hold.
 
   Rationale: each condition covers a gap that the others leave open.
   Norms that hold one by one do not prove that the whole works (condition 2);
-  tests that pass do not prove that the unit is what the requester wanted
-  (condition 3); a unit that works can still hide choices that nobody asked
+  tests that pass do not prove that the acceptance unit is what the requester wanted
+  (condition 3); an acceptance unit that works can still hide choices that nobody asked
   for (conditions 4 and 5).
 
 - **ACU-17.** An AI decision is a choice of the implementing agent where the norms leave it free, and which meets at least one of these criteria (complete list):
   1. **Dependency:** it adds or changes an outside library, service or tool;
   2. **Stored shape:** it fixes the shape in which data is stored or exchanged outside the running process. Examples (illustrative): a schema, a file format, a key;
   3. **Trade-off of quality:** it gives up some of one quality of the product to gain another, where the norms set neither. Examples (illustrative): memory over speed, cost over consistency;
-  4. **Binding:** a later unit that touches the same code will have to follow it or undo it. Examples (illustrative): an architecture, a model of concurrency, the technique of a parser.
+  4. **Binding:** a later acceptance unit that touches the same code will have to follow it or undo it. Examples (illustrative): an architecture, a model of concurrency, the technique of a parser.
 
   A choice that meets none of them is not recorded. Example (illustrative): the name of an internal variable. A choice about the external interface that no norm makes is not an AI decision: it is a gap of layer 1, and the implementing agent opens an issue as [LAY-5](../../development-methodology/specs/layers.md#rules) says instead of choosing.
 
@@ -503,7 +510,7 @@ norms it groups, the evidence that it works, and the person's acceptance.
   - `supersedes: <slug>`, when it replaces an earlier decision;
   - `scope: project`, when it holds for the whole code repository and not for one part of it.
 
-  The units of a decision are those that the code under the block cites (ACU-56). A decision with `scope: project` is a decision of every unit that the code repository cites.
+  The acceptance units of a decision are those that the code under the block cites (ACU-56). A decision with `scope: project` is a decision of every acceptance unit that the code repository cites.
 
   Example (illustrative), in Python:
 
@@ -537,7 +544,7 @@ norms it groups, the evidence that it works, and the person's acceptance.
   Rationale: the code is the only place that cannot drift from the code. A
   separate list of decisions would say one thing while the code does another.
 
-- **ACU-33.** The implementing agent writes the decision blocks while it writes the code; no person approves or rejects them. A script computes the inventory of the decision blocks of each unit from the code; the inventory is not stored. Only the count of the decision blocks of each unit reaches layer 3; never a slug or the text of a block ([LAY-8](../../development-methodology/specs/layers.md#rules)).
+- **ACU-33.** The implementing agent writes the decision blocks while it writes the code; no person approves or rejects them. A script finds the decision blocks of each acceptance unit in the code, and stores no list of them. Only the count of the decision blocks of each acceptance unit reaches layer 3; never a slug or the text of a block ([LAY-8](../../development-methodology/specs/layers.md#rules)).
 
   Rationale: the code is written by the AI, so the choices about how it is
   built are the AI's; the requester decides what the product does, in layer 1,
@@ -553,8 +560,8 @@ norms it groups, the evidence that it works, and the person's acceptance.
   lines takes 3 seconds instead of the 2 that PRF-1 asks. Why: the optimizer
   is not written yet. Accepted by the requester until 2027-06-30."
 
-  Rationale: no real unit is perfect. What matters is that each imperfection
-  is seen and has an owner, not hidden, and not "fixed" by rewriting the unit
+  Rationale: no real acceptance unit is perfect. What matters is that each imperfection
+  is seen and has an owner, not hidden, and not "fixed" by rewriting the acceptance unit
   to match what was built.
 
 ## Done profiles
@@ -563,9 +570,9 @@ norms it groups, the evidence that it works, and the person's acceptance.
 
   | | `prototype` | `product` | `critical` |
   |---|---|---|---|
-  | 1. Norms | The unit is cited by the code of layer 4 with its current unit hash (ACU-56) | As `prototype`, and each norm of `## Norms` is tagged by a scenario of the unit whose acceptance test passes | As `product` |
-  | 2. End to end | A demo of each scenario of the unit | Each acceptance test of the unit passes on the reference commits | As `product` |
-  | 3. Validation | By the requester | By the requester | By the requester, and by a second person, named by the requester, who knows the domain of the unit's risk (example, illustrative: security or law) |
+  | 1. Norms | The acceptance unit is cited by the code of layer 4 with its current unit hash (ACU-56) | As `prototype`, and each norm of `## Norms` is tagged by a scenario of the acceptance unit whose acceptance test passes | As `product` |
+  | 2. End to end | A demo of each scenario of the acceptance unit | Each acceptance test of the acceptance unit passes on the reference commits | As `product` |
+  | 3. Validation | By the requester | By the requester | By the requester, and by a second person, named by the requester, who knows the domain of the acceptance unit's risk (example, illustrative: security or law) |
   | 4. AI decisions | Each AI decision is recorded as a decision block | As `prototype` | As `prototype` |
   | 5. Deviations | Recorded, and accepted by the requester | Recorded, and accepted by the requester | Recorded, and accepted by the requester and by the second person |
   | Acceptance tests (ACU-11) | Not required | Required | Required |
@@ -574,24 +581,24 @@ norms it groups, the evidence that it works, and the person's acceptance.
   | Different model families (ACU-14) | Not required | Not required | Required |
   | `in use` after | Not reached | 30 days after the first release that holds the reference commits it was validated on, with no open failure (ACU-36) | 90 days, as `product` |
 
-  Deliberate design: three profiles, not one per dimension of done.
-  Rationale: no unit can meet every dimension of done; a profile says in
+  Deliberate design: three done profiles, not one per dimension of done.
+  Rationale: no acceptance unit can meet every dimension of done; a done profile says in
   advance what is asked and what is not, so that nobody assumes another level
   and no agent falls back to the cheapest one.
 
-- **ACU-20.** The project declares its default profile in `acceptance.json`. A unit may declare another profile in its line `Profile:`. The acceptance architect may propose a profile, and the requester approves it as [LAY-9](../../development-methodology/specs/layers.md#rules) says. Rationale: choosing the rigour is choosing how much risk is accepted, which is the requester's decision, not the agent's.
-- **ACU-21.** A unit that leaves out something its profile requires records it as a deviation (ACU-18). Example (illustrative): "No load test: three people use it."
-- **ACU-22.** A scenario of an area follows the strictest profile among the units it crosses, in the order `prototype`, `product`, `critical`.
+- **ACU-20.** The project declares its default done profile in `acceptance.json`. An acceptance unit may declare another done profile in its line `Profile:`. The acceptance architect may propose a done profile, and the requester approves it as [LAY-9](../../development-methodology/specs/layers.md#rules) says. Rationale: choosing the rigour is choosing how much risk is accepted, which is the requester's decision, not the agent's.
+- **ACU-21.** An acceptance unit that leaves out something its done profile requires records it as a deviation (ACU-18). Example (illustrative): "No load test: three people use it."
+- **ACU-22.** A scenario of an acceptance area follows the strictest done profile among the acceptance units it crosses, in the order `prototype`, `product`, `critical`.
 
 ## The ladder of states
 
-- **ACU-23.** The state of a unit is computed from its evidence that is not stale; it is not stored. The states are (complete list):
-  - `pending`: the unit is not `verified`;
-  - `verified`: conditions 1 and 2 of ACU-16 hold, as its profile requires;
-  - `validated`: the unit is `verified`, and conditions 3, 4 and 5 hold;
-  - `in use`: the unit is `validated`, and its profile's time since a release has passed with no open failure (ACU-36).
+- **ACU-23.** The state of an acceptance unit is computed from its evidence that is not stale; it is not stored. The states are (complete list):
+  - `pending`: the acceptance unit is not `verified`;
+  - `verified`: conditions 1 and 2 of ACU-16 hold, as its done profile requires;
+  - `validated`: the acceptance unit is `verified`, and conditions 3, 4 and 5 hold;
+  - `in use`: the acceptance unit is `validated`, and its done profile's time since a release has passed with no open failure (ACU-36).
 
-  Example (illustrative), for a unit with the profile `product`:
+  Example (illustrative), for an acceptance unit with the done profile `product`:
 
   | Step | Event | State after it |
   |---|---|---|
@@ -602,35 +609,35 @@ norms it groups, the evidence that it works, and the person's acceptance.
   | 5 | The norm INV-12 changes in layer 2 | `pending` |
   | 6 | The acceptance architect updates the citation of INV-12, which changes the unit hash of AU-3; the requester approves the change; the test agent updates the tests and the implementing agent the code, each citing the new unit hash; the tests pass, and the requester validates again | `validated` |
 
-- **ACU-24.** A validation holds across changes of the code while the unit stays `verified`. Deliberate design. Rationale: the acceptance tests guard what the requester saw; asking the requester to validate again after every commit would make validation a formality.
-- **ACU-25.** Each state answers one question (complete list): `verified`, whether the unit meets the norms; `validated`, whether it is what the requester wanted; `in use`, whether it works in the real world. Rationale: verifying is almost free for an AI and can be wrong in the same way as the code; only the requester can validate.
+- **ACU-24.** A validation holds across changes of the code while the acceptance unit stays `verified`. Deliberate design. Rationale: the acceptance tests guard what the requester saw; asking the requester to validate again after every commit would make validation a formality.
+- **ACU-25.** Each state answers one question (complete list): `verified`, whether the acceptance unit meets the norms; `validated`, whether it is what the requester wanted; `in use`, whether it works in the real world. Rationale: verifying is almost free for an AI and can be wrong in the same way as the code; only the requester can validate.
 
 ## Done is a state, not an event
 
 - **ACU-26.** Each evidence is recorded with what it was produced for, and is stale as soon as one of these happens (complete list):
-  - for any evidence: a hash in `hashes` of its `for` is no longer the unit hash, area hash or scenario hash of its ID, or its unit, area or scenario is no longer in the acceptance repository; or a norm hash in `norm_hashes` of its `for` differs from the norm hash of that norm at the head of the default branch of the norms repository, or that norm is not a norm there (ACU-35);
+  - for any evidence: a hash in `hashes` of its `for` is no longer the unit hash, area hash or scenario hash of its ID, or its acceptance unit, acceptance area or scenario is no longer in the acceptance repository; or a norm hash in `norm_hashes` of its `for` differs from the norm hash of that norm at the head of the default branch of the norms repository, or that norm is not a norm there (ACU-35);
   - for an acceptance test that passes: a file in `files` of its `for` changes, or a reference commit in `reference_commits` of its `for` changes (ACU-35);
-  - for a citation in the code: the unit hash it cites is no longer the unit hash of its unit, or its unit is no longer in the acceptance repository;
+  - for a citation in the code: the unit hash it cites is no longer the unit hash of its acceptance unit, or its acceptance unit is no longer in the acceptance repository;
   - for any evidence: its recorded date passes, or its recorded event is recorded as happened (ACU-18);
-  - for every evidence of a unit, the citations in the code included: a norm that its `## Norms` cites is not a norm at the head of the default branch of the norms repository, or has there a norm hash other than the one cited;
-  - for every evidence of a unit: an issue of ACU-36 about the unit is open.
+  - for every evidence of an acceptance unit, the citations in the code included: a norm that its `## Norms` cites is not a norm at the head of the default branch of the norms repository, or has there a norm hash other than the one cited;
+  - for every evidence of an acceptance unit: an issue of ACU-36 about the acceptance unit is open.
 
-  Deliberate design: a demo holds across changes of the code, as a validation does (ACU-24). Rationale: a demo that went stale with each commit of layer 4 would send a `prototype` unit back to `pending` after every commit, and ask the requester for more than `product` asks; in `prototype` no acceptance test guards the demo, which is the risk that the profile accepts (ACU-19).
-- **ACU-27.** A script, not the model, says which evidence is stale and computes the state of each unit. When a norm of `## Norms` is no longer in layer 2, the script reports the citation as broken. Rationale: the same as [ORC-25](../../code-implementation/specs/module.md#implement-the-changed-norms): the result must be exact, and must not depend on a reading.
-- **ACU-35.** The record of the evidence of a unit or an area is the file `records/<unit ID or area ID>.jsonl` of the acceptance repository: one JSON object per line, lines only added, never changed or removed. Every line holds these common fields (complete list), and each kind adds the fields listed below; a line of kind `validation` holds no other:
+  Deliberate design: a demo holds across changes of the code, as a validation does (ACU-24). Rationale: a demo that went stale with each commit of layer 4 would send a `prototype` acceptance unit back to `pending` after every commit, and ask the requester for more than `product` asks; in `prototype` no acceptance test guards the demo, which is the risk that the done profile accepts (ACU-19).
+- **ACU-27.** A script, not the model, says which evidence is stale and computes the state of each acceptance unit. When a norm of `## Norms` is no longer in layer 2, the script reports the citation as broken. Rationale: the same as [ORC-25](../../code-implementation/specs/module.md#implement-the-changed-norms): the result must be exact, and must not depend on a reading.
+- **ACU-35.** The record of the evidence of an acceptance unit or an acceptance area is the file `records/<unit ID or area ID>.jsonl` of the acceptance repository: one JSON object per line, lines only added, never changed or removed. Every line holds these common fields (complete list), and each kind adds the fields listed below; a line of kind `validation` holds no other:
   - `kind`: the kind of evidence, one of `test`, `demo`, `validation`, `deviation` and `event`;
   - `for`: what it was produced for (ACU-26), an object with these fields (complete list): `hashes`, an object from each unit ID, area ID and scenario ID to its unit hash, area hash or scenario hash; `norm_hashes`, an object from each norm ID to its norm hash; `files`, an object from the path of each file, relative to the root of the acceptance repository, to its git blob hash, empty for every kind but `test`; `reference_commits`, an object from the `<owner>/<name>` of each code repository to its reference commit, empty for the kinds `validation`, `deviation` and `event`;
   - `date`: when it was produced, in UTC, in exactly this form, with no fractional seconds: `YYYY-MM-DDTHH:MM:SS+00:00`. Example: `2026-10-27T09:30:00+00:00`;
-  - `produced_by`: who produced it: the URL of the run of the continuous integration for `test`; for `validation` and `deviation`, the name of the person who validated or accepted it: the requester, or, under the profile `critical`, the second person of ACU-19, each in a line of their own; and the name of the requester for `demo` and `event`.
+  - `produced_by`: who produced it: the URL of the run of the continuous integration for `test`; for `validation` and `deviation`, the name of the person who validated or accepted it: the requester, or, under the done profile `critical`, the second person of ACU-19, each in a line of their own; and the name of the requester for `demo` and `event`.
 
   Each kind adds these fields (complete list):
-  - `test`: `test`, the name of the test, `<classname>::<name>` of its test case in the JUnit report, or the path of the folder when the folder is one result (ACU-34) (example, illustrative: `tests/AU-3`); `result`, one of `pass`, `fail` and `skipped`; `acceptance_commit`, the commit of the acceptance repository that the run tested. In `for`, `hashes` holds the ID of each citation of the files of the folder (ACU-11), with the hash it cites, and, for the folder of an area, each unit that a scenario of the area crosses, with its unit hash at `acceptance_commit`; an ID that the files cite with two different hashes maps to the empty string, which is no hash, so the line is stale (ACU-26). `norm_hashes` holds the norms of `## Norms` of the unit, or of each unit that a scenario of the area crosses, with the norm hash that `## Norms` cites at `acceptance_commit`, and the empty string for a norm that two of those units cite with two different norm hashes; `files` every file that `acceptance_commit` holds in the folder; and `reference_commits` the reference commit that step 2 of ACU-34 read for each code repository of `project.json`, not only for those of `product`.
-    The run reads `hashes`, `norm_hashes` and `files` from the files of `acceptance_commit`, before it runs any `build`, and never from the working tree, which the code of layer 4 can change while it runs (level 3 of ACU-13) and which may hold files that git does not track. Example (illustrative): a `__pycache__` folder that a test run writes in `tests/AU-3/` is not in `files`;
+  - `test`: `test`, the name of the test, `<classname>::<name>` of its test case in the JUnit report, or the path of the folder when the folder is one result (ACU-34) (example, illustrative: `tests/AU-3`); `result`, one of `pass`, `fail` and `skipped`; `acceptance_commit`, the commit of the acceptance repository that the run of the continuous integration tested. In `for`, `hashes` holds the ID of each citation of the files of the folder (ACU-11), with the hash it cites, and, for the folder of an acceptance area, each acceptance unit that a scenario of the acceptance area crosses, with its unit hash at `acceptance_commit`; an ID that the files cite with two different hashes maps to the empty string, which is no hash, so the line is stale (ACU-26). `norm_hashes` holds the norms of `## Norms` of the acceptance unit, or of each acceptance unit that a scenario of the acceptance area crosses, with the norm hash that `## Norms` cites at `acceptance_commit`, and the empty string for a norm that two of those acceptance units cite with two different norm hashes; `files` every file that `acceptance_commit` holds in the folder; and `reference_commits` the reference commit that step 2 of ACU-34 read for each code repository of `project.json`, not only for those of `product`.
+    The run of the continuous integration reads `hashes`, `norm_hashes` and `files` from the files of `acceptance_commit`, before it runs any `build`, and never from the working tree, which the code of layer 4 can change while it runs (level 3 of ACU-13) and which may hold files that git does not track. Example (illustrative): a `__pycache__` folder that a test run writes in `tests/AU-3/` is not in `files`;
   - `demo`: `scenario`, the name of the scenario it shows, as its `Scenario:` line in the `gherkin` block names it;
   - `deviation`: `what`, what is not met; `why`, why it is accepted; `until`, an object with one field, `date` (`YYYY-MM-DD`) or `event` (its name) (ACU-18);
   - `event`: `event`, the name of an event of a deviation, which the requester records as happened (ACU-26). Its `for` holds empty objects.
 
-  For `validation` and `deviation`, `hashes` holds the unit and its unit hash, and `norm_hashes` the norms of `## Norms` of the unit. For a `demo` in the record of a unit, `hashes` holds the unit with its unit hash and its scenario with its scenario hash, and `norm_hashes` the norms of `## Norms` of the unit. For a `demo` in the record of an area, `hashes` holds the area, its scenario and each unit that the scenario crosses, each with its hash, and `norm_hashes` the norm of each tag `@<norm ID>` of its scenario, with the norm hash that the `## Norms` of a unit it crosses cites. For a demo, `reference_commits` holds the commit of each code repository it ran on.
+  For `validation` and `deviation`, `hashes` holds the acceptance unit and its unit hash, and `norm_hashes` the norms of `## Norms` of the acceptance unit. For a `demo` in the record of an acceptance unit, `hashes` holds the acceptance unit with its unit hash and its scenario with its scenario hash, and `norm_hashes` the norms of `## Norms` of the acceptance unit. For a `demo` in the record of an acceptance area, `hashes` holds the acceptance area, its scenario and each acceptance unit that the scenario crosses, with its area hash, its scenario hash and their unit hashes, and `norm_hashes` the norm of each tag `@<norm ID>` of its scenario, with the norm hash that the `## Norms` of an acceptance unit it crosses cites. For a demo, `reference_commits` holds the commit of each code repository it ran on.
 
   Binding example of a line of kind `test`; what binds is the keys, their nesting and the types of the values, not the values:
 
@@ -639,55 +646,55 @@ norms it groups, the evidence that it works, and the person's acceptance.
   ```
 
   The continuous integration of ACU-34 writes the lines of kind `test`; the acceptance architect writes the others with what the requester says, in a change that the requester approves as [LAY-9](../../development-methodology/specs/layers.md#rules) says. The decision blocks are not in this record: they are in the code of the code repositories (ACU-33).
-- **ACU-36.** A failure of a released unit is an issue of the acceptance repository with the label `failure` that names the unit ID. The acceptance architect may propose which unit a failure belongs to; the requester confirms it. While such an issue is open, the evidence of the unit is stale (ACU-26), and the unit is `pending`.
-- **ACU-28.** When a norm that a unit groups changes or leaves layer 2, the acceptance architect updates the unit and its scenarios, the citation of the norm in `## Norms` included, which changes its unit hash (ACU-52); the test agent updates its acceptance tests, the implementation planner updates the plan, and the requester approves the change as [LAY-9](../../development-methodology/specs/layers.md#rules) says; then the unit is verified and validated again, as its profile requires.
-- **ACU-37.** In a run ([ORC-15](../../development-methodology/specs/flow.md#start-a-run)), the step of layer 3 starts from the commit of layer 2 of the run ([ORC-9](../../norms-management/specs/module.md#regenerate-the-norms)). The acceptance architect takes its part of the step with the use case define ([define.md](../use-cases/define/specs/define.md)): it analyses every norm of layer 2 against every area and every unit, and proposes the changes it finds, as ACU-2 says; for each new norm it may propose where it goes, and a norm that it groups in no unit is left out without a change (ACU-32). When a change adds, changes or removes a unit, the implementation planner proposes the new `plan.json` (ACU-44), and the test agent proposes the acceptance tests of each scenario that the change adds or changes (ACU-11), when the done profile of the unit requires them (ACU-19); for a norm that a unit groups and that changed or left layer 2, these are the changes of ACU-28. Then the run stops and waits until the requester approves or rejects each change, as [LAY-9](../../development-methodology/specs/layers.md#rules) says.
-- **ACU-41.** The hand-off of the step of layer 3 is the head of the default branch of the acceptance repository once the requester has decided on every change of ACU-37, together with the commit of layer 2 of the run. A rejected change is never committed ([LAY-9](../../development-methodology/specs/layers.md#rules)), so that commit holds only the approved changes, and the files that a rejected change touched keep their content from before the run. When the step proposed no change, the hand-off is the head of the default branch before the run. Layer 4 reads the acceptance repository at that commit, and implements no unit whose `## Norms` cites a norm hash other than that of its norm in that commit of layer 2, or a norm that commit no longer holds.
+- **ACU-36.** A failure of a released acceptance unit is an issue of the acceptance repository with the label `failure` that names the unit ID. The acceptance architect may propose which acceptance unit a failure belongs to; the requester confirms it. While such an issue is open, the evidence of the acceptance unit is stale (ACU-26), and the acceptance unit is `pending`.
+- **ACU-28.** When a norm that an acceptance unit groups changes or leaves layer 2, the acceptance architect updates the acceptance unit and its scenarios, the citation of the norm in `## Norms` included, which changes its unit hash (ACU-52); the test agent updates its acceptance tests, the implementation planner updates the plan of implementation, and the requester approves the change as [LAY-9](../../development-methodology/specs/layers.md#rules) says; then the acceptance unit is verified and validated again, as its done profile requires.
+- **ACU-37.** In a run ([ORC-15](../../development-methodology/specs/flow.md#start-a-run)), the step of layer 3 starts from the commit of layer 2 of the run ([ORC-9](../../norms-management/specs/module.md#regenerate-the-norms)). The acceptance architect takes its part of the step with the use case define ([define.md](../use-cases/define/specs/define.md)): it analyses every norm of layer 2 against every acceptance area and every acceptance unit, and proposes the changes it finds, as ACU-2 says; for each new norm it may propose where it goes, and a norm that it groups in no acceptance unit is left out without a change (ACU-32). When a change adds, changes or removes an acceptance unit, the implementation planner proposes the new `plan.json` (ACU-44), and the test agent proposes the acceptance tests of each scenario that the change adds or changes (ACU-11), when the done profile of the acceptance unit requires them (ACU-19); for a norm that an acceptance unit groups and that changed or left layer 2, these are the changes of ACU-28. Then the run stops and waits until the requester approves or rejects each change, as [LAY-9](../../development-methodology/specs/layers.md#rules) says.
+- **ACU-41.** The hand-off of the step of layer 3 is the head of the default branch of the acceptance repository once the requester has decided on every change of ACU-37, together with the commit of layer 2 of the run. A rejected change is never committed ([LAY-9](../../development-methodology/specs/layers.md#rules)), so that commit holds only the approved changes, and the files that a rejected change touched keep their content from before the run. When the step proposed no change, the hand-off is the head of the default branch before the run. Layer 4 reads the acceptance repository at that commit, and implements no acceptance unit whose `## Norms` cites a norm hash other than that of its norm in that commit of layer 2, or a norm that commit no longer holds.
 
   Rationale: a decision that belongs to a person is never taken in their
   place; the run goes on only once the person has decided, and only with
   what the person approved.
 
-- **ACU-47.** When the requester rejects a change of ACU-37, the agent that proposed it revises it in a later change, or opens an issue in the repository of layer 1 when a norm is wrong ([LAY-5](../../development-methodology/specs/layers.md#rules)).
+- **ACU-47.** When the requester rejects a change of ACU-37, the agent that proposed it revises it in a later change, or opens an issue in the specs repository when a norm is wrong ([LAY-5](../../development-methodology/specs/layers.md#rules)).
 
 ## The plan of implementation
 
-- **ACU-39.** The implementation planner writes `plan.json`, which implement reads ([IMP-14](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)): one object with one field, `increments`, a list with one object per increment, in the order in which the increments are delivered (ACU-9). Each increment holds these fields (complete list): `name`, its name; `units`, a list of its units in the order in which they are implemented. Each unit holds these fields (complete list): `unit`, its unit ID; `depends_on`, a list of the unit IDs it depends on; `components`, a list of groups, each a list of the components of layer 4 that implement the unit, as `component` names them in `project.json`, or the `name` of the code repository when the project has one code repository without `component`.
+- **ACU-39.** The implementation planner writes `plan.json`, which implement reads ([IMP-14](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)): one object with one field, `increments`, a list with one object per increment, in the order in which the increments are delivered (ACU-9). Each increment holds these fields (complete list): `name`, its name; `acceptance_units`, a list of its acceptance units in the order in which they are implemented. Each acceptance unit holds these fields (complete list): `acceptance_unit`, its unit ID; `depends_on`, a list of the unit IDs it depends on; `components`, a list of groups, each a list of the components of layer 4 that implement the acceptance unit, as `component` names them in `project.json`, or the `name` of the code repository when the project has one code repository without `component`.
 
   Binding example, for a compiler; what binds is the keys, their nesting and the types of the values, not the IDs or the names:
 
   ```json
   {"increments": [
-    {"name": "edition-1", "units": [
-      {"unit": "AU-10", "depends_on": [], "components": [["compiler"]]},
-      {"unit": "AU-11", "depends_on": ["AU-10"], "components": [["compiler"]]}]},
-    {"name": "edition-2", "units": [
-      {"unit": "AU-12", "depends_on": ["AU-10", "AU-11"], "components": [["compiler"], ["runtime", "ide"]]}]}]}
+    {"name": "edition-1", "acceptance_units": [
+      {"acceptance_unit": "AU-10", "depends_on": [], "components": [["compiler"]]},
+      {"acceptance_unit": "AU-11", "depends_on": ["AU-10"], "components": [["compiler"]]}]},
+    {"name": "edition-2", "acceptance_units": [
+      {"acceptance_unit": "AU-12", "depends_on": ["AU-10", "AU-11"], "components": [["compiler"], ["runtime", "ide"]]}]}]}
   ```
 
-- **ACU-42.** In `plan.json`, a unit comes after every unit it depends on. Each group of `components` is implemented after the group before it; the components of one group may be implemented in parallel, each by the implementing agent of its own code repository; a component comes after every component whose build it needs. ACU-23 says when the unit becomes `verified`.
-- **ACU-44.** The implementation planner decides only the plan: the increments, their names and their order, which units each increment holds, the order of the units inside each increment, and the groups of their components. It decides nothing of what a unit or an area is (ACU-4). The implementation planner writes the plan again whenever a unit is added, changed or removed, and the requester approves it as [LAY-9](../../development-methodology/specs/layers.md#rules) says.
+- **ACU-42.** In `plan.json`, an acceptance unit comes after every acceptance unit it depends on. Each group of `components` is implemented after the group before it; the components of one group may be implemented in parallel, each by the implementing agent of its own code repository; a component comes after every component whose build it needs. ACU-23 says when the acceptance unit becomes `verified`.
+- **ACU-44.** The implementation planner decides only the plan of implementation: the increments, their names and their order, which acceptance units each increment holds, the order of the acceptance units inside each increment, and the groups of their components. It decides nothing of what an acceptance unit or an acceptance area is (ACU-4). The implementation planner writes the plan of implementation again whenever an acceptance unit is added, changed or removed, and the requester approves it as [LAY-9](../../development-methodology/specs/layers.md#rules) says.
 
   Rationale: what is delivered, and when, stays a decision of the requester,
-  who approves the plan; the order in which it is built follows from the
-  dependencies between units, and can be computed again without touching a
-  unit, its unit hash or its evidence.
+  who approves the plan of implementation; the order in which it is built follows from the
+  dependencies between acceptance units, and can be computed again without touching an
+  acceptance unit, its unit hash or its evidence.
 
-## When an area and an increment are done
+## When an acceptance area and an increment are done
 
-- **ACU-29.** A scenario of an area belongs to the latest increment, in the order of `increments` of `plan.json`, among the units it crosses. While one of the units it crosses is in no increment, the scenario belongs to no increment.
-- **ACU-30.** An area is done when each of its units is at least `validated`, and each scenario of the area has evidence that is not stale, as its profile requires (ACU-22): a demo for `prototype`, an acceptance test that passes for `product` and `critical`.
+- **ACU-29.** A scenario of an acceptance area belongs to the latest increment, in the order of `increments` of `plan.json`, among the acceptance units it crosses. While one of the acceptance units it crosses is in no increment, the scenario belongs to no increment.
+- **ACU-30.** An acceptance area is done when each of its acceptance units is at least `validated`, and each scenario of the acceptance area has evidence that is not stale, as its done profile requires (ACU-22): a demo for `prototype`, an acceptance test that passes for `product` and `critical`.
 - **ACU-31.** An increment is done when these two conditions hold together (complete list):
-  1. each unit of the increment is at least `validated`;
-  2. each scenario of an area that belongs to the increment has evidence that is not stale, as ACU-30 says.
+  1. each acceptance unit of the increment is at least `validated`;
+  2. each scenario of an acceptance area that belongs to the increment has evidence that is not stale, as ACU-30 says.
 
-  A script computes it from the evidence, not a person and not the model. An increment that is done stops being done as soon as one of its units stops being `validated`.
+  A script computes it from the evidence, not a person and not the model. An increment that is done stops being done as soon as one of its acceptance units stops being `validated`.
 
   Rationale: whether a project is finished becomes a result that a program
   computes, not an opinion, and it always says the truth about the present.
 
-- **ACU-32.** The script of ACU-27 also reports each norm of layer 2 that no unit groups. Such a norm does not stop an increment from being done. Deliberate design. Rationale: layer 2 also holds text that no unit can accept, such as tables of terms and rationales; the report shows the requester which norms are left out, and the requester decides.
+- **ACU-32.** The script of ACU-27 also reports each norm of layer 2 that no acceptance unit groups. Such a norm does not stop an increment from being done. Deliberate design. Rationale: layer 2 also holds text that no acceptance unit can accept, such as tables of terms and rationales; the report shows the requester which norms are left out, and the requester decides.
 
 ## Open questions
 
-1. How is the code under a decision block found in each language, so that the script of ACU-33 ties each block to its units?
+1. How is the code under a decision block found in each language, so that the script of ACU-33 ties each block to its acceptance units?

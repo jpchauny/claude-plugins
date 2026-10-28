@@ -251,7 +251,7 @@ Feature: Create a project
     Scenario: The user chose the profile "product"
       Given the user approved the plan for the project "billing", with the default done profile "product"
       When the project is created
-      Then "billing-acceptance" holds "acceptance.json" with "default_profile" "product", "last_area_id", "last_unit_id" and "last_scenario_id" 0, "test_command" an empty string and "product" an empty object (ACU-6)
+      Then "billing-acceptance" holds "acceptance.json" with "default_done_profile" "product", "last_area_id", "last_unit_id" and "last_scenario_id" 0, "test_command" an empty string and "product" an empty object (ACU-6)
 
   Rule: ORC-19 A creation that fails halfway removes nothing and reports what exists
 

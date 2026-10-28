@@ -15,16 +15,19 @@ API (every function that takes `data` takes the bytes or the text of one file):
     scenarios(data)       -> list[Scenario]     ACU-54, in the order of the file
     forbidden_lines(data) -> list[int]          ACU-54: the numbers, from 1, of the lines of the
                                                 "gherkin" block that start with a keyword it may not hold
-    norm_citations(data)  -> list[tuple[str, str, str]]  the citations of "## Norms" (ACU-8):
+    norm_citations(data)  -> list[tuple[str, str, str]]  the norm citations of "## Norms" (ACU-8):
                                                 (norm ID, norm hash, reason), in the order of the file
-    citations(data)       -> list[tuple[str, str]]  every citation of a unit, an area or a
-                                                scenario in a file (ACU-56): (ID, hash)
+    citations(data)       -> list[tuple[str, str]]  every citation of an acceptance unit, an
+                                                acceptance area or a scenario in a file (ACU-56):
+                                                (unit ID, area ID or scenario ID; its unit hash,
+                                                area hash or scenario hash)
 
-A Scenario has these fields: "id", its scenario ID ("SC-5"), or None when its
-tag lines hold not exactly one tag "@SC-<n>" (ACU-50); "name"; "tags", every
-tag of its tag lines, in order, with its "@"; "norms", the norm IDs of its
-tags "@<norm ID>"; "units", the unit IDs of its tags "@unit:<unit ID>"; "hash",
-its scenario hash; "line", the number, from 1, of its first line in the file.
+A Scenario has these fields: "scenario_id", its scenario ID ("SC-5"), or None
+when its tag lines hold not exactly one tag "@SC-<n>" (ACU-50); "name"; "tags",
+every tag of its tag lines, in order, with its "@"; "norms", the norm IDs of
+its tags "@<norm ID>"; "acceptance_units", the unit IDs of its tags
+"@unit:<unit ID>"; "scenario_hash", its scenario hash; "line", the number, from
+1, of its first line in the file.
 
 Usage as a command, to print the hashes of files:
 
@@ -41,7 +44,7 @@ from dataclasses import dataclass, asdict
 
 NORM_ID = r"[A-Z]{3,}(?:-[1-9][0-9]*)?"  # ACU-56, R61
 NORM_TAG = re.compile(rf"^@({NORM_ID})$")
-UNIT_TAG = re.compile(r"^@unit:(AU-[1-9][0-9]*)$")
+ACCEPTANCE_UNIT_TAG = re.compile(r"^@unit:(AU-[1-9][0-9]*)$")
 SC_TAG = re.compile(r"^@(SC-[1-9][0-9]*)$")
 NORM_CITATION = re.compile(rf"^- ({NORM_ID})@([0-9a-f]{{8}}): (\S.*)$")  # ACU-8, ACU-56
 CITATION = re.compile(r"(?<![A-Za-z0-9_-])((?:AU|AA|SC)-[1-9][0-9]*)@([0-9a-f]{8})(?![0-9A-Za-z])")  # ACU-56
@@ -51,12 +54,12 @@ FORBIDDEN = ("Feature:", "Rule:", "Background:", "Example:", "Scenario Outline:"
 
 @dataclass
 class Scenario:
-    id: str | None
+    scenario_id: str | None
     name: str
     tags: list[str]
     norms: list[str]
-    units: list[str]
-    hash: str
+    acceptance_units: list[str]
+    scenario_hash: str
     line: int
 
 
@@ -159,19 +162,20 @@ def scenarios(data) -> list[Scenario]:
         tags = [tag for line in lines[start:head] for tag in line.split()]
         ids = [m.group(1) for m in map(SC_TAG.match, tags) if m]
         found.append(Scenario(
-            id=ids[0] if len(ids) == 1 else None,
+            scenario_id=ids[0] if len(ids) == 1 else None,
             name=lines[head].lstrip(" \t")[len("Scenario:"):].strip(" \t"),
             tags=tags,
             norms=[m.group(1) for m in map(NORM_TAG.match, tags) if m],
-            units=[m.group(1) for m in map(UNIT_TAG.match, tags) if m],
-            hash=fingerprint(lines[start:end]),
+            acceptance_units=[m.group(1) for m in map(ACCEPTANCE_UNIT_TAG.match, tags) if m],
+            scenario_hash=fingerprint(lines[start:end]),
             line=start + 1,
         ))
     return found
 
 
 def norm_citations(data) -> list[tuple[str, str, str]]:
-    """The citations of "## Norms" of the file of a unit (ACU-8, ACU-56): (norm ID, norm hash, reason)."""
+    """The norm citations of "## Norms" of the file of an acceptance unit (ACU-8, ACU-56): (norm ID, norm hash,
+    reason)."""
     lines = lines_of(data)
     section = _section(lines, "## Norms")
     if section is None:
@@ -180,7 +184,8 @@ def norm_citations(data) -> list[tuple[str, str, str]]:
 
 
 def citations(data) -> list[tuple[str, str]]:
-    """Every citation of a unit, an area or a scenario in a file (ACU-56), as (ID, hash), in order."""
+    """Every citation of an acceptance unit, an acceptance area or a scenario in a file (ACU-56), as (its unit ID,
+    area ID or scenario ID, its unit hash, area hash or scenario hash), in order."""
     return CITATION.findall(_text(data))
 
 

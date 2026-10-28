@@ -12,10 +12,11 @@ only):
         ACU-58: the checks, in their order, with the fetch of both
         repositories; on the first that fails, prints
         "acceptance-management:define: <message>" and exits 1. Otherwise
-        prints one JSON object: "acceptance" and "norms" (<owner>/<name>),
-        "layer1" (<owner>/<name> of the entry of layer 1, or null), "branch"
-        and "norms_branch" (the default branches), "norms_commit",
-        "acceptance_commit" and "summary" (the line of ACU-64).
+        prints one JSON object: "acceptance_repository" and
+        "norms_repository" (<owner>/<name>), "specs_repository" (<owner>/<name>
+        of the entry of layer 1, or null), "acceptance_default_branch" and
+        "norms_default_branch", "norms_commit", "acceptance_commit" and
+        "summary" (the line of ACU-64).
     define.py inventory REPO --norms-commit SHA [--worktree]
         ACU-60, ACU-61, ACU-62: prints the inventory, at HEAD, or with
         --worktree of areas/, units/ and acceptance.json as they are on disk.
@@ -31,9 +32,9 @@ only):
         tests/<unit ID>/ that HEAD holds.
     define.py commit REPO --norms-commit SHA --change "<verb> <ID>"...
         ACU-71: fetches; when the fetch fails or origin/<branch> moved, exits
-        3. Runs `check`; refuses a deleted unit whose tests/<unit ID>/ is
-        still there (ACU-70), and a file of areas/ or units/ that belongs to
-        no change. Prints a JSON object: "display" (the whole diff and the
+        3. Runs `check`; refuses a deleted acceptance unit whose
+        tests/<unit ID>/ is still there (ACU-70), and a file of areas/ or
+        units/ that belongs to no change. Prints a JSON object: "display" (the whole diff and the
         message), "paths", "message" and "command", which fetches again and
         exits 3 with the same message when the fetch fails or origin/<branch>
         moved, and otherwise stages each path by name, commits only them, and
@@ -46,13 +47,16 @@ only):
         ACU-72: prints the line "Next: ..." for the commits from SHA to HEAD,
         or nothing.
     define.py hash FILE...
-        Prints the unit hash, area hash and scenarios of each file, wherever it
-        is, as ACU-52 to ACU-54 compute them.
+        Prints the unit hash, the area hash and the scenarios, each with its
+        scenario hash, of each file, wherever it is, as ACU-52 to ACU-54
+        compute them.
 
 Never runs git stash, reset, checkout, restore or clean (ACU-73); never
 changes the working tree, the index or a local branch of the norms repository
 (ACU-59). --norms-commit is 40 lower-case hex digits, the head of a branch of
 origin of the norms repository. Python 3.9 or later, standard library only.
+The names of the JSON keys and of the identifiers follow the terms of the
+specs: "acceptance_unit", "acceptance_area", "unit_hash", "norm_citations"...
 """
 
 from __future__ import annotations
@@ -76,19 +80,20 @@ from deny_code_repositories import owner_name, valid_path  # noqa: E402
 PREFIX = "acceptance-management:define: "
 PROFILES = ("prototype", "product", "critical")  # ACU-19
 KINDS = ("test", "demo", "validation", "deviation", "event")  # ACU-35
-ID_FIELDS = (("area", "AA", "last_area_id"), ("unit", "AU", "last_unit_id"), ("scenario", "SC", "last_scenario_id"))
-ACCEPTANCE_FIELDS = {"default_profile": str, "last_area_id": int, "last_unit_id": int,
+ID_FIELDS = (("acceptance_area", "AA", "last_area_id"), ("acceptance_unit", "AU", "last_unit_id"),
+             ("scenario", "SC", "last_scenario_id"))  # ACU-55
+ACCEPTANCE_FIELDS = {"default_done_profile": str, "last_area_id": int, "last_unit_id": int,
                      "last_scenario_id": int, "test_command": str, "product": dict}  # ACU-6
 NORM_ID = re.compile(r"[A-Z]{3,}(?:-[1-9][0-9]*)?")  # ACU-56, R61
 PREFIX_FORM = re.compile(r"[A-Z]{3,}")
-UNIT_FILE = re.compile(r"units/(AU-[1-9][0-9]*)\.md")
-AREA_FILE = re.compile(r"areas/(AA-[1-9][0-9]*)\.md")
+ACCEPTANCE_UNIT_FILE = re.compile(r"units/(AU-[1-9][0-9]*)\.md")
+ACCEPTANCE_AREA_FILE = re.compile(r"areas/(AA-[1-9][0-9]*)\.md")
 CHANGE = re.compile(r"(add|change|delete) ((?:AA|AU)-[1-9][0-9]*)")
 SC_LIKE = re.compile(r"@SC-([0-9]+)")
 NODE_KINDS = {"file", "section", "heading", "paragraph", "code_block", "html_block", "link_ref_def", "table",
               "table_row", "table_cell", "block_quote", "list", "item"}  # R61
-UNIT_PARTS = ["## Narrative", "## Norms", "## Scenarios", "## Non-goals", "## Assumptions"]  # ACU-8
-AREA_PARTS = ["## Purpose", "## Scenarios"]  # ACU-7
+ACCEPTANCE_UNIT_PARTS = ["## Narrative", "## Norms", "## Scenarios", "## Non-goals", "## Assumptions"]  # ACU-8
+ACCEPTANCE_AREA_PARTS = ["## Purpose", "## Scenarios"]  # ACU-7
 ASSUMPTION_END = re.compile(r"\(([^()]*)\)\.?$")
 NARRATIVE = (re.compile(r"In order to \S"), re.compile(r"As an? \S"), re.compile(r"I want \S"))
 
@@ -144,11 +149,11 @@ def default_branch(cwd):
 # ---------------------------------------------------------------- where the repositories are
 
 def locate(cwd):
-    """ORC-20, ORC-21: the acceptance repository, its entry, and the entries of layers 1 and 2.
+    """ORC-20, ORC-21: the acceptance repository, the norms repository and the specs repository.
 
     Raises Stop with the message of the second row of ACU-58 when the repository is not that of layer 3, and
     with that of the third row when project.json has not exactly one entry of layer 2 with a valid path."""
-    refused = Stop("runs only from the repository of layer 3")
+    refused = Stop("runs only from the acceptance repository")
     root = out(cwd, "rev-parse", "--show-toplevel")
     if not root:
         raise refused
@@ -173,29 +178,30 @@ def locate(cwd):
     folder = root
     for _ in parts:
         folder = os.path.dirname(folder)
-    layer2 = [e for e in entries if e.get("layer") == 2]
-    if len(layer2) != 1 or not valid_path(layer2[0].get("path")):
-        raise Stop("project.json has not exactly one entry of layer 2 with a valid path")
-    layer1 = [e for e in entries if e.get("layer") == 1]
-    norms = layer2[0]
+    norms_entries = [e for e in entries if e.get("layer") == 2]
+    if len(norms_entries) != 1 or not valid_path(norms_entries[0].get("path")):
+        raise Stop("project.json has not exactly one entry of layer 2, the norms repository, with a valid path")
+    specs_entries = [e for e in entries if e.get("layer") == 1]
+    norms_entry = norms_entries[0]
     return {
         "root": root,
         "project_bytes": project_bytes,
-        "acceptance": f"{mine[0]['owner']}/{mine[0]['name']}",
-        "norms": f"{norms['owner']}/{norms['name']}",
-        "norms_path": os.path.join(folder, *norms["path"].split("/")),
-        "layer1": f"{layer1[0]['owner']}/{layer1[0]['name']}" if len(layer1) == 1 else None,
+        "acceptance_repository": f"{mine[0]['owner']}/{mine[0]['name']}",
+        "norms_repository": f"{norms_entry['owner']}/{norms_entry['name']}",
+        "norms_repository_path": os.path.join(folder, *norms_entry["path"].split("/")),
+        "specs_repository": (f"{specs_entries[0]['owner']}/{specs_entries[0]['name']}"
+                             if len(specs_entries) == 1 else None),
     }
 
 
-def norms_present(where):
+def norms_repository_present(where):
     """ORC-22: whether the norms repository is a git repository at its path, with its remote origin."""
-    path = where["norms_path"]
+    path = where["norms_repository_path"]
     top = out(path, "rev-parse", "--show-toplevel") if os.path.isdir(path) else None
     if not top or os.path.realpath(top) != os.path.realpath(path):
         return False
     remote = out(path, "config", "--get", "remote.origin.url")
-    return bool(remote) and owner_name(remote) == where["norms"]
+    return bool(remote) and owner_name(remote) == where["norms_repository"]
 
 
 # ---------------------------------------------------------------- layer 2
@@ -291,20 +297,21 @@ def read_tree(data):
 
 def read_norms(where, commit):
     """The norms at the norms commit (ACU-60): one dict per norm, in the order of data/tree.jsonl."""
-    data = show(where["norms_path"], commit, "data/tree.jsonl")
+    data = show(where["norms_repository_path"], commit, "data/tree.jsonl")
     if data is None:
-        raise Stop(f"{where['norms']} has no data/tree.jsonl at {commit[:7]}")
+        raise Stop(f"{where['norms_repository']} has no data/tree.jsonl at {commit[:7]}")
     try:
         nodes = read_tree(data)
     except (ValueError, UnicodeDecodeError):
-        raise Stop(f"{where['norms']}: data/tree.jsonl is not valid")
+        raise Stop(f"{where['norms_repository']}: data/tree.jsonl is not valid")
     norms, seen = [], set()
     for node in nodes:
         if node["id"] in seen:
             continue
         seen.add(node["id"])
-        norms.append({"id": node["id"], "file": node["file"], "kind": node["kind"], "parent": node.get("parent"),
-                      "hash": node["tree_hash"][:8].lower(), "text": node["own_text"]})
+        norms.append({"norm_id": node["id"], "file": node["file"], "kind": node["kind"],
+                      "parent_norm_id": node.get("parent"), "norm_hash": node["tree_hash"][:8].lower(),
+                      "own_text": node["own_text"]})
     return norms
 
 
@@ -324,7 +331,7 @@ def acceptance_ok(data):
             return None
         if kind is int and value < 0:
             return None
-    if obj["default_profile"] not in PROFILES:
+    if obj["default_done_profile"] not in PROFILES:
         return None
     return obj
 
@@ -382,7 +389,7 @@ def _check_parts(lines, parts, expected, errors, name):
 
 
 def _gherkin(lines, indexes, errors, allow_none):
-    """ACU-7, ACU-8: whether "## Scenarios" is one gherkin block (or "None." in an area)."""
+    """ACU-7, ACU-8: whether "## Scenarios" is one gherkin block (or "None." in an acceptance area)."""
     body = _trimmed(lines, indexes)
     if allow_none and [lines[i] for i in body] == ["None."]:
         return True
@@ -400,68 +407,71 @@ def _gherkin(lines, indexes, errors, allow_none):
     return True
 
 
-def _scenarios(data, lines, errors, in_area):
+def _scenarios(data, lines, errors, in_acceptance_area):
     """ACU-50, ACU-54: the scenarios of a file, with the errors of their tags."""
     found = []
+    allowed = "@SC-<n>, @<norm ID> or @unit:<unit ID>" if in_acceptance_area else "@SC-<n> or @<norm ID>"
     for s in hashes.scenarios(data):
         tag_line = s.line
         sc_like = [t for t in s.tags if SC_LIKE.fullmatch(t)]
         for tag in s.tags:
-            if SC_LIKE.fullmatch(tag) or hashes.NORM_TAG.match(tag) or (in_area and hashes.UNIT_TAG.match(tag)):
+            if (SC_LIKE.fullmatch(tag) or hashes.NORM_TAG.match(tag)
+                    or (in_acceptance_area and hashes.ACCEPTANCE_UNIT_TAG.match(tag))):
                 continue
-            _err(errors, tag_line, f"tag {tag} is not a scenario, norm or unit tag")
-        if s.id is None or len(sc_like) != 1:
+            _err(errors, tag_line, f"tag {tag} is not {allowed}")
+        if s.scenario_id is None or len(sc_like) != 1:
             _err(errors, tag_line, f'scenario "{s.name}" has not exactly one tag @SC-<n>')
-            sid = None
+            scenario_id = None
         else:
-            sid = s.id
-        entry = {"id": sid, "name": s.name, "hash": s.hash, "norms": list(dict.fromkeys(s.norms))}
-        if in_area:
-            entry["units"] = list(dict.fromkeys(s.units))
+            scenario_id = s.scenario_id
+        entry = {"scenario_id": scenario_id, "name": s.name, "scenario_hash": s.scenario_hash,
+                 "norms": list(dict.fromkeys(s.norms))}
+        if in_acceptance_area:
+            entry["acceptance_units"] = list(dict.fromkeys(s.acceptance_units))
         entry["_line"] = tag_line
         found.append(entry)
     return found
 
 
-def parse_unit(uid, data, ctx):
-    """ACU-8, ACU-52, ACU-60, ACU-61: one unit of the inventory, with its errors."""
-    unit = {"id": uid, "path": f"units/{uid}.md", "title": None, "area": None,
-            "profile": ctx["default_profile"], "hash": None, "citations": [], "scenarios": [],
-            "evidence": ctx["evidence"](uid), "errors": []}
-    errors = unit["errors"]
+def parse_acceptance_unit(unit_id, data, ctx):
+    """ACU-8, ACU-52, ACU-60, ACU-61: one acceptance unit of the inventory, with its errors."""
+    acceptance_unit = {"unit_id": unit_id, "path": f"units/{unit_id}.md", "title": None, "area_id": None,
+                       "done_profile": ctx["default_done_profile"], "unit_hash": None, "norm_citations": [],
+                       "scenarios": [], "evidence": ctx["evidence"](unit_id), "errors": []}
+    errors = acceptance_unit["errors"]
     try:
         data.decode("utf-8")
     except UnicodeDecodeError:
         _err(errors, None, "not UTF-8")
-        return unit
+        return acceptance_unit
     lines = hashes.lines_of(data)
-    heading = re.fullmatch(re.escape(f"# {uid} ") + r"(.*\S.*)", lines[0])
+    heading = re.fullmatch(re.escape(f"# {unit_id} ") + r"(.*\S.*)", lines[0])
     if heading:
-        unit["title"] = heading.group(1)
+        acceptance_unit["title"] = heading.group(1)
     else:
-        _err(errors, 1, f'heading is not "# {uid} <title>"')
-    unit["hash"] = hashes.unit_hash(data)
+        _err(errors, 1, f'heading is not "# {unit_id} <title>"')
+    acceptance_unit["unit_hash"] = hashes.unit_hash(data)
     preamble, parts = _parts(lines, 1)
     filled = [i for i in preamble if lines[i] != ""]
     area_match = re.fullmatch(r"Area: (AA-[1-9][0-9]*)", lines[filled[0]]) if filled else None
     extra = filled[1:]
     if area_match:
-        unit["area"] = area_match.group(1)
-        if unit["area"] not in ctx["area_ids"]:
-            _err(errors, filled[0] + 1, f"area {unit['area']} has no file")
+        acceptance_unit["area_id"] = area_match.group(1)
+        if acceptance_unit["area_id"] not in ctx["area_ids"]:
+            _err(errors, filled[0] + 1, f"acceptance area {acceptance_unit['area_id']} has no file")
         nxt = filled[0] + 1
         if len(filled) > 1 and filled[1] == nxt and lines[nxt].startswith("Profile:"):
             extra = filled[2:]
-            profile = lines[nxt][len("Profile:"):].strip()
-            unit["profile"] = profile
-            if profile not in PROFILES:
-                _err(errors, nxt + 1, f"profile {profile} is not prototype, product or critical")
-            elif profile == ctx["default_profile"]:
-                _err(errors, nxt + 1, f"profile {profile} is the default profile")
+            done_profile = lines[nxt][len("Profile:"):].strip()
+            acceptance_unit["done_profile"] = done_profile
+            if done_profile not in PROFILES:
+                _err(errors, nxt + 1, f"done profile {done_profile} is not prototype, product or critical")
+            elif done_profile == ctx["default_done_profile"]:
+                _err(errors, nxt + 1, f"done profile {done_profile} is the default done profile")
     else:
         _err(errors, (filled[0] + 1) if filled else None, 'no line "Area: <area ID>"')
         extra = filled[1:]
-    in_order = _check_parts(lines, parts, UNIT_PARTS, errors, "ACU-8")
+    in_order = _check_parts(lines, parts, ACCEPTANCE_UNIT_PARTS, errors, "ACU-8")
     if extra and in_order:
         _err(errors, extra[0] + 1, "parts are not those of ACU-8")
     by_name = {}
@@ -480,35 +490,42 @@ def parse_unit(uid, data, ctx):
         index, content = by_name["## Norms"]
         items = [i for i in content if lines[i] != ""]
         if not any(lines[i].startswith("- ") for i in items):
-            _err(errors, index + 1, "no citation in ## Norms")
+            _err(errors, index + 1, "no norm citation in ## Norms")
         for i in items:
             m = hashes.NORM_CITATION.match(lines[i])
             if not m:
-                _err(errors, i + 1, "not a citation of a norm")
+                _err(errors, i + 1, "not a norm citation")
                 continue
-            norm, cited_hash = m.group(1), m.group(2)
-            if norm in cited:
-                _err(errors, i + 1, f"{norm} is cited twice")
+            norm_id, hash_in_acceptance_unit = m.group(1), m.group(2)
+            if norm_id in cited:
+                _err(errors, i + 1, f"{norm_id} is cited twice")
                 continue
-            cited[norm] = i + 1
-            now = ctx["norm_hashes"].get(norm)
-            status = "retired" if now is None else ("current" if now == cited_hash else "changed")
-            unit["citations"].append({"norm": norm, "hash": cited_hash, "status": status, "norm_hash": now,
-                                      "_line": i + 1})
+            cited[norm_id] = i + 1
+            hash_in_norms_repository = ctx["norm_hashes"].get(norm_id)
+            if hash_in_norms_repository is None:
+                citation_status = "retired"
+            elif hash_in_norms_repository == hash_in_acceptance_unit:
+                citation_status = "current"
+            else:
+                citation_status = "changed"
+            acceptance_unit["norm_citations"].append({
+                "norm_id": norm_id, "hash_in_acceptance_unit": hash_in_acceptance_unit,
+                "citation_status": citation_status, "hash_in_norms_repository": hash_in_norms_repository,
+                "_line": i + 1})
 
     if "## Scenarios" in by_name:
         index, content = by_name["## Scenarios"]
         if _gherkin(lines, content, errors, allow_none=False):
-            unit["scenarios"] = _scenarios(data, lines, errors, in_area=False)
+            acceptance_unit["scenarios"] = _scenarios(data, lines, errors, in_acceptance_area=False)
     tagged = set()
-    for s in unit["scenarios"]:
-        for norm in s["norms"]:
-            tagged.add(norm)
-            if norm not in cited:
-                _err(errors, s["_line"], f"tag @{norm} is not in ## Norms")
-    for norm, line in cited.items():
-        if norm not in tagged:
-            _err(errors, line, f"{norm} is checked by no scenario")
+    for scenario in acceptance_unit["scenarios"]:
+        for norm_id in scenario["norms"]:
+            tagged.add(norm_id)
+            if norm_id not in cited:
+                _err(errors, scenario["_line"], f"tag @{norm_id} is not in ## Norms")
+    for norm_id, line in cited.items():
+        if norm_id not in tagged:
+            _err(errors, line, f"{norm_id} is checked by no scenario")
 
     for name in ("## Non-goals", "## Assumptions"):
         if name not in by_name:
@@ -527,31 +544,31 @@ def parse_unit(uid, data, ctx):
                 rest = m.group(1) if m else None
                 if rest != "environment" and rest not in ctx["norm_hashes"]:
                     _err(errors, i + 1, "assumption rests on no norm and not on (environment)")
-    unit["_cited"] = list(cited)
-    return unit
+    acceptance_unit["_cited"] = list(cited)
+    return acceptance_unit
 
 
-def parse_area(aid, data, ctx, units):
-    """ACU-7, ACU-53, ACU-60, ACU-61: one area of the inventory, with its errors."""
-    area = {"id": aid, "path": f"areas/{aid}.md", "title": None, "hash": None,
-            "units": [u["id"] for u in units if u["area"] == aid], "scenarios": [],
-            "evidence": ctx["evidence"](aid), "errors": []}
-    errors = area["errors"]
+def parse_acceptance_area(area_id, data, ctx, acceptance_units):
+    """ACU-7, ACU-53, ACU-60, ACU-61: one acceptance area of the inventory, with its errors."""
+    acceptance_area = {"area_id": area_id, "path": f"areas/{area_id}.md", "title": None, "area_hash": None,
+                       "acceptance_units": [u["unit_id"] for u in acceptance_units if u["area_id"] == area_id],
+                       "scenarios": [], "evidence": ctx["evidence"](area_id), "errors": []}
+    errors = acceptance_area["errors"]
     try:
         data.decode("utf-8")
     except UnicodeDecodeError:
         _err(errors, None, "not UTF-8")
-        return area
+        return acceptance_area
     lines = hashes.lines_of(data)
-    heading = re.fullmatch(re.escape(f"# {aid} ") + r"(.*\S.*)", lines[0])
+    heading = re.fullmatch(re.escape(f"# {area_id} ") + r"(.*\S.*)", lines[0])
     if heading:
-        area["title"] = heading.group(1)
+        acceptance_area["title"] = heading.group(1)
     else:
-        _err(errors, 1, f'heading is not "# {aid} <title>"')
-    area["hash"] = hashes.area_hash(data)
+        _err(errors, 1, f'heading is not "# {area_id} <title>"')
+    acceptance_area["area_hash"] = hashes.area_hash(data)
     preamble, parts = _parts(lines, 1)
     filled = [i for i in preamble if lines[i] != ""]
-    in_order = _check_parts(lines, parts, AREA_PARTS, errors, "ACU-7")
+    in_order = _check_parts(lines, parts, ACCEPTANCE_AREA_PARTS, errors, "ACU-7")
     by_name = {}
     for heading_text, index, content in parts:
         by_name.setdefault(heading_text, (index, content))
@@ -561,23 +578,23 @@ def parse_area(aid, data, ctx, units):
     if "## Scenarios" in by_name:
         index, content = by_name["## Scenarios"]
         if _gherkin(lines, content, errors, allow_none=True):
-            area["scenarios"] = _scenarios(data, lines, errors, in_area=True)
-    by_id = {u["id"]: u for u in units}
-    for s in area["scenarios"]:
-        label = s["id"] or f'"{s["name"]}"'
-        if len(s["units"]) < 2:
-            _err(errors, s["_line"], f"scenario {label} crosses fewer than two units")
+            acceptance_area["scenarios"] = _scenarios(data, lines, errors, in_acceptance_area=True)
+    by_unit_id = {u["unit_id"]: u for u in acceptance_units}
+    for scenario in acceptance_area["scenarios"]:
+        label = scenario["scenario_id"] or f'"{scenario["name"]}"'
+        if len(scenario["acceptance_units"]) < 2:
+            _err(errors, scenario["_line"], f"scenario {label} crosses fewer than two acceptance units")
         norms_of_crossed = set()
-        for uid in s["units"]:
-            unit = by_id.get(uid)
-            if unit is None or unit["area"] != aid:
-                _err(errors, s["_line"], f"{uid} is not a unit of {aid}")
-            if unit is not None:
-                norms_of_crossed.update(unit.get("_cited", []))
-        for norm in s["norms"]:
-            if norm not in norms_of_crossed:
-                _err(errors, s["_line"], f"tag @{norm} is in ## Norms of no unit it crosses")
-    return area
+        for unit_id in scenario["acceptance_units"]:
+            acceptance_unit = by_unit_id.get(unit_id)
+            if acceptance_unit is None or acceptance_unit["area_id"] != area_id:
+                _err(errors, scenario["_line"], f"{unit_id} is not an acceptance unit of {area_id}")
+            if acceptance_unit is not None:
+                norms_of_crossed.update(acceptance_unit.get("_cited", []))
+        for norm_id in scenario["norms"]:
+            if norm_id not in norms_of_crossed:
+                _err(errors, scenario["_line"], f"tag @{norm_id} is in ## Norms of no acceptance unit it crosses")
+    return acceptance_area
 
 
 # ---------------------------------------------------------------- the inventory
@@ -647,38 +664,39 @@ def inventory(where, norms_commit, rev="HEAD", norms=None):
     acc = acceptance_ok(acc_bytes) if acc_bytes is not None else None
     if acc is None:
         errors.append({"path": "acceptance.json", "line": None, "message": "acceptance.json does not meet ACU-6"})
-        acc = {"default_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0}
+        acc = {"default_done_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0}
     head_rev = rev if rev is not None else "HEAD"
-    ctx = {"default_profile": acc["default_profile"], "norm_hashes": {n["id"]: n["hash"] for n in norms},
+    ctx = {"default_done_profile": acc["default_done_profile"], "norm_hashes": {n["norm_id"]: n["norm_hash"] for n in norms},
            "evidence": evidence_counter(root, head_rev)}
     unit_files, area_files = {}, {}
     for path in source.paths():
-        m_unit, m_area = UNIT_FILE.fullmatch(path), AREA_FILE.fullmatch(path)
+        m_unit, m_area = ACCEPTANCE_UNIT_FILE.fullmatch(path), ACCEPTANCE_AREA_FILE.fullmatch(path)
         if m_unit:
             unit_files[m_unit.group(1)] = path
         elif m_area:
             area_files[m_area.group(1)] = path
         else:
-            errors.append({"path": path, "line": None, "message": "not the file of an area or a unit"})
+            errors.append({"path": path, "line": None,
+                           "message": "not the file of an acceptance area or an acceptance unit"})
     ctx["area_ids"] = set(area_files)
-    units = [parse_unit(uid, source.read(path) or b"", ctx) for uid, path in
-             sorted(unit_files.items(), key=lambda kv: number(kv[0]))]
-    areas = [parse_area(aid, source.read(path) or b"", ctx, units) for aid, path in
-             sorted(area_files.items(), key=lambda kv: number(kv[0]))]
+    acceptance_units = [parse_acceptance_unit(unit_id, source.read(path) or b"", ctx) for unit_id, path in
+                        sorted(unit_files.items(), key=lambda kv: number(kv[0]))]
+    acceptance_areas = [parse_acceptance_area(area_id, source.read(path) or b"", ctx, acceptance_units)
+                        for area_id, path in sorted(area_files.items(), key=lambda kv: number(kv[0]))]
 
     holders = {}
-    for item in sorted(areas + units, key=lambda x: x["path"]):
-        for s in item["scenarios"]:
-            if s["id"]:
-                holders.setdefault(s["id"], []).append((item["path"], s["_line"]))
-    for sid, places in sorted(holders.items(), key=lambda kv: number(kv[0])):
+    for item in sorted(acceptance_areas + acceptance_units, key=lambda x: x["path"]):
+        for scenario in item["scenarios"]:
+            if scenario["scenario_id"]:
+                holders.setdefault(scenario["scenario_id"], []).append((item["path"], scenario["_line"]))
+    for scenario_id, places in sorted(holders.items(), key=lambda kv: number(kv[0])):
         if len(places) > 1:
             errors.append({"path": places[0][0], "line": places[0][1],
-                           "message": f"{sid} is the ID of more than one scenario"})
+                           "message": f"{scenario_id} is the ID of more than one scenario"})
 
-    present = {"area": [(a["id"], a["path"], None) for a in areas],
-               "unit": [(u["id"], u["path"], None) for u in units],
-               "scenario": [(sid, places[0][0], places[0][1]) for sid, places in holders.items()]}
+    present = {"acceptance_area": [(a["area_id"], a["path"], None) for a in acceptance_areas],
+               "acceptance_unit": [(u["unit_id"], u["path"], None) for u in acceptance_units],
+               "scenario": [(scenario_id, places[0][0], places[0][1]) for scenario_id, places in holders.items()]}
     for kind, _, field in ID_FIELDS:
         for an_id, path, line in sorted(present[kind], key=lambda x: number(x[0])):
             if number(an_id) > acc[field]:
@@ -695,11 +713,11 @@ def inventory(where, norms_commit, rev="HEAD", norms=None):
     result = {
         "norms_commit": norms_commit,
         "acceptance_commit": out(root, "rev-parse", head_rev),
-        "default_profile": acc["default_profile"],
+        "default_done_profile": acc["default_done_profile"],
         "next_ids": {kind: f"{prefix}-{tops[field] + 1}" for kind, prefix, field in ID_FIELDS},
         "norms": norms,
-        "areas": areas,
-        "units": units,
+        "acceptance_areas": acceptance_areas,
+        "acceptance_units": acceptance_units,
         "errors": errors,
     }
     return result
@@ -708,19 +726,19 @@ def inventory(where, norms_commit, rev="HEAD", norms=None):
 def head_ids(root):
     """The area IDs, unit IDs and scenario IDs that HEAD holds in any file, and the fields of acceptance.json there."""
     head = Layer3(root, "HEAD")
-    ids = {"area": set(), "unit": set(), "scenario": set()}
+    ids = {kind: set() for kind, _, _ in ID_FIELDS}
     for path in head.paths():
-        m_unit, m_area = UNIT_FILE.fullmatch(path), AREA_FILE.fullmatch(path)
+        m_unit, m_area = ACCEPTANCE_UNIT_FILE.fullmatch(path), ACCEPTANCE_AREA_FILE.fullmatch(path)
         if m_unit:
-            ids["unit"].add(m_unit.group(1))
+            ids["acceptance_unit"].add(m_unit.group(1))
         elif m_area:
-            ids["area"].add(m_area.group(1))
+            ids["acceptance_area"].add(m_area.group(1))
         else:
             continue
         try:
-            for s in hashes.scenarios(head.read(path) or b""):
-                if s.id:
-                    ids["scenario"].add(s.id)
+            for scenario in hashes.scenarios(head.read(path) or b""):
+                if scenario.scenario_id:
+                    ids["scenario"].add(scenario.scenario_id)
         except UnicodeDecodeError:
             pass
     acc = acceptance_ok(head.read("acceptance.json") or b"") or {f: 0 for _, _, f in ID_FIELDS}
@@ -778,14 +796,14 @@ def plural(count, noun):
 
 def summary(inv):
     """ACU-64: the line that sums up the inventory."""
-    citations = [c for u in inv["units"] for c in u["citations"]]
-    changed = sum(c["status"] == "changed" for c in citations)
-    retired = sum(c["status"] == "retired" for c in citations)
-    errors = len(inv["errors"]) + sum(len(x["errors"]) for x in inv["areas"] + inv["units"])
+    norm_citations = [c for u in inv["acceptance_units"] for c in u["norm_citations"]]
+    changed = sum(c["citation_status"] == "changed" for c in norm_citations)
+    retired = sum(c["citation_status"] == "retired" for c in norm_citations)
+    errors = len(inv["errors"]) + sum(len(x["errors"]) for x in inv["acceptance_areas"] + inv["acceptance_units"])
     return (f"Layer 2 at {inv['norms_commit'][:7]}: {plural(len(inv['norms']), 'norm')}. "
-            f"Layer 3 at {inv['acceptance_commit'][:7]}: {plural(len(inv['areas']), 'area')}, "
-            f"{plural(len(inv['units']), 'unit')}; {plural(changed, 'citation')} changed, {retired} retired; "
-            f"{plural(errors, 'format error')}.")
+            f"Layer 3 at {inv['acceptance_commit'][:7]}: {plural(len(inv['acceptance_areas']), 'acceptance area')}, "
+            f"{plural(len(inv['acceptance_units']), 'acceptance unit')}; "
+            f"{plural(changed, 'norm citation')} changed, {retired} retired; {plural(errors, 'format error')}.")
 
 
 # ---------------------------------------------------------------- start (ACU-58)
@@ -794,8 +812,9 @@ def start(cwd, args):
     if any(a.strip() for a in args):
         raise Stop("takes no argument")
     where = locate(cwd)
-    root, acc_name, norms_name, npath = where["root"], where["acceptance"], where["norms"], where["norms_path"]
-    if not norms_present(where):
+    root, acc_name, norms_name = where["root"], where["acceptance_repository"], where["norms_repository"]
+    npath = where["norms_repository_path"]
+    if not norms_repository_present(where):
         raise Stop(f"{norms_name} not found at {npath}; run: git clone https://github.com/{norms_name} {npath}")
     if git(root, "fetch", "-q", "origin").returncode != 0:
         raise Stop(f"cannot fetch {acc_name}")
@@ -838,8 +857,9 @@ def start(cwd, args):
     if acceptance_ok(show(root, "HEAD", "acceptance.json") or b"") is None:
         raise Stop("acceptance.json does not meet ACU-6")
     inv = inventory(where, norms_commit)
-    return {"acceptance": acc_name, "norms": norms_name, "layer1": where["layer1"], "branch": branch,
-            "norms_branch": norms_branch, "norms_commit": norms_commit,
+    return {"acceptance_repository": acc_name, "norms_repository": norms_name,
+            "specs_repository": where["specs_repository"], "acceptance_default_branch": branch,
+            "norms_default_branch": norms_branch, "norms_commit": norms_commit,
             "acceptance_commit": inv["acceptance_commit"], "summary": summary(inv)}
 
 
@@ -884,20 +904,21 @@ def check(where, norms_commit):
     files = written(root)
     paths = [p for p, _, new in files]
     problems = []
-    for unit in after["units"]:
-        if unit["path"] in paths:
-            for c in unit["citations"]:
-                if c["status"] != "current":
-                    now = c["norm_hash"] or "none: the norm is not in layer 2"
-                    problems.append({"path": unit["path"], "line": c["_line"],
-                                     "message": f"{c['norm']}@{c['hash']} is {c['status']}; its norm hash is {now}"})
+    for acceptance_unit in after["acceptance_units"]:
+        if acceptance_unit["path"] in paths:
+            for c in acceptance_unit["norm_citations"]:
+                if c["citation_status"] != "current":
+                    now = c["hash_in_norms_repository"] or "none: the norm is not in layer 2"
+                    problems.append({"path": acceptance_unit["path"], "line": c["_line"],
+                                     "message": f"{c['norm_id']}@{c['hash_in_acceptance_unit']} is "
+                                                f"{c['citation_status']}; its norm hash at the norms commit is {now}"})
     old = {(e["path"], e["message"]) for e in before["errors"]}
-    for x in before["areas"] + before["units"]:
+    for x in before["acceptance_areas"] + before["acceptance_units"]:
         old |= {(x["path"], e["message"]) for e in x["errors"]}
     for e in after["errors"]:
         if e["path"] in paths or (e["path"], e["message"]) not in old:
             problems.append(e)
-    for x in after["areas"] + after["units"]:
+    for x in after["acceptance_areas"] + after["acceptance_units"]:
         for e in x["errors"]:
             if x["path"] in paths or (x["path"], e["message"]) not in old:
                 problems.append({"path": x["path"], "line": e["line"], "message": e["message"]})
@@ -919,14 +940,15 @@ def set_ids(root):
     if acc is None:
         raise Stop("acceptance.json does not meet ACU-6")
     disk = Layer3(root, None)
-    present = {"area": [], "unit": [], "scenario": []}
+    present = {kind: [] for kind, _, _ in ID_FIELDS}
     for p in disk.paths():
-        m_unit, m_area = UNIT_FILE.fullmatch(p), AREA_FILE.fullmatch(p)
+        m_unit, m_area = ACCEPTANCE_UNIT_FILE.fullmatch(p), ACCEPTANCE_AREA_FILE.fullmatch(p)
         if not (m_unit or m_area):
             continue
-        present["unit" if m_unit else "area"].append(((m_unit or m_area).group(1), p, None))
+        present["acceptance_unit" if m_unit else "acceptance_area"].append(((m_unit or m_area).group(1), p, None))
         try:
-            present["scenario"] += [(s.id, p, s.line) for s in hashes.scenarios(disk.read(p) or b"") if s.id]
+            present["scenario"] += [(s.scenario_id, p, s.line) for s in hashes.scenarios(disk.read(p) or b"")
+                                    if s.scenario_id]
         except UnicodeDecodeError:
             pass
     expected, _ = expected_fields(root, present)
@@ -946,22 +968,22 @@ def set_ids(root):
     return changed
 
 
-def tests_of(root, uid):
+def tests_of(root, unit_id):
     """The files of tests/<unit ID>/ that HEAD holds."""
-    return ls_tree(root, "HEAD", f"tests/{uid}")
+    return ls_tree(root, "HEAD", f"tests/{unit_id}")
 
 
-def delete_tests(root, uid):
+def delete_tests(root, unit_id):
     """ACU-10, ACU-70: deletes from the working tree each file of tests/<unit ID>/ that HEAD holds."""
-    if not re.fullmatch(r"AU-[1-9][0-9]*", uid):
-        raise Stop(f"{uid} is not a unit ID")
+    if not re.fullmatch(r"AU-[1-9][0-9]*", unit_id):
+        raise Stop(f"{unit_id} is not a unit ID")
     deleted = []
-    for path in tests_of(root, uid):
+    for path in tests_of(root, unit_id):
         full = os.path.join(root, *path.split("/"))
         if os.path.lexists(full):
             os.remove(full)
             deleted.append(path)
-    base = os.path.join(root, "tests", uid)
+    base = os.path.join(root, "tests", unit_id)
     for folder, _, _ in sorted(os.walk(base), key=lambda x: -len(x[0])):
         try:
             os.rmdir(folder)
@@ -991,7 +1013,8 @@ def message(changes):
 
 
 def deleted_tests(root, changes):
-    """The files of tests/<unit ID>/ that HEAD holds and the working tree does not, for each unit deleted."""
+    """The files of tests/<unit ID>/ that HEAD holds and the working tree does not, for each acceptance unit
+    deleted."""
     found = []
     for verb, an_id in changes:
         if verb == "delete" and an_id.startswith("AU-"):
@@ -1009,26 +1032,27 @@ def unified(path, old, new):
 
 
 def _facts(data):
-    """The scenario IDs, the norms cited in "## Norms", the line "Area:" and the scenarios of a file."""
+    """The scenario IDs, the norm IDs cited in "## Norms", the area ID of the line "Area:" and the scenarios of a
+    file."""
     if data is None:
         return set(), set(), None, []
     try:
         found = hashes.scenarios(data)
-        cited = {norm for norm, _, _ in hashes.norm_citations(data)}
-        area = next((m.group(1) for m in map(re.compile(r"Area: (AA-[1-9][0-9]*)").fullmatch,
-                                              hashes.lines_of(data)) if m), None)
+        cited = {norm_id for norm_id, _, _ in hashes.norm_citations(data)}
+        area_id = next((m.group(1) for m in map(re.compile(r"Area: (AA-[1-9][0-9]*)").fullmatch,
+                                                 hashes.lines_of(data)) if m), None)
     except UnicodeDecodeError:
         return set(), set(), None, []
-    return {x.id for x in found if x.id}, cited, area, found
+    return {x.scenario_id for x in found if x.scenario_id}, cited, area_id, found
 
 
 def strays(root, changes, files):
     """ACU-71: the files of areas/ and units/ that differ from HEAD and belong to no change (the term Change).
 
-    A file belongs to a change when it is the file of its ID; when the change moves a scenario or a citation out
-    of it into the file of a change (ACU-67); or, for an area, when a scenario of it at HEAD crosses a unit that
-    the change deletes, moves to another area, or makes cite no longer a norm of a tag of that scenario (ACU-10,
-    ACU-70)."""
+    A file belongs to a change when it is the file of its ID; when the change moves a scenario or a norm citation
+    out of it into the file of a change (ACU-67); or, for an acceptance area, when a scenario of it at HEAD crosses
+    an acceptance unit that the change deletes, moves to another acceptance area, or makes cite no longer a norm of
+    a tag of that scenario (ACU-10, ACU-70)."""
     disk, head = Layer3(root, None), Layer3(root, "HEAD")
     named = {f"{'areas' if an_id.startswith('AA-') else 'units'}/{an_id}.md": (verb, an_id) for verb, an_id in changes}
     now_sc, now_norms = set(), set()
@@ -1044,24 +1068,24 @@ def strays(root, changes, files):
         new_sc, new_norms, _, _ = _facts(new)
         if (old_sc - new_sc) & now_sc or (old_norms - new_norms) & now_norms:
             moved.add(path)
-    units = {}
+    acceptance_units = {}
     for path in list(named) + sorted(moved):
-        m = UNIT_FILE.fullmatch(path)
+        m = ACCEPTANCE_UNIT_FILE.fullmatch(path)
         if m:
             verb = named[path][0] if path in named else "change"
-            units[m.group(1)] = (verb, _facts(head.read(path)), _facts(disk.read(path)))
+            acceptance_units[m.group(1)] = (verb, _facts(head.read(path)), _facts(disk.read(path)))
     found = []
     for path, old, new in files:
         if path == "acceptance.json" or path in named or path in moved:
             continue
         old_scenarios = _facts(old)[3]
         crossed = False
-        if AREA_FILE.fullmatch(path):
+        if ACCEPTANCE_AREA_FILE.fullmatch(path):
             for scenario in old_scenarios:
-                for uid in scenario.units:
-                    if uid not in units:
+                for unit_id in scenario.acceptance_units:
+                    if unit_id not in acceptance_units:
                         continue
-                    verb, (_, cited_before, area_before, _), (_, cited_now, area_now, _) = units[uid]
+                    verb, (_, cited_before, area_before, _), (_, cited_now, area_now, _) = acceptance_units[unit_id]
                     lost = cited_before - cited_now
                     if verb == "delete" or area_before != area_now or set(scenario.norms) & lost:
                         crossed = True
@@ -1078,9 +1102,9 @@ def commit(where, norms_commit, change_texts):
         raise Stop("no change given")
     branch = default_branch(root)
     if not branch:
-        raise Stop(f"cannot find the default branch of {where['acceptance']}")
+        raise Stop(f"cannot find the default branch of {where['acceptance_repository']}")
     if git(root, "fetch", "-q", "origin").returncode != 0:
-        raise Stop(f"cannot fetch {where['acceptance']}", code=3)
+        raise Stop(f"cannot fetch {where['acceptance_repository']}", code=3)
     if out(root, "rev-list", "--count", f"HEAD..refs/remotes/origin/{branch}") != "0":
         raise Stop(f"origin/{branch} moved; run the skill again", code=3)
     result = check(where, norms_commit)
@@ -1109,7 +1133,7 @@ def commit(where, norms_commit, change_texts):
     r = shlex.quote(root)
     ps = " ".join(shlex.quote(p) for p in paths)
     g = f"git --literal-pathspecs -C {r}"
-    cannot = shlex.quote(PREFIX + f"cannot fetch {where['acceptance']}")
+    cannot = shlex.quote(PREFIX + f"cannot fetch {where['acceptance_repository']}")
     moved = shlex.quote(PREFIX + f"origin/{branch} moved; run the skill again")
     behind = shlex.quote(f"HEAD..refs/remotes/origin/{branch}")
     # ACU-71: the command fetches again first, so that a move of the default branch while the requester reads the
@@ -1123,11 +1147,12 @@ def commit(where, norms_commit, change_texts):
     display = "\n".join(["Diff:", ""] + diffs + ["Commit:", f"    {subject}", ""] +
                         [f"    {line}" for line in body.split("\n")])
     return {"display": display, "paths": paths, "message": f"{subject}\n\n{body}", "command": command,
-            "branch": branch}
+            "default_branch": branch}
 
 
 def rollback(root, change_texts):
-    """ACU-71: gives back to areas/, units/ and acceptance.json the bytes of HEAD, and the tests of each unit deleted."""
+    """ACU-71: gives back to areas/, units/ and acceptance.json the bytes of HEAD, and the tests of each acceptance unit
+    deleted."""
     changes = parse_changes(change_texts)
     restored = []
     for path, old, new in written(root):
@@ -1152,16 +1177,16 @@ def next_line(root, since):
     """ACU-72: the line "Next: ..." for the commits from `since` to HEAD, or None."""
     old, new = Layer3(root, since), Layer3(root, "HEAD")
     paths = sorted(set(old.paths()) | set(new.paths()))
-    units_touched, ids = False, []
+    acceptance_units_touched, ids = False, []
     for path in paths:
-        m_unit, m_area = UNIT_FILE.fullmatch(path), AREA_FILE.fullmatch(path)
+        m_unit, m_area = ACCEPTANCE_UNIT_FILE.fullmatch(path), ACCEPTANCE_AREA_FILE.fullmatch(path)
         if not (m_unit or m_area):
             continue
         a, b = old.read(path), new.read(path)
         if a == b:
             continue
         if m_unit:
-            units_touched = True
+            acceptance_units_touched = True
         if b is None:
             continue
         compute = hashes.unit_hash if m_unit else hashes.area_hash
@@ -1174,7 +1199,7 @@ def next_line(root, since):
             ids.append((m_unit or m_area).group(1))
     ids.sort(key=lambda x: (x[:2] != "AA", number(x)))
     parts = []
-    if units_touched:
+    if acceptance_units_touched:
         parts.append("the implementation planner updates plan.json")
     if ids:
         parts.append(f"the test agent updates the acceptance tests of {', '.join(ids)}")
@@ -1187,9 +1212,9 @@ def norms_commit_of(where, rest):
     """The option --norms-commit: 40 lower-case hex digits, the head of a branch of origin of the norms repository
     (ACU-59), never a local branch, HEAD or a short SHA."""
     sha = option(rest, "--norms-commit")
-    refs = out(where["norms_path"], "for-each-ref", "--points-at", sha, "--format=%(refname)", "refs/remotes/origin/")
+    refs = out(where["norms_repository_path"], "for-each-ref", "--points-at", sha, "--format=%(refname)", "refs/remotes/origin/")
     if not re.fullmatch(r"[0-9a-f]{40}", sha) or not refs:
-        raise Stop(f"--norms-commit {sha} is not the head of a branch of origin in {where['norms']}; "
+        raise Stop(f"--norms-commit {sha} is not the head of a branch of origin in {where['norms_repository']}; "
                    "run the skill again")
     return sha
 
@@ -1213,7 +1238,8 @@ def main(argv):
             with open(path, "rb") as f:
                 data = f.read()
             print(json.dumps({"path": path, "unit_hash": hashes.unit_hash(data), "area_hash": hashes.area_hash(data),
-                              "scenarios": [{"id": s.id, "name": s.name, "hash": s.hash}
+                              "scenarios": [{"scenario_id": s.scenario_id, "name": s.name,
+                                             "scenario_hash": s.scenario_hash}
                                             for s in hashes.scenarios(data)]}, ensure_ascii=False))
         return 0
     if not args:

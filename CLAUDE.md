@@ -21,3 +21,11 @@ Claude decide el cómo: formatos, algoritmos, scripts, mensajes, campos,
 estructura del código y de las specs. No preguntar detalles de
 implementación; decidirlos, escribirlos en la spec y seguir. Preguntar
 solo lo que cambia lo que el usuario ve o decide.
+
+## Lenguaje ubicuo (2026-10-28)
+
+Los nombres de specs, código, campos de JSON, mensajes y variables usan
+los términos que definen las tablas de términos de las specs, completos
+y sin abreviar: `acceptance_unit`, no `unit`; `acceptance_area`, no
+`area`; `norms_repository`, no `norms`. Un nombre dice de quién es y de
+dónde viene el dato (`hash_in_acceptance_unit`, no `hash`).

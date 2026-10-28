@@ -39,10 +39,11 @@ are those of ACU-34, in its order:
 6. Adds one line of kind "test" per result to records/<ID>.jsonl, never
    changing a line already there. Every result of a folder is recorded for
    every file of the folder, which is never less strict than ACU-26. Its
-   "for" holds, as ACU-35 says: "hashes", each unit, area and scenario that the
-   files of the folder cite (ACU-11), and for an area each unit that a
-   scenario of the area crosses, with its unit hash (ACU-52); "norm_hashes",
-   the citations of "## Norms" of the unit or of the units crossed (ACU-8);
+   "for" holds, as ACU-35 says: "hashes", each acceptance unit, acceptance area
+   and scenario that the files of the folder cite (ACU-11), and for an
+   acceptance area each acceptance unit that a scenario of the acceptance area
+   crosses, with its unit hash (ACU-52); "norm_hashes", the norm citations of
+   "## Norms" of the acceptance unit or of the acceptance units crossed (ACU-8);
    "files", each file of the folder with its git blob hash; and
    "reference_commits". The hashes, the scenarios and the citations are read
    with acceptance_hashes.py (ACU-51 to ACU-56). Every "for" is read from the
@@ -77,7 +78,7 @@ TARGET = re.compile(r"^(AU|AA)-[1-9][0-9]*$")  # ACU-55, ACU-56
 ENV_NAME = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$")  # ACU-35
 GIT_URL = "https://github.com/{owner}/{name}.git"
-FIELDS = {"default_profile": str, "last_area_id": int, "last_unit_id": int, "last_scenario_id": int,
+FIELDS = {"default_done_profile": str, "last_area_id": int, "last_unit_id": int, "last_scenario_id": int,
           "test_command": str, "product": dict}  # ACU-6
 PROFILES = ("prototype", "product", "critical")  # ACU-19
 
@@ -193,7 +194,8 @@ def targets_of(repo: Path, commit: str) -> list:
 
 
 def read_utf8(repo: Path, commit: str, path: str) -> str | None:
-    """The text of a file of areas/ or units/ at `commit`, or None when it is missing or not UTF-8."""
+    """The text of the file of an acceptance area or an acceptance unit at `commit`, or None when it is missing or
+    not UTF-8."""
     data = git_bytes(repo, "show", f"{commit}:{path}")
     try:
         return data.decode("utf-8") if data is not None else None
@@ -203,27 +205,28 @@ def read_utf8(repo: Path, commit: str, path: str) -> str | None:
 
 def produced_for(repo: Path, commit: str, target: str) -> tuple[dict, dict, dict]:
     """The "hashes", "norm_hashes" and "files" of the "for" of the lines of one folder, at `commit` (ACU-35)."""
-    hashes, norms = {}, {}
+    hashes, norm_hashes = {}, {}
     files = tracked(repo, commit, f"tests/{target}")
     for sha in files.values():
         data = git_bytes(repo, "cat-file", "blob", sha) or b""
         for cited, value in acceptance_hashes.citations(data.decode("utf-8", errors="replace")):
             put(hashes, cited, value)
     if target.startswith("AA-"):
-        area = read_utf8(repo, commit, f"areas/{target}.md")
-        units = sorted({unit for scenario in (acceptance_hashes.scenarios(area) if area is not None else [])
-                        for unit in scenario.units}, key=id_order)
+        acceptance_area = read_utf8(repo, commit, f"areas/{target}.md")
+        scenarios = acceptance_hashes.scenarios(acceptance_area) if acceptance_area is not None else []
+        acceptance_units = sorted({unit_id for scenario in scenarios for unit_id in scenario.acceptance_units},
+                                  key=id_order)
     else:
-        units = [target]
-    for unit in units:
-        data = read_utf8(repo, commit, f"units/{unit}.md")
+        acceptance_units = [target]
+    for unit_id in acceptance_units:
+        data = read_utf8(repo, commit, f"units/{unit_id}.md")
         if target.startswith("AA-"):
-            # A unit with no file, or a file with no unit hash, maps to "": no hash (ACU-35).
-            put(hashes, unit, (acceptance_hashes.unit_hash(data) or "") if data is not None else "")
+            # An acceptance unit with no file, or a file with no unit hash, maps to "": no hash (ACU-35).
+            put(hashes, unit_id, (acceptance_hashes.unit_hash(data) or "") if data is not None else "")
         for norm_id, norm_hash, _ in acceptance_hashes.norm_citations(data) if data is not None else []:
-            put(norms, norm_id, norm_hash)
+            put(norm_hashes, norm_id, norm_hash)
     return (dict(sorted(hashes.items(), key=lambda kv: id_order(kv[0]))),
-            dict(sorted(norms.items())), files)
+            dict(sorted(norm_hashes.items())), files)
 
 
 def config_of(repo: Path) -> dict | None:
@@ -238,7 +241,7 @@ def config_of(repo: Path) -> dict | None:
         value = config[field]
         if not isinstance(value, kind) or isinstance(value, bool) or (kind is int and value < 0):
             return None
-    return config if config["default_profile"] in PROFILES else None
+    return config if config["default_done_profile"] in PROFILES else None
 
 
 def last_run(repo: Path) -> list[dict]:
@@ -370,13 +373,13 @@ def main(argv: list[str]) -> int:
         report.unlink(missing_ok=True)
         out = subprocess.run(command, shell=True, cwd=repo,
                              env=env | {"ACCEPTANCE_TARGET": f"tests/{target}", "ACCEPTANCE_REPORT": str(report)})
-        hashes, norms, files = fors[target]
+        hashes, norm_hashes, files = fors[target]
         found = results(report, f"tests/{target}", out.returncode)
         lines = []
         for name, result in found:
             lines.append(json.dumps({
                 "kind": "test", "test": name, "result": result,
-                "for": {"hashes": hashes, "norm_hashes": norms, "files": files, "reference_commits": commits},
+                "for": {"hashes": hashes, "norm_hashes": norm_hashes, "files": files, "reference_commits": commits},
                 "acceptance_commit": acceptance_commit, "date": date, "produced_by": args.produced_by,
             }))
         with open(repo / "records" / f"{target}.jsonl", "a", encoding="utf-8") as f:

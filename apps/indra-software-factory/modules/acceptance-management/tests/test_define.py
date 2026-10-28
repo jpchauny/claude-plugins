@@ -185,7 +185,7 @@ class Fixture(unittest.TestCase):
         self.tmp.cleanup()
 
     def acceptance(self, **fields):
-        data = {"default_profile": "product", "last_area_id": 1, "last_unit_id": 3, "last_scenario_id": 9,
+        data = {"default_done_profile": "product", "last_area_id": 1, "last_unit_id": 3, "last_scenario_id": 9,
                 "test_command": "", "product": {}}
         data.update(fields)
         return json.dumps(data, indent=2) + "\n"
@@ -239,11 +239,11 @@ class Fixture(unittest.TestCase):
     def norms_commit(self):
         return git(self.norms, "rev-parse", "origin/main").stdout.strip()
 
-    def unit_of(self, inv, uid):
-        return next(u for u in inv["units"] if u["id"] == uid)
+    def unit_of(self, inv, unit_id):
+        return next(u for u in inv["acceptance_units"] if u["unit_id"] == unit_id)
 
-    def area_of(self, inv, aid):
-        return next(a for a in inv["areas"] if a["id"] == aid)
+    def area_of(self, inv, area_id):
+        return next(a for a in inv["acceptance_areas"] if a["area_id"] == area_id)
 
     def messages(self, item):
         return [e["message"] for e in item["errors"]]
@@ -258,16 +258,16 @@ class Start(Fixture):
 
     def test_acu58_all_pass_and_summary_acu64(self):
         out = self.started()
-        self.assertEqual(out["acceptance"], "acme/billing-acceptance")
-        self.assertEqual(out["norms"], "acme/billing-norms")
-        self.assertEqual(out["layer1"], "acme/billing-specs")
-        self.assertEqual((out["branch"], out["norms_branch"]), ("main", "main"))
+        self.assertEqual(out["acceptance_repository"], "acme/billing-acceptance")
+        self.assertEqual(out["norms_repository"], "acme/billing-norms")
+        self.assertEqual(out["specs_repository"], "acme/billing-specs")
+        self.assertEqual((out["acceptance_default_branch"], out["norms_default_branch"]), ("main", "main"))
         self.assertEqual(out["norms_commit"], self.norms_commit())
         head = git(self.acc, "rev-parse", "HEAD").stdout.strip()
         self.assertEqual(out["acceptance_commit"], head)
         self.assertEqual(out["summary"],
-                         f"Layer 2 at {self.norms_commit()[:7]}: 10 norms. Layer 3 at {head[:7]}: 1 area, 3 units; "
-                         "1 citation changed, 0 retired; 0 format errors.")
+                         f"Layer 2 at {self.norms_commit()[:7]}: 10 norms. Layer 3 at {head[:7]}: 1 acceptance area, 3 acceptance units; "
+                         "1 norm citation changed, 0 retired; 0 format errors.")
 
     def test_acu58_argument(self):
         self.refused("takes no argument", "--", "AA-1")
@@ -278,18 +278,18 @@ class Start(Fixture):
     def test_acu58_not_a_git_repository(self):
         other = os.path.join(self.root, "plain")
         os.mkdir(other)
-        self.refused("runs only from the repository of layer 3", cwd=other)
+        self.refused("runs only from the acceptance repository", cwd=other)
 
     def test_acu58_another_layer(self):
-        self.refused("runs only from the repository of layer 3", cwd=self.norms)
+        self.refused("runs only from the acceptance repository", cwd=self.norms)
 
     def test_acu58_no_project_json(self):
         os.remove(os.path.join(self.acc, "project.json"))
-        self.refused("runs only from the repository of layer 3")
+        self.refused("runs only from the acceptance repository")
 
     def test_acu58_no_entry_matches_origin(self):
         git(self.acc, "remote", "set-url", "origin", "https://github.com/acme/elsewhere")
-        self.refused("runs only from the repository of layer 3")
+        self.refused("runs only from the acceptance repository")
 
     def test_acu58_norms_repository_not_at_its_path(self):
         shutil.rmtree(self.norms)
@@ -376,7 +376,7 @@ class Start(Fixture):
     def test_acu58_acceptance_json_does_not_meet_acu6(self):
         bad = [self.acceptance(last_unit_id=-1), self.acceptance(last_unit_id="3"), self.acceptance(product=[]),
                self.acceptance(increments=[]), self.acceptance(last_area_id=True),
-               self.acceptance(default_profile="gold"), "[]"]
+               self.acceptance(default_done_profile="gold"), "[]"]
         for text in bad:
             with self.subTest(text=text):
                 write(os.path.join(self.acc, "acceptance.json"), text)
@@ -387,13 +387,13 @@ class Start(Fixture):
         project = json.loads(self.project)
         project["repositories"] = [r for r in project["repositories"] if r["layer"] != 2]
         write(os.path.join(self.acc, "project.json"), json.dumps(project))
-        self.refused("project.json has not exactly one entry of layer 2 with a valid path")
+        self.refused("project.json has not exactly one entry of layer 2, the norms repository, with a valid path")
 
     def test_acu58_folder_does_not_end_with_its_path(self):
         project = json.loads(self.project)
         project["repositories"][2]["path"] = "elsewhere/billing-acceptance"
         write(os.path.join(self.acc, "project.json"), json.dumps(project))
-        self.refused("runs only from the repository of layer 3")
+        self.refused("runs only from the acceptance repository")
 
     def test_acu68_no_entry_of_layer_1(self):
         project = json.loads(self.project)
@@ -403,7 +403,7 @@ class Start(Fixture):
         self.commit_all(self.acc)
         write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), text)
         self.commit_all(self.norms)
-        self.assertIsNone(self.started()["layer1"])
+        self.assertIsNone(self.started()["specs_repository"])
 
     def test_acu58_the_first_check_that_fails_in_their_order(self):
         """Each step adds a failure of an earlier check than the one before, so the message moves up the list."""
@@ -447,10 +447,10 @@ class Start(Fixture):
         steps.append((f"acme/billing-norms not found at {self.norms}; run: git clone "
                       f"https://github.com/acme/billing-norms {self.norms}",
                       lambda: shutil.rmtree(self.norms)))
-        steps.append(("project.json has not exactly one entry of layer 2 with a valid path",
+        steps.append(("project.json has not exactly one entry of layer 2, the norms repository, with a valid path",
                       lambda: write(os.path.join(self.acc, "project.json"), self.project.replace(
                           '"layer": 2', '"layer": 7'))))
-        steps.append(("runs only from the repository of layer 3",
+        steps.append(("runs only from the acceptance repository",
                       lambda: write(os.path.join(self.acc, "project.json"), self.project.replace(
                           '"layer": 2', '"layer": 7').replace('"layer": 3', '"layer": 4'))))
         steps.append(("takes no argument", lambda: None))
@@ -483,56 +483,60 @@ class Inventory(Fixture):
 
     def test_acu60_binding_example(self):
         inv = self.inventory()
-        self.assertEqual(list(inv), ["norms_commit", "acceptance_commit", "default_profile", "next_ids", "norms",
-                                     "areas", "units", "errors"])
+        self.assertEqual(list(inv), ["norms_commit", "acceptance_commit", "default_done_profile", "next_ids", "norms",
+                                     "acceptance_areas", "acceptance_units", "errors"])
         self.assertEqual(inv["norms_commit"], self.norms_commit())
-        self.assertEqual(inv["default_profile"], "product")
-        self.assertEqual(inv["next_ids"], {"area": "AA-2", "unit": "AU-4", "scenario": "SC-10"})
-        self.assertEqual(inv["norms"][3], {"id": "INV-7", "file": "billing/invoices.md", "kind": "item",
-                                           "parent": "INV-3", "hash": "5a627175",
-                                           "text": "- Each invoice is one row of the CSV."})
-        self.assertNotIn("INV-20", [n["id"] for n in inv["norms"]])
-        self.assertEqual([n["id"] for n in inv["norms"]], [n[0] for n in NORMS])
-        self.assertEqual(inv["areas"], [{
-            "id": "AA-1", "path": "areas/AA-1.md", "title": "Billing", "hash": "3b0900fb",
-            "units": ["AU-1", "AU-2", "AU-3"],
-            "scenarios": [{"id": "SC-9", "name": "A cancelled invoice is not exported", "hash": "1bd67ec5",
-                           "norms": ["INV-15"], "units": ["AU-1", "AU-2", "AU-3"]}],
+        self.assertEqual(inv["default_done_profile"], "product")
+        self.assertEqual(inv["next_ids"], {"acceptance_area": "AA-2", "acceptance_unit": "AU-4", "scenario": "SC-10"})
+        self.assertEqual(inv["norms"][3], {"norm_id": "INV-7", "file": "billing/invoices.md", "kind": "item",
+                                           "parent_norm_id": "INV-3", "norm_hash": "5a627175",
+                                           "own_text": "- Each invoice is one row of the CSV."})
+        self.assertNotIn("INV-20", [n["norm_id"] for n in inv["norms"]])
+        self.assertEqual([n["norm_id"] for n in inv["norms"]], [n[0] for n in NORMS])
+        self.assertEqual(inv["acceptance_areas"], [{
+            "area_id": "AA-1", "path": "areas/AA-1.md", "title": "Billing", "area_hash": "3b0900fb",
+            "acceptance_units": ["AU-1", "AU-2", "AU-3"],
+            "scenarios": [{"scenario_id": "SC-9", "name": "A cancelled invoice is not exported",
+                           "scenario_hash": "1bd67ec5", "norms": ["INV-15"], "acceptance_units": ["AU-1", "AU-2", "AU-3"]}],
             "evidence": {"test": 1, "demo": 0, "validation": 0, "deviation": 0, "event": 0}, "errors": []}])
         self.assertEqual(self.unit_of(inv, "AU-3"), {
-            "id": "AU-3", "path": "units/AU-3.md", "title": "Export the invoices to CSV", "area": "AA-1",
-            "profile": "product", "hash": "efc7ae86",
-            "citations": [{"norm": "INV-7", "hash": "5a627175", "status": "current", "norm_hash": "5a627175"},
-                          {"norm": "INV-12", "hash": "0c1d2e3f", "status": "changed", "norm_hash": "7d6e5f40"},
-                          {"norm": "INV-15", "hash": "9e8d7c6b", "status": "current", "norm_hash": "9e8d7c6b"}],
-            "scenarios": [{"id": "SC-5", "name": "Three invoices give three rows", "hash": "147d88d2",
+            "unit_id": "AU-3", "path": "units/AU-3.md", "title": "Export the invoices to CSV", "area_id": "AA-1",
+            "done_profile": "product", "unit_hash": "efc7ae86",
+            "norm_citations": [
+                {"norm_id": "INV-7", "hash_in_acceptance_unit": "5a627175", "citation_status": "current",
+                 "hash_in_norms_repository": "5a627175"},
+                {"norm_id": "INV-12", "hash_in_acceptance_unit": "0c1d2e3f", "citation_status": "changed",
+                 "hash_in_norms_repository": "7d6e5f40"},
+                {"norm_id": "INV-15", "hash_in_acceptance_unit": "9e8d7c6b", "citation_status": "current",
+                 "hash_in_norms_repository": "9e8d7c6b"}],
+            "scenarios": [{"scenario_id": "SC-5", "name": "Three invoices give three rows", "scenario_hash": "147d88d2",
                            "norms": ["INV-7", "INV-12"]},
-                          {"id": "SC-6", "name": "A cancelled invoice gives no row", "hash": "a67eb609",
-                           "norms": ["INV-15"]}],
+                          {"scenario_id": "SC-6", "name": "A cancelled invoice gives no row",
+                           "scenario_hash": "a67eb609", "norms": ["INV-15"]}],
             "evidence": {"test": 2, "demo": 0, "validation": 1, "deviation": 0, "event": 0}, "errors": []})
         self.assertEqual(inv["errors"], [])
-        self.assertEqual([u["id"] for u in inv["units"]], ["AU-1", "AU-2", "AU-3"])
+        self.assertEqual([u["unit_id"] for u in inv["acceptance_units"]], ["AU-1", "AU-2", "AU-3"])
 
     def test_acu60_order_of_the_numbers(self):
         write(os.path.join(self.acc, "units", "AU-10.md"), unit("AU-10", "Ten", "INV-1@11111111", "SC-10"))
         write(os.path.join(self.acc, "acceptance.json"), self.acceptance(last_unit_id=10, last_scenario_id=10))
         self.commit_all(self.acc)
-        self.assertEqual([u["id"] for u in self.inventory()["units"]], ["AU-1", "AU-2", "AU-3", "AU-10"])
+        self.assertEqual([u["unit_id"] for u in self.inventory()["acceptance_units"]], ["AU-1", "AU-2", "AU-3", "AU-10"])
 
     def test_acu60_profile_line(self):
         write(os.path.join(self.acc, "units", "AU-1.md"),
               unit("AU-1", "Issue an invoice", "INV-1@11111111", "SC-1", extra="Profile: critical\n"))
         self.commit_all(self.acc)
         au1 = self.unit_of(self.inventory(), "AU-1")
-        self.assertEqual((au1["profile"], au1["errors"]), ("critical", []))
+        self.assertEqual((au1["done_profile"], au1["errors"]), ("critical", []))
 
     def test_acu52_title_area_and_profile_outside_the_unit_hash(self):
-        before = self.unit_of(self.inventory(), "AU-3")["hash"]
+        before = self.unit_of(self.inventory(), "AU-3")["unit_hash"]
         text = AU3.replace("# AU-3 Export the invoices to CSV", "# AU-3 Export to CSV").replace(
             "Area: AA-1\n", "Area: AA-1\nProfile: critical\n")
         write(os.path.join(self.acc, "units", "AU-3.md"), text)
         self.commit_all(self.acc)
-        self.assertEqual(self.unit_of(self.inventory(), "AU-3")["hash"], before)
+        self.assertEqual(self.unit_of(self.inventory(), "AU-3")["unit_hash"], before)
 
     def test_acu62_status_of_a_citation(self):
         cases = [("0c1d2e3f", None, "current"), ("7d6e5f40", None, "changed"), (None, "INV-12", "retired"),
@@ -546,8 +550,8 @@ class Inventory(Fixture):
                       tree_jsonl(norms, ("INV-20",) + ((retired,) if retired else ())))
                 self.commit_all(self.norms)
                 git(self.norms, "fetch", "-q", "origin")
-                c = self.unit_of(self.inventory(), "AU-3")["citations"][1]
-                self.assertEqual((c["norm"], c["status"], c["norm_hash"]),
+                c = self.unit_of(self.inventory(), "AU-3")["norm_citations"][1]
+                self.assertEqual((c["norm_id"], c["citation_status"], c["hash_in_norms_repository"]),
                                  ("INV-12", status, hash_now if status != "retired" else None))
 
     def unit_errors(self, text, uid="AU-3"):
@@ -559,16 +563,17 @@ class Inventory(Fixture):
         cases = [
             (AU3.replace("# AU-3 Export the invoices to CSV", "# AU-3"), 'heading is not "# AU-3 <title>"', 1),
             (AU3.replace("Area: AA-1", "Area AA-1"), 'no line "Area: <area ID>"', 3),
-            (AU3.replace("Area: AA-1", "Area: AA-7"), "area AA-7 has no file", 3),
+            (AU3.replace("Area: AA-1", "Area: AA-7"), "acceptance area AA-7 has no file", 3),
             (AU3.replace("Area: AA-1\n", "Area: AA-1\nProfile: gold\n"),
-             "profile gold is not prototype, product or critical", 4),
-            (AU3.replace("Area: AA-1\n", "Area: AA-1\nProfile: product\n"), "profile product is the default profile", 4),
+             "done profile gold is not prototype, product or critical", 4),
+            (AU3.replace("Area: AA-1\n", "Area: AA-1\nProfile: product\n"),
+             "done profile product is the default done profile", 4),
             (AU3.replace("Area: AA-1\n", "Area: AA-1\nIncrement: first\n"), "parts are not those of ACU-8", 4),
             (AU3.replace("## Non-goals", "## Goals"), "parts are not those of ACU-8", None),
             (AU3.replace("As a user of the company\n", ""), "narrative is not In order to, As a, I want", 5),
             (AU3.replace("I want to export", "I wish to export"), "narrative is not In order to, As a, I want", 5),
             (AU3.replace("- INV-7@5a627175: one row per invoice", "- INV-7@5A627175: one row per invoice"),
-             "not a citation of a norm", 13),
+             "not a norm citation", 13),
             (AU3.replace("- INV-12@0c1d2e3f: amounts with two decimals", "- INV-7@5a627175: again"),
              "INV-7 is cited twice", 14),
             (AU3.replace("@SC-6 @INV-15", "@SC-6"), "INV-15 is checked by no scenario", 15),
@@ -577,9 +582,9 @@ class Inventory(Fixture):
              "## Non-goals is not a list or None.", None),
             (AU3.replace("(environment).", "(nowhere)."), "assumption rests on no norm and not on (environment)", 41),
             (AU3.replace("(USR-4).", "(USR-99)."), "assumption rests on no norm and not on (environment)", 42),
-            (AU3.replace("@SC-6 @INV-15", "@SC-6 @INV-15 @wip"), "tag @wip is not a scenario, norm or unit tag", 27),
+            (AU3.replace("@SC-6 @INV-15", "@SC-6 @INV-15 @wip"), "tag @wip is not @SC-<n> or @<norm ID>", 27),
             (AU3.replace("@SC-6 @INV-15", "@SC-6 @INV-15 @unit:AU-1"),
-             "tag @unit:AU-1 is not a scenario, norm or unit tag", 27),
+             "tag @unit:AU-1 is not @SC-<n> or @<norm ID>", 27),
             (AU3.replace("Scenario: A cancelled", "Scenario Outline: A cancelled"),
              "Scenario Outline: is not allowed in ## Scenarios", 28),
             (AU3.replace("```gherkin", "```"), "## Scenarios is not one gherkin block", 19),
@@ -601,14 +606,14 @@ class Inventory(Fixture):
     def test_acu61_no_citation(self):
         text = AU3.replace("- INV-7@5a627175: one row per invoice\n- INV-12@0c1d2e3f: amounts with two decimals\n"
                            "- INV-15@9e8d7c6b: cancelled invoices are not exported\n", "")
-        self.assertIn("no citation in ## Norms", self.messages(self.unit_errors(text)))
+        self.assertIn("no norm citation in ## Norms", self.messages(self.unit_errors(text)))
 
     def test_acu61_not_utf8(self):
         write(os.path.join(self.acc, "units", "AU-3.md"), AU3.encode("utf-8") + b"\xff", "wb")
         self.commit_all(self.acc)
         au3 = self.unit_of(self.inventory(), "AU-3")
         self.assertEqual(au3["errors"], [{"line": None, "message": "not UTF-8"}])
-        self.assertEqual((au3["title"], au3["area"], au3["hash"], au3["citations"], au3["scenarios"]),
+        self.assertEqual((au3["title"], au3["area_id"], au3["unit_hash"], au3["norm_citations"], au3["scenarios"]),
                          (None, None, None, [], []))
 
     def test_acu61_a_valid_unit_has_no_error(self):
@@ -621,9 +626,9 @@ class Inventory(Fixture):
              "parts are not those of ACU-7"),
             (AA1.replace("## Purpose", "## Why"), "parts are not those of ACU-7"),
             (AA1.replace("# AA-1 Billing\n", "# AA-1 Billing\nIntro\n"), "parts are not those of ACU-7"),
-            (AA1.replace("@unit:AU-1 @unit:AU-2 @unit:AU-3", "@unit:AU-3"), "scenario SC-9 crosses fewer than two units"),
-            (AA1.replace("@unit:AU-3", "@unit:AU-3 @unit:AU-8"), "AU-8 is not a unit of AA-1"),
-            (AA1.replace("@INV-15", "@INV-15 @INV-40"), "tag @INV-40 is in ## Norms of no unit it crosses"),
+            (AA1.replace("@unit:AU-1 @unit:AU-2 @unit:AU-3", "@unit:AU-3"), "scenario SC-9 crosses fewer than two acceptance units"),
+            (AA1.replace("@unit:AU-3", "@unit:AU-3 @unit:AU-8"), "AU-8 is not an acceptance unit of AA-1"),
+            (AA1.replace("@INV-15", "@INV-15 @INV-40"), "tag @INV-40 is in ## Norms of no acceptance unit it crosses"),
             (AA1.replace("```gherkin", "```"), "## Scenarios is not one gherkin block"),
         ]
         for text, message in cases:
@@ -652,9 +657,9 @@ class Inventory(Fixture):
                        "message": "AU-9 is greater than last_unit_id of acceptance.json"}, errors)
         self.assertIn({"path": "units/AU-9.md", "line": 18,
                        "message": "SC-12 is greater than last_scenario_id of acceptance.json"}, errors)
-        self.assertIn({"path": "units/notes.md", "line": None, "message": "not the file of an area or a unit"},
+        self.assertIn({"path": "units/notes.md", "line": None, "message": "not the file of an acceptance area or an acceptance unit"},
                       errors)
-        self.assertIn({"path": "areas/AU-4.md", "line": None, "message": "not the file of an area or a unit"},
+        self.assertIn({"path": "areas/AU-4.md", "line": None, "message": "not the file of an acceptance area or an acceptance unit"},
                       errors)
 
     def test_acu61_worktree_already_given_and_last_fields(self):
@@ -696,7 +701,7 @@ class Inventory(Fixture):
         self.commit_all(self.acc)
         aa1 = self.area_of(self.inventory(), "AA-1")
         self.assertEqual(aa1["errors"], [{"line": None, "message": "not UTF-8"}])
-        self.assertEqual((aa1["title"], aa1["hash"], aa1["scenarios"]), (None, None, []))
+        self.assertEqual((aa1["title"], aa1["area_hash"], aa1["scenarios"]), (None, None, []))
 
     def test_acu61_area_ids_greater_and_already_given(self):
         write(os.path.join(self.acc, "areas", "AA-3.md"), AA1.replace("AA-1", "AA-3").replace(
@@ -719,7 +724,7 @@ class Inventory(Fixture):
         self.commit_all(self.acc)
         inv = self.inventory()
         self.assertIn("AU-9 is greater than last_unit_id of acceptance.json", [e["message"] for e in inv["errors"]])
-        self.assertEqual(inv["next_ids"], {"area": "AA-2", "unit": "AU-10", "scenario": "SC-10"})
+        self.assertEqual(inv["next_ids"], {"acceptance_area": "AA-2", "acceptance_unit": "AU-10", "scenario": "SC-10"})
         # A change of AU-9 is not blocked: ids raises the field, and the check passes.
         write(os.path.join(self.acc, "units", "AU-9.md"), unit("AU-9", "Nine again", "INV-1@11111111", "SC-8"))
         self.assertEqual(json.loads(self.run_script("ids", self.acc).stdout), {"last_unit_id": 9})
@@ -730,7 +735,7 @@ class Inventory(Fixture):
         os.remove(os.path.join(self.acc, "units", "AU-9.md"))
         self.run_script("ids", self.acc)
         self.assertEqual(json.loads(read(os.path.join(self.acc, "acceptance.json")))["last_unit_id"], 9)
-        self.assertEqual(self.inventory(worktree=True)["next_ids"]["unit"], "AU-10")
+        self.assertEqual(self.inventory(worktree=True)["next_ids"]["acceptance_unit"], "AU-10")
 
     def test_acu64_singular_and_plural(self):
         sys.path.insert(0, os.path.dirname(SCRIPT))
@@ -738,14 +743,16 @@ class Inventory(Fixture):
             import define
         finally:
             sys.path.pop(0)
-        unit_one = {"citations": [{"status": "changed"}, {"status": "retired"}], "errors": [{"message": "x"}]}
-        inv = {"norms_commit": "9fceb02d0", "acceptance_commit": "1a410efbd", "norms": [{}], "areas": [
-            {"errors": []}], "units": [unit_one], "errors": []}
-        self.assertEqual(define.summary(inv), "Layer 2 at 9fceb02: 1 norm. Layer 3 at 1a410ef: 1 area, 1 unit; "
-                                              "1 citation changed, 1 retired; 1 format error.")
-        inv.update(norms=[], areas=[], units=[], errors=[])
-        self.assertEqual(define.summary(inv), "Layer 2 at 9fceb02: 0 norms. Layer 3 at 1a410ef: 0 areas, 0 units; "
-                                              "0 citations changed, 0 retired; 0 format errors.")
+        unit_one = {"norm_citations": [{"citation_status": "changed"}, {"citation_status": "retired"}],
+                    "errors": [{"message": "x"}]}
+        inv = {"norms_commit": "9fceb02d0", "acceptance_commit": "1a410efbd", "norms": [{}], "acceptance_areas": [
+            {"errors": []}], "acceptance_units": [unit_one], "errors": []}
+        self.assertEqual(define.summary(inv), "Layer 2 at 9fceb02: 1 norm. Layer 3 at 1a410ef: 1 acceptance area, "
+                                              "1 acceptance unit; 1 norm citation changed, 1 retired; 1 format error.")
+        inv.update(norms=[], acceptance_areas=[], acceptance_units=[], errors=[])
+        self.assertEqual(define.summary(inv), "Layer 2 at 9fceb02: 0 norms. Layer 3 at 1a410ef: 0 acceptance areas, "
+                                              "0 acceptance units; 0 norm citations changed, 0 retired; "
+                                              "0 format errors.")
 
     def test_python_3_9(self):
         python = "/usr/bin/python3"
@@ -777,8 +784,8 @@ class Inventory(Fixture):
     def test_acu60_worktree_reads_the_disk(self):
         write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("INV-12@0c1d2e3f", "INV-12@7d6e5f40"))
         inv = self.inventory(worktree=True)
-        self.assertEqual(self.unit_of(inv, "AU-3")["citations"][1]["status"], "current")
-        self.assertEqual(self.unit_of(self.inventory(), "AU-3")["citations"][1]["status"], "changed")
+        self.assertEqual(self.unit_of(inv, "AU-3")["norm_citations"][1]["citation_status"], "current")
+        self.assertEqual(self.unit_of(self.inventory(), "AU-3")["norm_citations"][1]["citation_status"], "changed")
 
 
 class Writing(Fixture):
@@ -823,7 +830,7 @@ class Writing(Fixture):
         os.remove(os.path.join(self.acc, "units", "AU-3.md"))
         self.assertEqual(json.loads(self.script("ids", self.acc)), {})
         inv = self.inventory(worktree=True)
-        self.assertEqual(inv["next_ids"]["unit"], "AU-4")
+        self.assertEqual(inv["next_ids"]["acceptance_unit"], "AU-4")
 
     def test_acu69_check_passes_and_fails(self):
         self.add_au4()
@@ -832,7 +839,7 @@ class Writing(Fixture):
         write(os.path.join(self.acc, "units", "AU-4.md"),
               unit("AU-4", "Register a customer", "CUS-1@00000000", "SC-10"))
         problems = self.check(code=1)["problems"]
-        self.assertEqual([p["message"] for p in problems], ["CUS-1@00000000 is changed; its norm hash is c0c0c0c0"])
+        self.assertEqual([p["message"] for p in problems], ["CUS-1@00000000 is changed; its norm hash at the norms commit is c0c0c0c0"])
 
     def test_acu69_written_unit_must_cite_current_hashes(self):
         write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("amounts with two decimals", "two decimals"))
@@ -907,7 +914,7 @@ class Writing(Fixture):
                              "main:records/AU-2.jsonl").stdout, record)
         self.assertEqual(read(os.path.join(self.acc, "records", "AU-2.jsonl")), record)
         self.assertNotIn("records/AU-2.jsonl", plan["paths"])
-        self.assertEqual(self.unit_of(self.inventory(), "AU-1")["id"], "AU-1")
+        self.assertEqual(self.unit_of(self.inventory(), "AU-1")["unit_id"], "AU-1")
 
     def test_acu70_delete_refused_while_its_tests_are_there(self):
         os.remove(os.path.join(self.acc, "units", "AU-2.md"))
@@ -924,12 +931,12 @@ class Writing(Fixture):
         plan = self.commit("delete AU-1", "delete AU-2", "change AA-1")
         self.assertEqual(self.approve(plan).returncode, 0)
         self.assertNotIn("SC-9", read(os.path.join(self.acc, "areas", "AA-1.md")))
-        self.assertEqual(self.inventory()["next_ids"], {"area": "AA-2", "unit": "AU-4", "scenario": "SC-10"})
+        self.assertEqual(self.inventory()["next_ids"], {"acceptance_area": "AA-2", "acceptance_unit": "AU-4", "scenario": "SC-10"})
 
     def test_acu70_a_unit_moves_to_another_area(self):
         write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("INV-12@0c1d2e3f", "INV-12@7d6e5f40"))
         self.commit_all(self.acc)
-        before = self.unit_of(self.inventory(), "AU-3")["hash"]
+        before = self.unit_of(self.inventory(), "AU-3")["unit_hash"]
         write(os.path.join(self.acc, "areas", "AA-2.md"),
               "# AA-2 Exports\n\n## Purpose\n\nThe exports.\n\n## Scenarios\n\nNone.\n")
         write(os.path.join(self.acc, "units", "AU-3.md"),
@@ -941,9 +948,9 @@ class Writing(Fixture):
         self.assertEqual(plan["paths"], ["acceptance.json", "areas/AA-1.md", "areas/AA-2.md", "units/AU-3.md"])
         self.assertEqual(self.approve(plan).returncode, 0)
         inv = self.inventory()
-        self.assertEqual((self.unit_of(inv, "AU-3")["area"], self.unit_of(inv, "AU-3")["hash"]), ("AA-2", before))
+        self.assertEqual((self.unit_of(inv, "AU-3")["area_id"], self.unit_of(inv, "AU-3")["unit_hash"]), ("AA-2", before))
         self.assertTrue(os.path.exists(os.path.join(self.acc, "tests", "AU-3", "test_export.py")))
-        self.assertEqual(self.area_of(inv, "AA-1")["scenarios"][0]["units"], ["AU-1", "AU-2"])
+        self.assertEqual(self.area_of(inv, "AA-1")["scenarios"][0]["acceptance_units"], ["AU-1", "AU-2"])
 
     def test_acu71_a_file_that_belongs_to_no_change(self):
         write(os.path.join(self.acc, "areas", "AA-1.md"), AA1 + "\n")
@@ -1043,7 +1050,7 @@ class Writing(Fixture):
         self.assertEqual(git(self.acc, "status", "--porcelain").stdout, "")
         self.assertEqual(json.loads(read(os.path.join(self.acc, "acceptance.json")))["last_unit_id"], 4)
         # The next change takes the IDs that follow those already committed (ACU-65).
-        self.assertEqual(self.inventory()["next_ids"], {"area": "AA-2", "unit": "AU-5", "scenario": "SC-11"})
+        self.assertEqual(self.inventory()["next_ids"], {"acceptance_area": "AA-2", "acceptance_unit": "AU-5", "scenario": "SC-11"})
 
     def test_acu71_rollback(self):
         self.script("delete-tests", self.acc, "AU-2")
@@ -1096,7 +1103,7 @@ class Writing(Fixture):
     def test_hash_command(self):
         path = os.path.join(self.acc, "units", "AU-3.md")
         out = json.loads(self.script("hash", path))
-        self.assertEqual((out["unit_hash"], [s["hash"] for s in out["scenarios"]]),
+        self.assertEqual((out["unit_hash"], [s["scenario_hash"] for s in out["scenarios"]]),
                          ("efc7ae86", ["147d88d2", "a67eb609"]))
 
 

@@ -45,15 +45,15 @@ class BindingExamples(unittest.TestCase):
 
     def test_acu54_the_scenario_hash_of_sc5(self):
         sc5 = h.scenarios(AU3)[0]
-        self.assertEqual((sc5.id, sc5.hash), ("SC-5", "147d88d2"))
+        self.assertEqual((sc5.scenario_id, sc5.scenario_hash), ("SC-5", "147d88d2"))
         self.assertIn("scenario hash `147d88d2`", SPEC)
 
     def test_acu11_the_citations_of_the_examples_are_the_hashes(self):
         self.assertIn(f"# AU-3@{h.unit_hash(AU3)}: Export the invoices to CSV", SPEC)
-        self.assertIn(f"# SC-5@{h.scenarios(AU3)[0].hash}: Three invoices give three rows", SPEC)
+        self.assertIn(f"# SC-5@{h.scenarios(AU3)[0].scenario_hash}: Three invoices give three rows", SPEC)
         self.assertIn(f"// AU-11@{h.unit_hash(AU11)}: Multiply two integers", SPEC)
-        self.assertIn(f"// SC-21@{h.scenarios(AU11)[0].hash}: Two integers give their product", SPEC)
-        self.assertIn(f'"SC-6": "{h.scenarios(AU3)[1].hash}"', SPEC)
+        self.assertIn(f"// SC-21@{h.scenarios(AU11)[0].scenario_hash}: Two integers give their product", SPEC)
+        self.assertIn(f'"SC-6": "{h.scenarios(AU3)[1].scenario_hash}"', SPEC)
 
 
 class Fingerprint(unittest.TestCase):
@@ -94,31 +94,31 @@ class UnitHash(unittest.TestCase):
 class Scenarios(unittest.TestCase):
     def test_acu54_names_tags_norms_and_units(self):
         sc5, sc6 = h.scenarios(AU3)
-        self.assertEqual((sc5.name, sc5.tags, sc5.norms, sc5.units), (
+        self.assertEqual((sc5.name, sc5.tags, sc5.norms, sc5.acceptance_units), (
             "Three invoices give three rows", ["@SC-5", "@INV-7", "@INV-12"], ["INV-7", "INV-12"], []))
-        self.assertEqual((sc6.id, sc6.name, sc6.norms), ("SC-6", "A cancelled invoice gives no row", ["INV-15"]))
+        self.assertEqual((sc6.scenario_id, sc6.name, sc6.norms), ("SC-6", "A cancelled invoice gives no row", ["INV-15"]))
         (sc9,) = h.scenarios(AA1)
-        self.assertEqual((sc9.id, sc9.units, sc9.norms), ("SC-9", ["AU-1", "AU-2", "AU-3"], ["INV-15"]))
+        self.assertEqual((sc9.scenario_id, sc9.acceptance_units, sc9.norms), ("SC-9", ["AU-1", "AU-2", "AU-3"], ["INV-15"]))
 
     def test_acu54_a_scenario_ends_before_the_tags_of_the_next(self):
         start = AU3.index("@SC-5")
         end = AU3.index("@SC-6")
         alone = "## Scenarios\n\n```gherkin\n" + AU3[start:end] + "```\n"
-        self.assertEqual(h.scenarios(alone)[0].hash, "147d88d2")
+        self.assertEqual(h.scenarios(alone)[0].scenario_hash, "147d88d2")
 
     def test_acu54_the_text_of_another_scenario_does_not_change_the_hash(self):
         changed = AU3.replace("Then the CSV has 2 rows", "Then the CSV has two rows")
-        self.assertEqual(h.scenarios(changed)[0].hash, h.scenarios(AU3)[0].hash)
-        self.assertNotEqual(h.scenarios(changed)[1].hash, h.scenarios(AU3)[1].hash)
+        self.assertEqual(h.scenarios(changed)[0].scenario_hash, h.scenarios(AU3)[0].scenario_hash)
+        self.assertNotEqual(h.scenarios(changed)[1].scenario_hash, h.scenarios(AU3)[1].scenario_hash)
 
     def test_acu54_the_tags_are_inside_the_hash(self):
-        self.assertNotEqual(h.scenarios(AU3.replace("@SC-5 @INV-7 @INV-12", "@SC-5 @INV-7"))[0].hash, "147d88d2")
+        self.assertNotEqual(h.scenarios(AU3.replace("@SC-5 @INV-7 @INV-12", "@SC-5 @INV-7"))[0].scenario_hash, "147d88d2")
 
     def test_acu50_not_exactly_one_scenario_id(self):
         none = h.scenarios(AU3.replace("@SC-5 @INV-7", "@INV-7"))[0]
         two = h.scenarios(AU3.replace("@SC-5 @INV-7", "@SC-5 @SC-8 @INV-7"))[0]
         zero = h.scenarios(AU3.replace("@SC-5 @INV-7", "@SC-05 @INV-7"))[0]
-        self.assertEqual((none.id, two.id, zero.id), (None, None, None))
+        self.assertEqual((none.scenario_id, two.scenario_id, zero.scenario_id), (None, None, None))
 
     def test_acu54_only_the_gherkin_block_of_scenarios(self):
         text = "## Narrative\n\nScenario: not one\n\n## Scenarios\n\nNone.\n"
