@@ -4,7 +4,7 @@
 
 **Audience:** The people who start a project; whoever builds the skill `create-project` of the plugin `project-management`
 
-**Scope:** The use case that creates the repositories of the five layers of a new project, and its `project.json`. Out of scope: the files of the acceptance repository that this use case does not write, such as its acceptance areas, acceptance units, acceptance tests and records ([ACU-6](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository))
+**Scope:** The use case that creates the repositories of the five layers of a new project and its orchestration repository, and its `project.json`. Out of scope: the files of the acceptance repository that this use case does not write, such as its acceptance areas, acceptance units, acceptance tests and records ([ACU-6](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository))
 
 A use case of the module `project-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
@@ -13,7 +13,7 @@ A use case of the module `project-management`, specified in [module.md](../../..
 | Term | Meaning |
 |---|---|
 | Skill | The skill `create-project` of the plugin `project-management`; the actor of every requirement that names no other. |
-| Project | The repositories of its five layers ([LAY-1](../../../../development-methodology/specs/layers.md#rules)), as its `project.json` lists them ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
+| Project | The repositories of its five layers ([LAY-1](../../../../development-methodology/specs/layers.md#rules)) and its orchestration repository ([LAY-11](../../../../development-methodology/specs/layers.md#the-orchestration-repository)), as its `project.json` lists them ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
 | Project folder | The folder that holds the repositories of a project ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
 
 ## Create a project
@@ -22,7 +22,7 @@ A use case of the module `project-management`, specified in [module.md](../../..
 Feature: Create a project
   In order to start each layer in its own repository, with the modules of its layer enabled
   As a person who starts a project
-  I want the repositories of its five layers created in one go
+  I want the repositories of its five layers and its orchestration repository created in one go
 
   Rule: ORC-1 The creation starts only when the user asks for it
 
@@ -88,7 +88,8 @@ Feature: Create a project
       And it says that the user must log in to GitHub
 
     Scenario: The token of GitHub lacks the scope "workflow"
-      Given the token of the user's login to GitHub does not have the scope "workflow"
+      Given the continuous integration of the acceptance repository is enabled (ACU-76), so that the skill writes a workflow (CRP-1)
+      And the token of the user's login to GitHub does not have the scope "workflow"
       When the creation of "billing" starts
       Then the skill creates nothing
       And it says to run "gh auth refresh -s workflow"
@@ -123,9 +124,9 @@ Feature: Create a project
       And the user does not approve it
       Then the skill creates nothing
 
-  Rule: ORC-5 Each repository starts with the modules of its layer enabled, as APP-6 says, with the rules "ask" and "deny" of its layer, and with the project's project.json
+  Rule: ORC-5 Each repository starts with the modules that APP-6 enables in it, with the rules "ask" and "deny" of its layer, and with the project's project.json
 
-    Scenario Outline: The repository of one layer
+    Scenario Outline: One repository of the project
       Given the user approved the plan for the project "billing", with no component
       When the project is created
       Then the repository "<repository>" exists on GitHub with the chosen owner and visibility
@@ -141,13 +142,14 @@ Feature: Create a project
         | billing-norms      | norms-management           |
         | billing-acceptance | acceptance-management |
         | billing-code       | code-implementation        |
+        | billing-orchestration | workflow-orchestration  |
 
     Scenario: A project with components
       Given the user approved the plan for the project "billing", with the components "api" and "web"
       When the project is created
       Then layer 4 is the repositories "billing-code-api" and "billing-code-web", and there is no "billing-code"
       And layer 3 is the one repository "billing-acceptance", for every component (LAY-1)
-      And each of them is created as the repository of one layer
+      And each of them is created as one repository of the project
 
     Scenario Outline: The repositories whose every change a person approves ask before every commit and push
       Given the user approved the plan for the project "billing"
@@ -176,20 +178,21 @@ Feature: Create a project
       When the skill writes a rule "deny" for the repository whose "path" is "billing-code"
       Then the rule names the path "//**/billing-code/**": anchored at the root of the file system, the folder "billing-code" at any depth
 
-    Scenario: The repositories of layers 0, 1 and 2 deny nothing
+    Scenario: The repositories of layers 0, 1 and 2, and the orchestration repository, deny nothing
       Given the user approved the plan for the project "billing"
       When the project is created
-      Then the ".claude/settings.json" of "billing-drafts", "billing-specs" and "billing-norms" holds no rule "deny"
+      Then the ".claude/settings.json" of "billing-drafts", "billing-specs", "billing-norms" and "billing-orchestration" holds no rule "deny"
 
     Scenario: The project.json of the project
       Given the user approved the plan for the project "billing", with the owner "acme"
       When the project is created
-      Then every repository holds the same "project.json", with one entry per repository, its "owner" "acme", its "name", its "layer", its "component" when it has one, and its "path" equal to its "name" (ORC-20)
+      Then every repository holds the same "project.json", with one entry per repository, its "owner" "acme", its "name", its "layer", or the "role" "orchestration" for "billing-orchestration", its "component" when it has one, and its "path" equal to its "name" (ORC-20)
 
-  Rule: CRP-1 The skill writes the workflow of continuous integration of the acceptance repository, and no workflow in a repository of layer 4
+  Rule: CRP-1 Once the continuous integration of the acceptance repository is enabled (ACU-76), the skill writes its workflow, and no workflow in a repository of layer 4
 
     Scenario: The workflow of the acceptance repository and its events
-      Given the user approved the plan for the project "billing", with the owner "acme" and the components "api" and "web"
+      Given the continuous integration of the acceptance repository is enabled (ACU-76)
+      And the user approved the plan for the project "billing", with the owner "acme" and the components "api" and "web"
       When the project is created
       Then "billing-acceptance" holds ".github/workflows/acceptance.yml", which runs on a schedule, every hour at minute 17 UTC, and on a push to "main" that changes a file outside "records/" (ACU-34)
       And it runs on no other event
@@ -201,7 +204,8 @@ Feature: Create a project
       And that script reads the reference commit of each code repository, and runs the acceptance tests and records them, as ACU-34 and ACU-35 say
 
     Scenario: No code repository holds a workflow or a credential of the acceptance repository
-      Given the user approved the plan for the project "billing", with the owner "acme" and the components "api" and "web"
+      Given the continuous integration of the acceptance repository is enabled (ACU-76)
+      And the user approved the plan for the project "billing", with the owner "acme" and the components "api" and "web"
       When the project is created
       Then the skill writes no file under ".github/workflows/" of "billing-code-api" or of "billing-code-web"
       And the message of ORC-6 asks for no secret in a repository of layer 4, so that no repository of layer 4 holds a credential of "billing-acceptance" (ACU-13, level 3)
@@ -246,6 +250,28 @@ Feature: Create a project
       When the project "billing" is created
       Then the skill creates no token and no secret on GitHub
 
+  Rule: CRP-3 While the continuous integration of the acceptance repository is deferred (ACU-76), the skill writes no workflow, and asks for the token of the evidence runs of the orchestrator instead of the secret of CRP-1
+    Rationale: while the continuous integration is deferred, the orchestrator makes every evidence run (ACU-76), and it reads the code repositories only with a token that can only read them (WFO-9); a workflow that ran beside it would make evidence runs that nobody started from the orchestration repository.
+
+    Scenario: No workflow while the continuous integration is deferred
+      Given the continuous integration of the acceptance repository is deferred (ACU-76)
+      When the project "billing" is created
+      Then the skill writes no file under ".github/workflows/" of any repository of the project
+      And it shows neither the message of the secret nor the message of the scheduled workflow of ORC-6
+
+    Scenario Outline: The token that the evidence runs of the orchestrator need
+      Given the continuous integration of the acceptance repository is deferred (ACU-76)
+      And the project "billing" was created, with the owner "acme" and <components>
+      Then the skill shows, after the URLs of ORC-6:
+        """
+        The evidence runs of billing-orchestration need one token, which I did not create. Create on GitHub a fine-grained token with read-only access to the contents of <code repositories>, and to no other repository, and save it, alone, in the file ~/.config/indra-software-factory/acme/billing-orchestration/code-read-token, readable only by you.
+        """
+
+      Examples:
+        | components                                 | code repositories                                      |
+        | no component                               | billing-code                                           |
+        | the components "api" and "web"             | billing-code-api and billing-code-web                  |
+
   Rule: CRP-2 The skill writes the acceptance.json of the acceptance repository with the default done profile that the user chose
 
     Scenario: The user chose the profile "product"
@@ -263,7 +289,7 @@ Feature: Create a project
       And it stops
       And it reports which repositories and local folders exist, and the error that GitHub gave
 
-  Rule: ORC-6 The skill reports where the project is, how to open it, and the secret that the workflow of the acceptance repository needs
+  Rule: ORC-6 The skill reports where the project is, how to open it, and the credential that the evidence runs of the acceptance tests need: the secret of the workflow of the acceptance repository (CRP-1), or the token of the orchestrator (CRP-3)
 
     Scenario: The project was created
       Given the project "billing" was created
@@ -271,7 +297,8 @@ Feature: Create a project
       And it says to open each repository alone, in its own editor window
 
     Scenario Outline: The secret that the workflow of CRP-1 needs
-      Given the project "billing" was created, with <components>
+      Given the continuous integration of the acceptance repository is enabled (ACU-76)
+      And the project "billing" was created, with <components>
       Then the skill shows:
         """
         The workflow of billing-acceptance needs one secret, which I did not create. Add it on GitHub, in billing-acceptance, Settings > Secrets and variables > Actions:
@@ -285,14 +312,16 @@ Feature: Create a project
         | the components "api", "web" and "mobile"   | billing-code-api, billing-code-web and billing-code-mobile |
 
     Scenario: The repositories of the project are public
-      Given the project "billing" was created, with the visibility "public"
+      Given the continuous integration of the acceptance repository is enabled (ACU-76)
+      And the project "billing" was created, with the visibility "public"
       Then after the message of the secret the skill shows:
         """
         billing-acceptance is public: GitHub disables its scheduled workflow after 60 days without activity in billing-acceptance, and a push to a code repository is not activity there. When that happens, the acceptance tests stop running and record nothing; enable the workflow again in billing-acceptance, Actions > acceptance.
         """
 
     Scenario: The repositories of the project are private
-      Given the project "billing" was created, with the visibility "private"
+      Given the continuous integration of the acceptance repository is enabled (ACU-76)
+      And the project "billing" was created, with the visibility "private"
       Then the skill shows no message about the scheduled workflow being disabled
 ```
 

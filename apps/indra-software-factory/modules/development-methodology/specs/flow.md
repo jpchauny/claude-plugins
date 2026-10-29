@@ -4,7 +4,7 @@
 
 **Audience:** The people who run a project's flow from specs to code, and the Claude Code sessions in the repositories of a project; whoever builds a module of the app
 
-**Scope:** How the work goes from one layer to the next: what starts a run, the order of its steps and the hand-off between them. What each layer holds is in [layers.md](layers.md); how a step does its work is in the module of its layer; what triggers a run and runs its steps is the module [workflow-orchestration](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/workflow-orchestration/specs/module.md)
+**Scope:** How the work goes from one layer to the next: what starts a run, the order of its steps and the hand-off between them. What each layer holds is in [layers.md](layers.md); how a step does its work is in the module of its layer; what triggers a run and runs its steps, from the orchestration repository ([LAY-11](layers.md#the-orchestration-repository)), is the module [workflow-orchestration](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/workflow-orchestration/specs/module.md)
 
 A spec of the module `development-methodology` of the app Indra Software Factory, listed in [app.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/app.md); the module is specified in [module.md](module.md).
 
