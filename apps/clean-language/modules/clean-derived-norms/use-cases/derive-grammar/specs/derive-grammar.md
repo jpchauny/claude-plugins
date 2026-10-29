@@ -4,7 +4,7 @@
 
 **Audience:** The people who keep layer 2 of the Clean Language project; whoever builds or changes the use case `derive-grammar` of the plugin `clean-derived-norms`
 
-**Scope:** The use case `/clean-derived-norms:derive-grammar`, the generator of the type `grammar`, which derives, from the norms of layer 2, one Lark grammar of Clean ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how it cites the norms, how it finds what to derive again, how it verifies, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-11, is in [norms-management](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-5, is in [module.md](../../../specs/module.md#rules); neither is repeated here. The rules of the Clean examples are in [clean-examples](../../../../clean-examples/specs/module.md), and this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Out of scope: the semantics of Clean, and any other type of derived norms; how the norms get their IDs, which is in the specs of `norms-management`; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)). The citation is the one of a derived norm, as [LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules) says, in the form of the citation of a norm of [ACU-56](../../../../../../indra-software-factory/modules/acceptance-management/specs/module.md#hashes-and-citations). How an issue is opened is the skill `utilities:issue`; DGR-14 adds what the issue of a pending fragment holds, and that this use case opens it without the yes of the user, DGR-18 does the same for the issue of a stale citation of the script, in `jpchauny/claude-plugins`, and `SKILL.md` holds the templates.
+**Scope:** The use case `/clean-derived-norms:derive-grammar`, the generator of the type `grammar`, which derives, from the norms of layer 2, one Lark grammar of Clean ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how it splits a fragment into the files of its program and parses each one, how it cites the norms, how it finds what to derive again, how it verifies, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-11, is in [norms-management](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-6, is in [module.md](../../../specs/module.md#rules); neither is repeated here. The rules of the Clean examples are in [clean-examples](../../../../clean-examples/specs/module.md), and this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Out of scope: the semantics of Clean, and any other type of derived norms; how the norms get their IDs, which is in the specs of `norms-management`; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)). The citation is the one of a derived norm, as [LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules) says, in the form of the citation of a norm of [ACU-56](../../../../../../indra-software-factory/modules/acceptance-management/specs/module.md#hashes-and-citations). How an issue is opened is the skill `utilities:issue`; DGR-14 adds what the issue of a pending fragment holds, and that this use case opens it without the yes of the user, DGR-18 does the same for the issue of a stale citation of the script, in `jpchauny/claude-plugins`, and `SKILL.md` holds the templates.
 
 A use case of the module `clean-derived-norms`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
@@ -32,6 +32,9 @@ The use case has two parts. The script does what is deterministic: the work list
 | Key of a statement | The name of a rule or terminal, such as `power` or `NAME`; for a directive, its exact first line, such as `%ignore COMMENT`. The work list and the check name a statement by its key. |
 | Status file | The file `specs-derived/grammar/clean-language-code-examples-status.jsonl`, the status file of the type `grammar` (NRM-5). |
 | Case text | The code of a fragment, as DGR-6 "The case text" builds it. The script never cuts it (DGR-6). |
+| File line, path of a file line, file of a program, program | As [clean-examples](../../../../clean-examples/specs/module.md#terms) defines them, for the case text. |
+| File text | The text of one file of the program of a case, as DGR-19 builds it. A case text with no file line has one file, whose file text is the whole case text. |
+| Offset of a file | The offset, in the case text, of the first character of the first line of a file. |
 | Case | The case text of a fragment, which the grammar must accept or reject, as its opening line says (DGR-6). A fragment is exactly one case, or none when its opening line is none of the forms of [CEX-4](../../../../clean-examples/specs/module.md#the-opening-line). |
 | Expected line | The `<n>` of `line=<n>` in the opening line of a fragment with `expect=syntax-error`. Where its case "reject" may fail is DGR-13. |
 | Blank | A space or a tab. No other character, such as a no-break space or a form feed, is a blank. |
@@ -260,7 +263,7 @@ Feature: Derive the grammar of Clean from the norms
     Scenario: One case per fragment
       Given a fragment with an opening line of one of the forms of CEX-4
       When the script takes its case
-      Then its case is its whole case text, and its "cases" is a list of one
+      Then its case is its whole case text, and its "cases" is a list of one, whatever the number of files of its program (DGR-19)
       And the script never cuts a fragment
 
     Scenario: The error code is not checked
@@ -473,9 +476,9 @@ Feature: Derive the grammar of Clean from the norms
       And every rule and terminal is used by "start", by another statement or by a directive, or is one of the fixed names of DGR-11
       And every rule and terminal cites a fragment, or is used by a statement that cites one (DGR-2)
       And the brackets, "NAME" and "RESERVED" meet DGR-11
-      And every case "accept" of a fragment "derived" parses, each case on its own
-      And every case "reject" of a fragment "derived" fails to parse, and the place of the failure does not end before the line break that ends the line before its expected line: it may be at that line break, at the expected line or later; when the expected line is 1, anywhere
-      And the place of a failure is, in the case text: for an unexpected token, the span from its start to its end, or the end of the text for the end of input; for an unexpected character, its position; for an error of the indenter, the span of the "_NL" token it handles
+      And every case "accept" of a fragment "derived" parses, each case on its own: every file of its program parses (DGR-19)
+      And every case "reject" of a fragment "derived" fails to parse: a file of its program does not parse (DGR-19); and the place of the failure does not end before the line break that ends the line before its expected line: it may be at that line break, at the expected line or later; when the expected line is 1, anywhere
+      And the place of a failure is, in the file text: for an unexpected token, the span from its start to its end, or the end of the text for the end of input; for an unexpected character, its position; for an error of the indenter, the span of the "_NL" token it handles; and, in the case text, that span moved by the offset of the file (DGR-19)
       And every fragment whose opening line is none of the forms of CEX-4 is "pending", and its case is not parsed (DGR-6)
       And every fragment cited is "derived", and every fragment "derived" is cited at least once
       And a citation names the fragment, as "<norm ID>@<norm hash>"; "<norm ID>#<n>" is not a citation
@@ -813,4 +816,84 @@ Feature: Derive the grammar of Clean from the norms
       When the use case goes on
       Then the end report (DGR-15) shows the error, or says that the body of the issue still holds "#<n>"
       And the next run, whose "check" still finds the stale citation, searches and opens again, as above
+
+  Rule: DGR-19 The script splits the case text into the files of its program, and parses each file alone, as a whole source file (CDN-6)
+    Rationale: one Clean example may hold a program of several files (CEX-35); each file is a source file of its own, so the grammar must take it as one, from its start rule, and never as the tail of the file before it. Splitting by the file lines alone gives every reader the same files, with no model and no reading of the Clean code. Parsing the files in their order, and comparing the first failure with the expected line counted on the whole case text, holds a program of several files to what DGR-13 holds a program of one file to: everything before the expected line parses.
+
+    Scenario: The files of a case text
+      Given the case text of a fragment holds one or more file lines
+      When the script splits it
+      Then it splits it into the files of its program from its file lines alone, as the term file of a program and CEX-35 say
+      And no other reading of the case text decides where a file starts: a file line inside a block comment or after an open bracket opens a file too
+      And the file text of a file is its lines, its file line first, each followed by one line feed, with the blank lines at its end dropped
+      And the path of a file is the path of its file line, as the term says, and a file whose file line has no path has no path
+      And the script parses none of the lines before the first file line
+
+    Scenario: The files of a program of two files
+      Given the case text is the nine lines below, with one tab before "integer" and before "print", and two tabs before "return"; only the lines and their order bind
+        """
+        // a program of two files
+        // file: app/utils.cln
+        functions:
+        	integer double(integer n)
+        		return n * 2
+
+        // file: app/main.cln
+        start:
+        	print(double(21))
+        """
+      When the script splits it
+      Then it gives two files, in this order:
+        | file | path          | lines of the case text | file text                                         |
+        | 1    | app/utils.cln | 2 to 6                 | lines 2 to 5, each with a line feed; line 6, blank, is dropped |
+        | 2    | app/main.cln  | 7 to 9                 | lines 7 to 9, each with a line feed               |
+      And line 1 belongs to no file, and is not parsed
+      And the offset of file 2 is the offset of line 7 in the case text
+
+    Scenario: A case text with no file line
+      Given the case text of a fragment holds no file line
+      When the script splits it
+      Then its program is one file with no path, whose file text is the whole case text and whose offset is 0
+      And the script parses it, places a failure and words its message exactly as DGR-13 says, with no word about files
+
+    Scenario: Each file is parsed alone
+      When the script parses the program of a case
+      Then it parses the file text of each file on its own, from the start rule "start", with the indenter of DGR-11 started anew
+      And a comment, a string literal or a bracket that one file leaves open does not go on into the next one (CEX-35)
+      And it parses the files in their order, and stops at the first one that does not parse: that failure is the failure of the program
+      And the place of the failure of the program, in the case text, is its place in the file text moved by the offset of the file
+      And the expected line counts the lines of the whole case text (CEX-6), and DGR-13 compares the place of the failure of the program with it
+
+    Scenario Outline: Where a program of several files fails
+      Given the case text of "TST-9" is the one of "The files of a program of two files", and its case is "<case>" with the expected line <line>
+      And its parse is: <parse>; this column, not the text of the lines, fixes how each file parses
+      When the script checks "TST-9"
+      Then <result>
+
+      Examples:
+        | case   | line | parse                                                                    | result |
+        | accept | none | both files parse                                                         | the case passes |
+        | accept | none | file 1 parses, and file 2 fails at its line 3                            | the case fails, and the message names line 9 of the case text, file 2 and its line 3 |
+        | reject | 9    | file 1 parses, and file 2 fails at its line 3, which is line 9           | the case passes |
+        | reject | 9    | file 1 parses, and file 2 fails at the end of its text                   | the case passes |
+        | reject | 9    | file 1 fails at its line 2, which is line 3; file 2 is not parsed        | the case fails: the failure of the program ends before the line break that ends line 8 |
+        | reject | 9    | both files parse                                                         | the case fails: the program parses, and its case is "reject" |
+        | reject | 1    | file 1 parses, and file 2 fails at its line 2                            | the case passes: with the expected line 1, anywhere |
+
+    Scenario: The message of a failure in a file
+      Given the program of a case holds a file line, and its file 2, of the path "app/main.cln", fails at its line 3, which is line 9 of the case text
+      When the script words the failure
+      Then the message starts with "line 9 (file 2, app/main.cln, line 3): " and goes on with the type of the error and the first line of its text, as for a case text with no file line
+      And for a file with no path, it starts with "line 9 (file 2, no path, line 3): "
+      And a case text with no file line keeps the message "line <n>: <type of the error>: <first line of its text>"
+
+    Scenario: The script checks no rule of the files (CDN-4, CDN-6)
+      Given the program of a fragment has two files with one path, a path that is not of the form of CEX-11, a code line before its first file line, no file or two files with "start:", or an expected line on a file line or before the first file line
+      When the script checks it
+      Then it reports none of these: they are rules of CEX-20, checked in layers 0 and 1
+      And it splits and parses the program all the same, as above: a file line with no path opens a file, two files with one path are two files, and an expected line before the first file line comes before every place of every file
+
+    Scenario: The status file and the work list
+      Given a fragment whose program has several files
+      Then it is one case, as DGR-6 says, and its status line and its item of the work list have the fields of DGR-5 and DGR-12, and nothing more for its files
 ```

@@ -66,6 +66,10 @@ SYNTAX_FORM = re.compile(r"clean-language expect=syntax-error code=" + dg.CODE +
 CASE_RE = re.compile(r"run|error " + dg.CODE)
 CODE_RE = re.compile(dg.CODE)
 LEAN_CITATION_RE = re.compile(r"^-- (" + dg.NORM_ID + r")@([0-9a-f]{8}): (\S.*)$")
+# The names of the parse tree of a program of several files, which no grammar of Lark gives (DSM-7).
+PROGRAM_RULE = "%program"
+FILE_RULE = "%file"
+PATH_TYPE = "%path"
 
 # ---------------------------------------------------------------- the fixed files (DSM-3)
 
@@ -312,19 +316,24 @@ def load_grammar(root):
 
 
 def parse(grammar, text):
-    """Parse a case text: (Lark tree, None), or (None, the message of the failure).
+    """Parse the program of a case text: (its parse tree, None), or (None, the message of the failure).
+
+    The files are split and parsed alone, in their order, as DGR-19 says. A
+    case text with no file line gives the tree of its one file; one with a
+    file line gives a rule %program of one rule %file per file: a token %path
+    with its path, or absent, then the tree of the file.
 
     Spec: DSM-7.
     """
     parser, indenter = grammar
-    indenter.source = text
-    try:
-        return parser.parse(text), None
-    except Exception as error:  # noqa: BLE001 - every failure is a failed parse
-        start, _ = dg.parse_error_span(error, indenter, text)
-        first = (str(error).strip().split("\n") or [""])[0]
-        line = text.count("\n", 0, min(start, len(text))) + 1
-        return None, f"line {line}: {type(error).__name__}: {first}"
+    files, trees, failure = dg.parse_program(parser, indenter, text)
+    if failure is not None:
+        return None, failure[2]
+    if not files[0].file_line:
+        return generic(trees[0]), None
+    return ("rule", PROGRAM_RULE, [
+        ("rule", FILE_RULE, [("token", PATH_TYPE, f.path_of_file_line) if f.path_of_file_line is not None else ("absent",), generic(tree)])
+        for f, tree in zip(files, trees)]), None
 
 
 def generic(node):
@@ -421,7 +430,7 @@ def facts(tree, grammar, node):
         if error is not None:
             out["parse_error"] = error
         else:
-            out["generic"] = generic(parsed)
+            out["generic"] = parsed
             out["serialized"] = serialize(out["generic"])
             out["parse_tree_hash"] = tree_hash(out["serialized"])
     return out

@@ -141,10 +141,6 @@ class Code(unittest.TestCase):
     def test_cex10_comment_at_end_of_section_line(self):
         self.assertEqual(rules(md("clean-language expect=valid", "start:   // entry", "\tprint(1)")), [])
 
-    def test_cex11_file_line(self):
-        self.assertEqual(rules(md("clean-language expect=valid", "// file: app/a.cln", "start:")), [])
-        text = md("clean-language expect=valid", "start:", "// file: app/b.cln")
-        self.assertEqual(rules(text), [(3, "CEX-11")])
 
     def test_cex13_space_in_indentation(self):
         text = md("clean-language expect=valid", "start:", "    print(1)", "\t print(2)")
@@ -156,6 +152,91 @@ class Code(unittest.TestCase):
 
     def test_cex13_syn003(self):
         self.assertEqual(rules(md("clean-language expect=syntax-error code=SYN003 line=2", "start:", "  print(1)")), [])
+
+
+class Files(unittest.TestCase):
+    VALID = "clean-language expect=valid"
+
+    def test_cex35_files_of_a_program(self):
+        code = ["// a comment", "", "// file: a.cln", "start:", "// file: b/c.cln", "functions:"]
+        self.assertEqual(ex.files_of_program(code), [(2, 4), (4, 6)])
+        self.assertEqual(ex.files_of_program(["start:", "\tprint(1)"]), [(0, 2)])
+        self.assertEqual(ex.files_of_program([]), [(0, 0)])
+
+    def test_cex35_a_file_line_inside_a_block_comment_opens_a_file(self):
+        code = ["// file: a.cln", "/* open", "// file: b.cln", "start:", "\tprint(1)"]
+        self.assertEqual(ex.files_of_program(code), [(0, 2), (2, 5)])
+        self.assertEqual(rules(md(self.VALID, *code)), [])
+
+    def test_cex35_a_bracket_does_not_go_on_into_the_next_file(self):
+        text = md(self.VALID, "// file: a.cln", "functions:", "\tinteger f() = (1 +", "// file: b.cln", "start:", "  print(1)")
+        self.assertEqual(rules(text), [(7, "CEX-13")])
+
+    def test_cex31_cex35_a_program_of_several_files(self):
+        text = md(self.VALID, "// file: app/utils.cln", "functions:", "\tinteger double(integer n)", "\t\treturn n * 2", "",
+                  "// file: app/main.cln", "import:", "\tapp/utils.cln", "", "start:", "\tprint(double(21))")
+        self.assertEqual(rules(text), [])
+
+    def test_cex11_the_form_of_a_path(self):
+        for path in ("a.cln", "app/a.cln", "app/x.y/a-b_c.cln", "ñ/a.cln"):
+            self.assertEqual(rules(md(self.VALID, "// file: " + path, "start:")), [], path)
+        for path in ("", "/a.cln", "a.cln/", "app//a.cln", "./a.cln", "app/../a.cln", "../a.cln", "a.txt", ".cln",
+                     "app/.cln", "a b.cln", "a\tb.cln", "app\\a.cln", " a.cln", "a.cln ", "a.cln // main"):
+            self.assertEqual(rules(md(self.VALID, "// file: " + path, "start:")), [(2, "CEX-11")], repr(path))
+        self.assertEqual(rules(md(self.VALID, "// file:a.cln", "start:")), [(2, "CEX-11")])
+        self.assertEqual(rules(md(self.VALID, "// file:", "start:")), [(2, "CEX-11")])
+
+    def test_cex11_a_line_that_looks_like_a_file_line(self):
+        for line in ("//file: a.cln", "// File: a.cln", "// FILE : a.cln", "\t// file: a.cln", " // file: a.cln", "//  file:a.cln"):
+            self.assertIn((3, "CEX-11"), rules(md(self.VALID, "start:", line, "\tprint(1)")), repr(line))
+        for line in ("\tprint(\"file: x\")", "// files: a.cln", "// the file: a.cln", "\tprint(1) // file: a.cln"):
+            self.assertEqual(rules(md(self.VALID, "start:", line)), [], repr(line))
+
+    def test_cex36_code_before_the_first_file_line(self):
+        text = md(self.VALID, "// a comment", "", "/* block */", "// file: a.cln", "start:")
+        self.assertEqual(rules(text), [])
+        text = md(self.VALID, "start:", "\tprint(1)", "// file: a.cln", "start:")
+        self.assertEqual(rules(text), [(2, "CEX-36"), (3, "CEX-36")])
+        syntax = md("clean-language expect=syntax-error code=SYN002 line=4", "integer x = 5", "// file: a.cln", "start:", "x")
+        self.assertEqual(rules(syntax), [(2, "CEX-36")])
+
+    def test_cex10_only_inside_a_file(self):
+        text = md(self.VALID, "// file: a.cln", "integer x = 5", "start:")
+        self.assertEqual(rules(text), [(3, "CEX-10")])
+        text = md(self.VALID, "integer x = 5", "// file: a.cln", "start:")
+        self.assertEqual(rules(text), [(2, "CEX-36")])
+
+    def test_cex37_the_same_path_twice(self):
+        text = md(self.VALID, "// file: a.cln", "start:", "// file: b.cln", "functions:", "// file: a.cln", "tests:")
+        self.assertEqual(rules(text), [(6, "CEX-37")])
+        self.assertEqual(rules(md(self.VALID, "// file: a.cln", "start:", "// file: A.cln", "tests:")), [])
+        self.assertEqual(rules(md(self.VALID, "// file: a b.cln", "start:", "// file: a b.cln", "tests:")),
+                         [(2, "CEX-11"), (4, "CEX-11"), (4, "CEX-37")])
+
+    def test_cex38_start_in_exactly_one_file(self):
+        self.assertEqual(rules(md(self.VALID, "// file: a.cln", "functions:", "// file: b.cln", "tests:")), [(1, "CEX-38")])
+        text = md(self.VALID, "// file: a.cln", "start:", "// file: b.cln", "start:", "start:", "// file: c.cln", "start:")
+        self.assertEqual(rules(text), [(5, "CEX-38"), (8, "CEX-38")])
+        self.assertEqual(rules(md(self.VALID, "// file: a.cln", "functions:", "// file: b.cln", "\t// start:", "start:")), [])
+
+    def test_cex38_says_nothing_of_one_file_nor_of_an_error(self):
+        self.assertEqual(rules(md(self.VALID, "functions:", "\tvoid f()")), [])
+        self.assertEqual(rules(md(self.VALID, "// file: a.cln", "functions:")), [])
+        self.assertEqual(rules(md("clean-language expect=error code=SEM004", "// file: a.cln", "functions:", "// file: b.cln", "tests:")), [])
+        self.assertEqual(rules(md("clean-language expect=error code=SEM004", "// file: a.cln", "start:", "// file: b.cln", "start:")), [])
+        self.assertEqual(rules(md("clean-language", "// file: a.cln", "functions:", "// file: b.cln", "tests:")), [(1, "CEX-4")])
+
+    def test_cex39_the_line_of_a_syntax_error(self):
+        info = "clean-language expect=syntax-error code=SYN002 line={}"
+        code = ["// intro", "// file: a.cln", "start:", "// file: b.cln", "x"]
+        for n, expected in ((1, [(1, "CEX-39")]), (2, [(1, "CEX-39")]), (3, []), (4, [(1, "CEX-39")]), (5, []),
+                            (6, [(1, "CEX-6")])):
+            self.assertEqual(rules(md(info.format(n), *code)), expected, n)
+        self.assertEqual(rules(md(info.format(1), "x")), [])
+
+    def test_cex6_counts_the_lines_of_the_whole_code(self):
+        info = "clean-language expect=syntax-error code=SYN002 line=5"
+        self.assertEqual(rules(md(info, "// file: a.cln", "start:", "// file: b.cln", "start:", "x")), [])
 
 
 class ErrorCodes(unittest.TestCase):
@@ -322,6 +403,39 @@ class Audit(unittest.TestCase):
         self.assertIn("- specs/o.md:10 · CEX-28 · the info string of an expected output block is exactly clean-language-output", report)
         self.assertIn("1 Clean examples in 1 selected files, 2 violations", report)
 
+    def test_cau5_cau8_the_files_of_a_program(self):
+        p = self.p
+        text = "\n" * 29 + md("clean-language expect=valid", "start:", "// file: a.cln", "start:", "// file: a.cln", "start:")
+        p.write(p.l1, "specs/f.md", text)
+        report = audit.run(p.l1, "specs/f.md")
+        self.assertNotIn("specs/f.md:30 ·", report)
+        self.assertIn("- specs/f.md:31 · CEX-36 · code before the first file line", report)
+        self.assertIn("- specs/f.md:34 · CEX-37 · a second file with the same path", report)
+        self.assertIn("- specs/f.md:35 · CEX-38 · a valid program of several files has start: in exactly one file", report)
+        syntax = md("clean-language expect=syntax-error code=SYN002 line=1", "// file: ../a.cln", "x")
+        p.write(p.l1, "specs/g.md", syntax)
+        report = audit.run(p.l1, "specs/g.md")
+        self.assertIn("- specs/g.md:1 · CEX-39 · the line of a syntax-error is a file line or before the first file line", report)
+        self.assertIn("- specs/g.md:2 · CEX-11 · a file line is // file: at column 1, one space and a path of the form of CEX-11", report)
+
+    def test_cau5_the_files_of_a_program_scenario_outline(self):
+        rows = [
+            ("clean-language expect=valid", ["// file: app/a.cln", "functions:", "\tvoid f()", "// file: app/main.cln", "start:", "\tf()"], []),
+            ("clean-language expect=valid", ["start:", "// file: a.cln", "start:"], [(31, "CEX-36")]),
+            ("clean-language expect=valid", ["// file: a.cln", "start:", "// file: a.cln", "functions:"], [(33, "CEX-37")]),
+            ("clean-language expect=valid", ["// file: a.cln", "functions:", "// file: b.cln", "tests:"], [(30, "CEX-38")]),
+            ("clean-language expect=valid", ["// file: a.cln", "start:", "// file: b.cln", "start:"], [(34, "CEX-38")]),
+            ("clean-language expect=error code=SEM004", ["// file: a.cln", "functions:", "// file: b.cln", "tests:"], []),
+            ("clean-language expect=valid", ["// file: ../a.cln", "start:"], [(31, "CEX-11")]),
+            ("clean-language expect=valid", ["//file: a.cln", "start:"], [(31, "CEX-11")]),
+            ("clean-language expect=syntax-error code=SYN011 line=1", ["// file: a.cln", "start:"], [(30, "CEX-39")]),
+        ]
+        for info, code, expected in rows:
+            self.p.write(self.p.l1, "specs/f.md", "\n" * 29 + md(info, *code))
+            report = audit.run(self.p.l1, "specs/f.md")
+            found = [line for line in report.splitlines() if line.startswith("- specs/f.md:")]
+            self.assertEqual(found, [ex.finding("", "specs/f.md", line, rule) for line, rule in expected], (info, code))
+
     def test_cau9_same_report(self):
         self.p.write(self.p.l0, "specs/a.md", md("clean", "start:"))
         self.assertEqual(audit.run(self.p.l0), audit.run(self.p.l0))
@@ -438,6 +552,15 @@ class Hook(unittest.TestCase):
         self.assertEqual(self.call("Write", file_path=path, content=valid + "\n" + out)[0], 0)
         self.p.write(self.p.l1, "specs/o.md", error + "\n" + out)
         self.assertEqual(self.call("Edit", file_path=path, old_string="print(1)", new_string="print(2)")[0], 0)
+
+    def test_cex22_the_files_of_a_new_example(self):
+        path = os.path.join(self.p.l1, "specs/f.md")
+        content = md("clean-language expect=valid", "// file: a.cln", "functions:", "// file: b.cln", "tests:")
+        code, _, err = self.call("Write", file_path=path, content=content)
+        self.assertEqual(code, 2)
+        self.assertIn("specs/f.md:1 · CEX-38", err)
+        content = md("clean-language expect=valid", "// file: a.cln", "functions:", "// file: b.cln", "start:")
+        self.assertEqual(self.call("Write", file_path=path, content=content)[0], 0)
 
     def test_cex26_never_changes_a_file(self):
         path = self.p.write(self.p.l0, "specs/a.md", "x\n")

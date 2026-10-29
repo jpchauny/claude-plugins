@@ -1,6 +1,6 @@
 """The rules of the Clean examples that the text decides alone, shared by the audit and the hook.
 
-Spec: specs/module.md (CEX-1 to CEX-30) and use-cases/audit/specs/audit.md (CAU-1 to CAU-9).
+Spec: specs/module.md (CEX-1 to CEX-39) and use-cases/audit/specs/audit.md (CAU-1 to CAU-9).
 Python 3.9 or later, standard library only.
 """
 
@@ -16,7 +16,9 @@ INFO_ERROR = re.compile(r"clean-language expect=error code=([A-Z]{3,6}[0-9]{3})"
 FENCE_OPEN = re.compile(r"^( *)(`{3,}|~{3,})(.*)$")  # at most 3 spaces: checked in blocks()
 DEFINITION = re.compile(r"^ {0,3}#{3,6}[ \t]+([A-Z]{3,6}[0-9]{3}) — \S")
 CODE_TOKEN = re.compile(r"\b([A-Z]{3,6}[0-9]{3})\b")
-FILE_LINE = re.compile(r"^// file: \S")
+FILE_LINE = re.compile(r"^// file:")  # CEX term "File line"
+FILE_LINE_PATH = "// file: "  # CEX term "Path of a file line": the text after it
+FILE_LINE_LOOKALIKE = re.compile(r"^[ \t]*//[ \t]*file[ \t]*:", re.IGNORECASE)  # CEX-11, its second paragraph
 FAILS = re.compile(r"^//[ \t]*fails:")
 OUTPUT_INFO = "clean-language-output"  # CEX term "Expected output block", CEX-28
 REGISTRY = "specs/platform/error-codes.md"
@@ -43,7 +45,7 @@ MESSAGES = {  # CAU-8
     "CEX-7": "an error needs a code whose prefix is not SYN",
     "CEX-9": "the expected outcome goes on the opening line, not in a fails: comment",
     "CEX-10": "code at column 1 outside a section",
-    "CEX-11": "a second file line, or a file line that is not line 1",
+    "CEX-11": "a file line is // file: at column 1, one space and a path of the form of CEX-11",
     "CEX-13": "a space in the indentation",
     "CEX-15": "a second definition of the error code",
     "CEX-16": "the error code has neither a definition nor a registry row",
@@ -51,6 +53,10 @@ MESSAGES = {  # CAU-8
     "CEX-18": "a definition of a retired code",
     "CEX-27": "an expected output block goes right after a Clean example with expect=valid, one at most",
     "CEX-28": "the info string of an expected output block is exactly clean-language-output",
+    "CEX-36": "code before the first file line",
+    "CEX-37": "a second file with the same path",
+    "CEX-38": "a valid program of several files has start: in exactly one file",
+    "CEX-39": "the line of a syntax-error is a file line or before the first file line",
 }
 SUSPECT_MESSAGE = "looks like a Clean source file outside a Clean example"
 
@@ -226,6 +232,39 @@ def lex(code):
     return out
 
 
+def path_of_file_line(line):
+    """CEX term "Path of a file line", or None when the file line has none."""
+    return line[len(FILE_LINE_PATH):] if line.startswith(FILE_LINE_PATH) else None
+
+
+def is_path_of_cex11(path):
+    """The form of a path of CEX-11, its four conditions."""
+    if path is None:
+        return False
+    parts = path.split("/")
+    if any(not part or re.search(r"[ \t\\]", part) or part in (".", "..") for part in parts):
+        return False
+    return parts[-1].endswith(".cln") and len(parts[-1]) > len(".cln")
+
+
+def files_of_program(code):
+    """CEX term "File of a program", found from the file lines alone (CEX-35): [(index of its first line, index after
+    its last line)], indexes of code. A code with no file line has one file, the whole code. The lines before the first
+    file line, code[:files[0][0]], belong to no file."""
+    starts = [k for k, line in enumerate(code) if FILE_LINE.match(line)]
+    if not starts:
+        return [(0, len(code))]
+    return list(zip(starts, starts[1:] + [len(code)]))
+
+
+def lex_program(code, files):
+    """lex() of each file of the program on its own, and of the lines before the first file line (CEX-35)."""
+    lexed = lex(code[:files[0][0]])
+    for first, after in files:
+        lexed += lex(code[first:after])
+    return lexed
+
+
 def is_code_line(lexed):
     return bool(lexed[0].strip())
 
@@ -275,21 +314,46 @@ def check_block(block, codes):
                 found.append((block.line, "CEX-16"))
             if code in retired:
                 found.append((block.line, "CEX-17"))
-    lexed = lex(block.code)
+    files = files_of_program(block.code)
+    first_file_line = files[0][0]  # index; 0 also when the code holds no file line
+    lexed = lex_program(block.code, files)
     sy003 = parsed is not None and parsed[0] == "syntax-error" and parsed[1] == "SYN003"
+    paths = set()
     for k, (raw, lx) in enumerate(zip(block.code, lexed)):
         at = block.line + 1 + k
         if any(FAILS.match(c) for c in lx[1]):
             found.append((at, "CEX-9"))
-        if parsed is not None and parsed[0] != "syntax-error" and raw and raw[0] not in " \t" \
+        if parsed is not None and parsed[0] != "syntax-error" and k >= first_file_line and raw and raw[0] not in " \t" \
                 and is_code_line(lx) and not is_section_line(raw, lx):
             found.append((at, "CEX-10"))
-        if FILE_LINE.match(raw) and k != 0:
+        if FILE_LINE.match(raw):
+            path = path_of_file_line(raw)
+            if not is_path_of_cex11(path):
+                found.append((at, "CEX-11"))
+            if path is not None and path in paths:
+                found.append((at, "CEX-37"))
+            paths.add(path)
+        elif FILE_LINE_LOOKALIKE.match(raw):
             found.append((at, "CEX-11"))
+        if k < first_file_line and is_code_line(lx):
+            found.append((at, "CEX-36"))
         if is_code_line(lx) and not sy003 and lx[2] == 0:
             lead = raw[: len(raw) - len(raw.lstrip(" \t"))]
             if " " in lead:
                 found.append((at, "CEX-13"))
+    if parsed is not None and parsed[0] == "valid" and len(files) > 1:  # CEX-38
+        starts = []
+        for first, after in files:
+            ks = [k for k in range(first, after) if is_section_line(block.code[k], lexed[k]) and lexed[k][0].rstrip() == "start:"]
+            if ks:
+                starts.append(ks[0])
+        if not starts:
+            found.append((block.line, "CEX-38"))
+        found += [(block.line + 1 + k, "CEX-38") for k in starts[1:]]
+    if parsed is not None and parsed[0] == "syntax-error" and FILE_LINE.match(block.code[first_file_line] if block.code else ""):
+        n = parsed[2]  # CEX-39; an n out of range is CEX-6
+        if 1 <= n <= len(block.code) and (n - 1 < first_file_line or FILE_LINE.match(block.code[n - 1])):
+            found.append((block.line, "CEX-39"))
     return found
 
 

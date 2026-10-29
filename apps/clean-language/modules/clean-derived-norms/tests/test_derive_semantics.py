@@ -973,3 +973,127 @@ def test_dsm7_the_reader_of_the_serialized_tree(tmp_path):
     tree = ("rule", "r", [("token", "T", 'a\\b\nc\r'), ("absent",), ("rule", "s", [])])
     assert ds.run_fragment(executable, ds.serialize(tree)) == (None, "(r T=a\\b\nc\r _ (s))".encode(), None)
     assert ds.run_fragment(executable, "rule r 2\nabsent\n")[2].startswith("the executable exited with 2")
+
+
+# ------------------------------------------------------------------ DSM-7, DSM-10: programs of several files
+
+
+def two_file_repo(root, first_path="// file: app/a.cln", second_path="// file: app/b.cln", second='\tprint("b")', output=None):
+    """The fixture, with TST-7: a program of two files, derived; with output, followed by its expected output block OUT-7."""
+    parts = base_parts() + [("TST-7", "code_block", fence(VALID, "// the files", first_path, "start:", '\tprint("a")',
+                                                          "", second_path, "start:", second)), "\n"]
+    if output is not None:
+        parts += ["\n", ("OUT-7", "code_block", fence("clean-language-output", *output)), "\n"]
+    nodes = section("SEC-1", parts)
+    write_tree(root, nodes)
+    reseal(root, nodes, lines=good_status(root, nodes) + [status_line(root, nodes, "TST-7")])
+    tree = ds.dg.load_tree(root)
+    return nodes, ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-7"])
+
+
+def test_dsm7_the_parse_tree_of_a_program_of_several_files(repo):
+    root, _ = repo
+    _, fact = two_file_repo(root)
+    lines = fact["serialized"].split("\n")
+    assert lines[:4] == ["rule %program 2", "rule %file 2", "token %path app/a.cln", "rule start 1"]
+    assert "token %path app/b.cln" in lines and lines.count("rule %file 2") == 2
+    assert not any("the files" in l for l in lines)
+    assert fact["parse_tree_hash"] == ds.tree_hash(fact["serialized"]) and fact["parse_error"] is None
+
+
+def test_dsm7_a_file_with_no_path_has_an_absent_path(repo):
+    root, _ = repo
+    _, fact = two_file_repo(root, second_path="// file:app/b.cln")
+    lines = fact["serialized"].split("\n")
+    second = [i for i, l in enumerate(lines) if l == "rule %file 2"][1]
+    assert lines[second + 1] == "absent"
+
+
+def test_dsm7_the_parse_tree_of_a_program_of_one_file_has_no_files(repo):
+    root, _ = repo
+    tree = ds.dg.load_tree(root)
+    fact = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-1"])
+    assert fact["serialized"].startswith("rule start ") and "%" not in fact["serialized"]
+
+
+def test_dsm7_a_program_of_several_files_that_the_grammar_does_not_parse(repo):
+    root, _ = repo
+    _, fact = two_file_repo(root, second="\tprint(")
+    assert fact["parse_tree_hash"] is None
+    assert fact["parse_error"].startswith("line 8 (file 2, app/b.cln, line 3): ")
+
+
+def test_dsm7_a_program_of_several_files_is_checked_as_any_fragment(repo, monkeypatch):
+    root, _ = repo
+    lean = FakeLean(monkeypatch)
+    two_file_repo(root)
+    problems, summary = run_check(root)
+    assert [p for p in problems if p[0] != "pending"] == []
+    assert summary["passed"]["run"] == [3, 3]
+    assert any(s.startswith("rule %program 2\n") for s in lean.runs)
+
+
+def test_dsm7_cex29_the_expected_output_of_a_program_of_several_files(repo, monkeypatch):
+    root, _ = repo
+    lean = FakeLean(monkeypatch)
+    _, fact = two_file_repo(root, output=["a", "b"])
+    assert fact["expected_output"] is not None and fact["expected_output"].startswith("OUT-7@")
+    problems, summary = run_check(root)
+    assert [p for p in problems if p[0] != "pending"] == [] and summary["passed"]["run"] == [3, 3]
+    assert any(s == fact["serialized"] for s in lean.runs)
+    FakeLean(monkeypatch, outcomes={fact["serialized"]: (None, b"a\n", None)})
+    problems, summary = run_check(root)
+    assert ("run", "TST-7") in names(problems) and summary["passed"]["run"] == [2, 3]
+
+
+def test_dsm10_an_example_of_the_error_of_an_undeclared_name_is_checked_for_its_code(repo, monkeypatch):
+    """The script never decides whether a name is declared: a derived SEM002 fragment is checked for its code alone."""
+    root, _ = repo
+    parts = base_parts() + [("TST-8", "code_block", fence("clean-language expect=error code=SEM002", "start:", '\tprint("lenght")')), "\n"]
+    nodes = section("SEC-1", parts)
+    write_tree(root, nodes)
+    reseal(root, nodes, lines=good_status(root, nodes) + [status_line(root, nodes, "TST-8")])
+    tree = ds.dg.load_tree(root)
+    serialized = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-8"])["serialized"]
+    FakeLean(monkeypatch, outcomes={serialized: ("SEM002", b"", None)})
+    problems, summary = run_check(root)
+    assert [p for p in problems if p[1] == "TST-8"] == [] and summary["passed"]["error"] == [2, 2]
+    FakeLean(monkeypatch, outcomes={serialized: (None, b"lenght\n", None)})
+    problems, summary = run_check(root)
+    assert ("run", "TST-8") in names(problems) and summary["passed"]["error"] == [1, 2]
+
+
+def test_dsm10_the_reason_of_an_example_that_is_not_a_whole_program_cites_a_norm(repo, monkeypatch):
+    root, nodes = repo
+    FakeLean(monkeypatch)
+    lines = good_status(root, nodes)
+    hash8 = lines[1]["hash"]
+    lines[1] = dict(lines[1], state="pending",
+                    reason=f"TST-2 is not a whole program (CEX-31): it uses the name score, which it does not declare and no norm defines: TST-2@{hash8}")
+    reseal(root, nodes, lines=lines)
+    found = [p for p in run_check(root)[0] if p[1] == "TST-2"]
+    assert [p[0] for p in found] == ["pending"]
+
+
+@needs_lake
+def test_dsm7_the_reader_takes_the_tree_of_a_program_of_several_files(tmp_path):
+    folder = tmp_path / "semantics"
+    for rel, text in ds.FIXED.items():
+        (folder / rel).parent.mkdir(parents=True, exist_ok=True)
+        (folder / rel).write_text(text)
+    echo = "\n".join(["import Fragment", "namespace Clean", "partial def render : Fragment.Tree → String",
+                      '  | .rule n cs => "(" ++ n ++ String.join (cs.map (" " ++ render ·)) ++ ")"',
+                      '  | .token t x => t ++ "=" ++ x', '  | .absent => "_"',
+                      "def outcome (t : Fragment.Tree) : Fragment.Outcome := { code := none, output := render t }",
+                      "end Clean", ""])
+    (folder / "Clean.lean").write_text(echo)
+    for rel in ds.LEAN_CODE[1:]:
+        (folder / rel).parent.mkdir(parents=True, exist_ok=True)
+        (folder / rel).write_text("")
+    work = tmp_path / "w"
+    work.mkdir()
+    executable, error = ds.build(folder, work, shutil.which("lake"))
+    assert error is None
+    tree = ("rule", ds.PROGRAM_RULE, [("rule", ds.FILE_RULE, [("token", ds.PATH_TYPE, "app/a.cln"), ("rule", "s", [])]),
+                                      ("rule", ds.FILE_RULE, [("absent",), ("rule", "s", [])])])
+    assert ds.run_fragment(executable, ds.serialize(tree)) == (None, b"(%program (%file %path=app/a.cln (s)) (%file _ (s)))", None)

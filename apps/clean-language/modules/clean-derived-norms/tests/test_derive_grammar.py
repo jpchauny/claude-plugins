@@ -1648,3 +1648,140 @@ def test_dgr8_an_alternative_at_column_0_continues_its_statement(repo):
     text = good_grammar(nodes).replace("statement: NAME OPEN_PAREN NUMBER CLOSE_PAREN _NL", "statement: NAME OPEN_PAREN NUMBER CLOSE_PAREN _NL\n| NAME _NL")
     found = names(with_grammar(root, nodes, text))
     assert not any(p[0] == "statement" for p in found) and not any(p[0] == "citation" and p[1].startswith("|") for p in found)
+
+
+# ------------------------------------------------------------------ DGR-19
+
+
+TWO_FILES = "\n".join([
+    "// a program of two files",
+    "// file: app/utils.cln",
+    "functions:",
+    "\tinteger double(integer n)",
+    "\t\treturn n * 2",
+    "",
+    "// file: app/main.cln",
+    "start:",
+    "\tprint(double(21))",
+]) + "\n"
+
+
+def test_dgr19_the_files_of_a_program_of_two_files():
+    files = dg.program_files(TWO_FILES)
+    lines = TWO_FILES.split("\n")
+    assert [(f.number_of_file, f.path_of_file_line, f.first_line_in_case_text, f.file_line) for f in files] == [(1, "app/utils.cln", 2, True), (2, "app/main.cln", 7, True)]
+    assert files[0].file_text == "\n".join(lines[1:5]) + "\n"
+    assert files[1].file_text == "\n".join(lines[6:9]) + "\n"
+    assert files[1].offset_of_file == TWO_FILES.index("// file: app/main.cln")
+    assert all("a program of two files" not in f.file_text for f in files)
+
+
+def test_dgr19_a_case_text_with_no_file_line_is_one_file():
+    text = "start:\n\tprint(1)\n"
+    [only] = dg.program_files(text)
+    assert (only.number_of_file, only.path_of_file_line, only.offset_of_file, only.first_line_in_case_text, only.file_text, only.file_line) == (1, None, 0, 1, text, False)
+
+
+@pytest.mark.parametrize("line,path,opens", [
+    ("// file: a.cln", "a.cln", True),
+    ("// file:a.cln", None, True),
+    ("// file: ", "", True),
+    ("// file: dir/x y.cln", "dir/x y.cln", True),
+    ("\t// file: a.cln", None, False),
+    (" // file: a.cln", None, False),
+    ("//file: a.cln", None, False),
+    ("// File: a.cln", None, False),
+])
+def test_dgr19_only_a_line_that_starts_at_column_1_with_the_mark_opens_a_file(line, path, opens):
+    files = dg.program_files("start:\n\tprint(1)\n" + line + "\nstart:\n\tprint(2)\n")
+    if opens:
+        assert len(files) == 1 and files[0].path_of_file_line == path and files[0].first_line_in_case_text == 3
+    else:
+        assert len(files) == 1 and not files[0].file_line
+
+
+def test_dgr19_a_file_line_inside_a_block_comment_opens_a_file():
+    files = dg.program_files("// file: a.cln\n/* a comment\n// file: b.cln\n*/\n")
+    assert [f.path_of_file_line for f in files] == ["a.cln", "b.cln"]
+    assert files[0].file_text == "// file: a.cln\n/* a comment\n"
+
+
+def two_file_fragment(info, first, second, paths=("app/a.cln", "app/b.cln")):
+    return fence(info, f"// file: {paths[0]}", "start:", first, f"// file: {paths[1]}", "start:", second)
+
+
+def test_dgr19_each_file_is_parsed_alone():
+    lark_parser = fixture_parser()
+    # A bracket that file 1 leaves open does not go on into file 2: file 1 fails, and alone it parses with ")".
+    text = "// file: a.cln\nstart:\n\tprint(\n// file: b.cln\n\t\t1)\n"
+    failure = dg.try_parse(*lark_parser, text)
+    assert failure is not None and "(file 1, a.cln, line " in failure[2]
+    assert failure[1] <= text.index("// file: b.cln")
+    assert dg.try_parse(*lark_parser, "start:\n\tprint(\n\t\t1)\n") is None
+    assert dg.try_parse(*lark_parser, "// file: a.cln\nstart:\n\tprint(1)\n// file: b.cln\nstart:\n\tprint(2)\n") is None
+
+
+def test_dgr19_an_accept_program_of_two_files_passes(repo):
+    root, nodes = repo
+    add_fragment(root, nodes, two_file_fragment(VALID, "\tprint(1)", "\tprint(2)"))
+    problems, summary = run_check(root)
+    assert problems == [] and summary["parsed"]["accept"] == [5, 5]
+
+
+def test_dgr19_an_accept_program_whose_second_file_does_not_parse(repo):
+    root, nodes = repo
+    add_fragment(root, nodes, two_file_fragment(VALID, "\tprint(1)", "\tprint 2"))
+    problems, _ = run_check(root)
+    [problem] = [p for p in problems if p[:2] == ("accept", "TST-7")]
+    assert problem[2].startswith("does not parse: line 6 (file 2, app/b.cln, line 3): UnexpectedToken: ")
+
+
+@pytest.mark.parametrize("line,first,second,passes", [
+    (6, "\tprint(1)", "\tprint 2", True),
+    (6, "\tprint(1)", "\tprint(", True),
+    (6, "\tprint 1", "\tprint 2", False),
+    (6, "\tprint(1)", "\tprint(2)", False),
+    (1, "\tprint(1)", "\tprint 2", True),
+])
+def test_dgr19_where_a_program_of_several_files_fails(repo, line, first, second, passes):
+    root, nodes = repo
+    add_fragment(root, nodes, two_file_fragment(syntax(line), first, second))
+    problems, summary = run_check(root)
+    assert (("reject", "TST-7") not in names(problems)) is passes, problems
+    assert summary["parsed"]["reject"] == ([2, 2] if passes else [1, 2])
+
+
+def test_dgr19_the_message_of_a_file_with_no_path():
+    lark_parser = fixture_parser()
+    failure = dg.try_parse(*lark_parser, "// file: a.cln\nstart:\n\tprint(1)\n// file:b.cln\nstart:\n\tprint 2\n")
+    assert failure[2].startswith("line 6 (file 2, no path, line 3): UnexpectedToken: ")
+
+
+def test_dgr19_a_case_text_with_no_file_line_keeps_its_message():
+    lark_parser = fixture_parser()
+    failure = dg.try_parse(*lark_parser, "start:\n\tprint 1\n")
+    assert failure[2].startswith("line 2: UnexpectedToken: ")
+
+
+def test_dgr19_the_script_checks_no_rule_of_the_files(repo):
+    root, nodes = repo
+    own = fence(VALID, "start:", "\tprint(0)", "// file: same.cln", "start:", "\tprint(1)",
+                "// file: same.cln", "start:", "\tprint(2)", "// file: ../bad path.lean", "start:", "\tprint(3)")
+    add_fragment(root, nodes, own)
+    problems, summary = run_check(root)
+    assert problems == [] and summary["parsed"]["accept"] == [5, 5]
+
+
+def test_dgr19_an_expected_line_before_the_first_file_line(repo):
+    root, nodes = repo
+    add_fragment(root, nodes, fence(syntax(2), "// a", "// b", "// file: a.cln", "start:", "\tprint 1"))
+    problems, summary = run_check(root)
+    assert ("reject", "TST-7") not in names(problems)
+    assert summary["parsed"]["reject"] == [2, 2]
+
+
+def test_dgr19_a_program_of_several_files_is_one_case(repo):
+    root, nodes = repo
+    add_fragment(root, nodes, two_file_fragment(VALID, "\tprint(1)", "\tprint(2)"))
+    line = next(json.loads(l) for l in (root / dg.STATUS_REL).read_text().splitlines() if '"TST-7"' in l)
+    assert list(line) == dg.FRAGMENT_KEYS and line["cases"] == ["accept"]

@@ -6,7 +6,7 @@ description: Derive the semantics of Clean in Lean 4 (abstract syntax, typing, e
 # derive-semantics
 
 Implements [specs/derive-semantics.md](specs/derive-semantics.md) (DSM), with
-the rules of the module, CDN-1 to CDN-5, in [module.md](../../specs/module.md),
+the rules of the module, CDN-1 to CDN-6, in [module.md](../../specs/module.md),
 and the interface of a derived-norms generator, NRM-1 to NRM-11, of the plugin
 `norms-management`. Where a step does what `derive-grammar` does, it says so;
 its `SKILL.md` is `${CLAUDE_PLUGIN_ROOT}/use-cases/derive-grammar/SKILL.md`.
@@ -104,6 +104,14 @@ Group the fragment items by `file` and work one file at a time. For each:
    as its type and its text as JSON, two spaces per level. A string of the
    grammar has a type that Lark makes, such as `PRINT` or `__ANON_3`: tell it
    by its text. `_NL`, `_INDENT` and `_DEDENT` are left out.
+
+   A case text with file lines (`// file: <path>` at column 1) holds a
+   program of several files: the script parses each file alone (DGR-19 of
+   `derive-grammar`), and its tree is a rule `%program` with one rule
+   `%file` per file, in their order; each `%file` holds a token `%path` with
+   the path of the file, or `(absent)` when it has none, then the tree of the
+   file (DSM-7). A program of one file gives the tree of its file, as
+   always. No grammar gives a name with `%`.
 2. Read the prose norms that say what those programs mean: types, values,
    operators, statements, functions, errors and their codes, and what
    `print` writes. Read the section around each fragment in
@@ -147,6 +155,13 @@ output; otherwise evaluate and return the code of run time, if any, and the
 standard output. `partial def` is allowed; the run of one fragment has 10
 seconds.
 
+A program of several files reaches `Clean.outcome` as the tree `%program`
+(DSM-7): find each file and its path in its children. Find the file that an
+`import:` names only by its path, among the files of the program, and only
+as the norms define `import:`; never by a guess (another path, a file name,
+an order). When no norm says what `import:` means, the fragment is a gap
+(DSM-10 (The deriver makes no decision that the norms do not make)).
+
 Rules of the Lean code (DSM-8 (Every declaration of the Lean code cites its
 norms, one citation line per norm, just above it), DSM-10 (The deriver makes
 no decision that the norms do not make)):
@@ -189,6 +204,8 @@ for each semantic fragment, and no other)). Exactly one of:
   that output, byte for byte; `error <code>` gives exactly that code. No
   comment decides it: `// prints:` is never an expected output (CDN-2,
   CEX-30).
+- `pending` as an example that is not a whole program ("Not a whole
+  program" below).
 - `pending` as a gap ("A gap" below).
 
 Write or extend the declarations it needs. A declaration that already covers
@@ -197,7 +214,7 @@ write its status line, fields in this order, compact JSON:
 
 ```json
 {"type":"fragment","id":"FUN-16","hash":"509f049c","cases":["run"],"expected_output":"FUN-17@0c1d2e3f","parse_tree_hash":"baf0f33a","state":"derived","reason":null,"issue":null}
-{"type":"fragment","id":"STA-9","hash":"<hash>","cases":["run"],"expected_output":null,"parse_tree_hash":"<hash>","state":"pending","reason":"STA-9 uses the name score, which it does not declare and no norm declares: STA-9@<hash>","issue":null}
+{"type":"fragment","id":"STA-9","hash":"<hash>","cases":["run"],"expected_output":null,"parse_tree_hash":"<hash>","state":"pending","reason":"STA-9 is not a whole program (CEX-31): it uses the name score, which it does not declare and no norm defines: STA-9@<hash>","issue":null}
 ```
 
 `hash`, `cases`, `expected_output` and `parse_tree_hash` are those of the
@@ -214,14 +231,46 @@ of it and its status line; a declaration left with no prose citation goes. A
 it still follows, update only the hashes of its citations; otherwise rewrite
 or remove it, and the fragments it serves are checked again.
 
+### Not a whole program
+
+An example is a whole program: read alone, it declares every name it uses,
+except a name that a norm of the language or a specified library defines
+(CEX-31 of clean-examples). Nothing outside its code builds it: no other
+example, no prelude, no context (CEX-32). A fragment that uses a name which
+none of its files declares, and which no norm defines, such as `score` in a
+`start:` that never declares it, is not a whole program (DSM-10). It is a
+defect of the example, not a gap of the norms.
+
+One exception (CEX-31): in a fragment with `expect=error`, a name whose use
+with no declaration gives its error code by a norm is allowed undeclared,
+such as the variable of `expect=error code=SEM002` when a norm gives `SEM002`
+for a variable declared in no enclosing scope. Such a fragment is not
+pending for that name: check it for its error code as any other (`derived`,
+or a gap). Any other undeclared name in it is still a defect. For a defect:
+
+1. Invent no declaration, no value, no type and no context for the name.
+   Write no declaration for the fragment, and remove any part you began.
+2. Write its status line `"state":"pending"`, with the reason, naming each
+   such name:
+   `"<ID> is not a whole program (CEX-31): it uses the name <name>, which it does not declare and no norm defines: <ID>@<hash>"`
+   (`the names <a>, <b> and <c>` for several), then any other norm involved
+   after `<ID>@<hash>`, comma-separated. CEX-31 is cited as text: it is no
+   norm of layer 2. Keep its `issue` if it has one; otherwise `null`.
+3. If it has no issue, open it at once (step 4, "Not a whole program"). No
+   proposal, no yes. Then go on.
+
+A pending line that an earlier version of the plugin wrote with the words
+`uses the name ..., which it does not declare and no norm declares` stays as
+it is while its fragment is not on the work list; write the reason above the
+next time you write its line.
+
 ### A gap
 
 Never decide what the norms do not decide (DSM-10). A fragment is a gap when
 its case needs something that no norm says, such as:
 
-- a name that it uses without declaring it, such as `score` in a `start:`
-  that never declares it: invent no declaration, no value, no type and no
-  context for it (open question 1 of clean-examples);
+- what `import:` means, for a program of several files, while no norm says
+  it;
 - the type of an operation, a conversion, or the text that `print` writes
   for a value, that no norm states;
 - an expected output or an error code that does not follow from the norms.
@@ -234,8 +283,9 @@ its case needs something that no norm says, such as:
 3. If it has no issue, open it at once (step 4), one issue for this fragment
    alone. No proposal, no yes. Then go on.
 
-After the work list, for every pending status line that is a gap (not one of
-the two fixed reasons), from this run or an earlier one: with
+After the work list, for every pending status line that is a gap or not a
+whole program (not one of the two fixed reasons), from this run or an
+earlier one: with
 `"issue": null`, open its issue in this run; with an issue, check it with
 `gh issue view <URL> --json state`, keep it when open, and open a new one at
 once when closed, with `Related: #<m>`, writing the new URL in its place.
@@ -283,15 +333,16 @@ norm says what it should give, mark the fragment a gap.
 - `script-citation` needs a new version of the plugin: never change the
   script; step 5.
 
-## 4. The issue of a pending gap
+## 4. The issue of a pending gap, or of an example that is not a whole program
 
 As step 4 of the SKILL.md of `derive-grammar` ("The issue of a pending
 fragment", "Fill in the template", "Open it at once"), with these
-differences only (DSM-14 (Each pending fragment that is a gap gets its own
-issue in layer 1 at once (NRM-8), and the derivation goes on)):
+differences only (DSM-14 (Each pending fragment that is a gap, or an example
+that is not a whole program, gets its own issue in layer 1 at once (NRM-8),
+and the derivation goes on)):
 
-- Only a gap gets an issue; a fragment pending with one of the two fixed
-  reasons gets none.
+- Only a gap, or an example that is not a whole program, gets an issue; a
+  fragment pending with one of the two fixed reasons gets none.
 - The label is `derive-semantics`, never `derive-grammar`: labels exactly
   `finding`, `question`, `derive-semantics`. Create it when missing:
 
@@ -319,6 +370,47 @@ issue in layer 1 at once (NRM-8), and the derivation goes on)):
   <ID> as pending.`
 - The last line: `Found while deriving the Lean semantics of Clean
   (/clean-derived-norms:derive-semantics), foundation @ <sha>, norms @ <sha>.`
+
+### Not a whole program
+
+The issue of a fragment pending because it is not a whole program (DSM-14,
+"The issue of an example that is not a whole program") is opened as a gap's,
+with the differences above, the same values, search for a duplicate, title
+form and order of the body, and these changes only (as "A malformed opening
+line" of `derive-grammar` does for CEX-4):
+
+- `<the gap>` is `an example that is not a whole program (CEX-31)`. Norms
+  involved: the fragment itself, `<ID> (<title>) @<hash>`, and any other norm
+  of the reason; name the rules as text, `CEX-31 (a Clean example is a whole
+  program), CEX-33 (no stub) and CEX-34 (no focus comment) of the plugin
+  clean-examples`.
+- In place of `**Decision needed** — ...`, the body holds:
+
+  ```markdown
+  **Fix needed** — the example uses <the names>, which it does not declare and no norm
+  defines (CEX-31: a Clean example is a whole program). Complete it: declare each of them
+  as a real part of its program, or repeat the declaration that another Clean example of
+  the specs shows (CEX-33). Never a stub, a fake stand-in for a name defined elsewhere
+  (CEX-33), and never a focus comment (CEX-34). When the name stands for something that
+  the specs define nowhere yet, define it in the specs first; the example stays pending
+  until then.
+  ```
+
+- In the hand-off, `Problem:` is `fragment <ID> is not a whole program
+  (CEX-31): it uses <the names> without declaring them, specs/<file>:<line>.`;
+  `Decision:` is `decided by CEX-31 and CEX-33; complete the example as Fix
+  needed says.`; step 1 is `1. Show the user the fragment and the names it
+  does not declare, short and simple, with where the specs declare each one,
+  if they do. Wait for the yes; change nothing before it.`; step 2 is `Complete
+  fragment <ID> in specs/<file> (<section>) as Fix needed says, keeping its
+  other lines. Show the diff first.`; the verification is `in
+  clean-language-norms, after step 3, <ID> is no longer pending in
+  specs-derived/semantics/ for a name it does not declare.`; and `Done when:`
+  is `the example is a whole program in foundation, and <ID> is no longer
+  pending for it in clean-language-norms.`
+- Its labels are exactly `finding` and `derive-semantics`, without
+  `question`: CEX-31 decides that the example declares what it uses, so
+  nothing waits for a decision on the norms.
 
 Append each event to `<scratchpad>/issues-opened.jsonl`, as there.
 

@@ -4,7 +4,7 @@
 
 **Audience:** The people who keep layer 2 of the Clean Language project; whoever builds or changes the use case `derive-semantics` of the plugin `clean-derived-norms`; the agents of layers 3 and 4, who read the semantics it derives
 
-**Scope:** The use case `/clean-derived-norms:derive-semantics`, the generator of the type `semantics`, which derives, from the norms of layer 2, one formal semantics of Clean in Lean 4: its abstract syntax, its typing and its evaluation ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how the Lean code meets the parse tree of a fragment, how it cites the norms, how it finds what to derive again, how it checks the semantics against the fragments and their expected output, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-11, is in [norms-management](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-5, is in [module.md](../../../specs/module.md#rules); neither is repeated here. Where this use case does what the use case `derive-grammar` does, its rule cites the rule of [derive-grammar.md](../../derive-grammar/specs/derive-grammar.md) (DGR) and states only what differs. The rules of the Clean examples, the expected output block among them, are in [clean-examples](../../../../clean-examples/specs/module.md); this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Systems it works with: the grammar of `derive-grammar`, which parses each fragment; Lean 4 and its build tool Lake, which build and run the semantics; GitHub, through `gh`, for the issues. Out of scope: the grammar, which `derive-grammar` derives; the syntax errors of Clean (`expect=syntax-error`), which the grammar checks; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)); adding the type `semantics` to `derived_norms` of the project's `project.json`, a change of layer 1. The use case must never decide what the norms do not decide.
+**Scope:** The use case `/clean-derived-norms:derive-semantics`, the generator of the type `semantics`, which derives, from the norms of layer 2, one formal semantics of Clean in Lean 4: its abstract syntax, its typing and its evaluation ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how the Lean code meets the parse tree of a fragment and of each file of its program, how it cites the norms, how it finds what to derive again, how it checks the semantics against the fragments and their expected output, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-11, is in [norms-management](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-6, is in [module.md](../../../specs/module.md#rules); neither is repeated here. Where this use case does what the use case `derive-grammar` does, its rule cites the rule of [derive-grammar.md](../../derive-grammar/specs/derive-grammar.md) (DGR) and states only what differs. The rules of the Clean examples, the expected output block among them, are in [clean-examples](../../../../clean-examples/specs/module.md); this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Systems it works with: the grammar of `derive-grammar`, which parses each fragment; Lean 4 and its build tool Lake, which build and run the semantics; GitHub, through `gh`, for the issues. Out of scope: the grammar, which `derive-grammar` derives; the syntax errors of Clean (`expect=syntax-error`), which the grammar checks; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)); adding the type `semantics` to `derived_norms` of the project's `project.json`, a change of layer 1. The use case must never decide what the norms do not decide.
 
 A use case of the module `clean-derived-norms`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
@@ -40,11 +40,13 @@ The use case has two parts. The script does what is deterministic: the work list
 | Prose norm | A norm that is neither a fragment nor an expected output block. |
 | Case | What the semantics must give for a semantic fragment, from its opening line (DSM-6): `run`, or `error <error code>`. A semantic fragment has one case, or none when its opening line is none of the forms of CEX-4. |
 | Case text | The code of a fragment, as [DGR-6](../../derive-grammar/specs/derive-grammar.md#derive-the-grammar) builds it. |
-| Parse tree | The tree that the grammar gives for the case text of a fragment, as DSM-7 builds it. |
+| File line, path of a file line, file of a program, program, file text, offset of a file | As [derive-grammar.md](../../derive-grammar/specs/derive-grammar.md#terms) defines them: the files of the case text of a fragment, split as [DGR-19](../../derive-grammar/specs/derive-grammar.md#derive-the-grammar) says. |
+| Parse tree | The tree that the grammar gives for the program of a fragment, as DSM-7 builds it: the tree of its one file when its case text holds no file line, otherwise a tree that holds the tree of each file with its path. |
 | Serialized tree | The text of a parse tree that the script gives the semantics, in the form of DSM-7. |
 | Parse tree hash | The first 8 hex digits of the SHA-256 of the serialized tree of a fragment, in UTF-8. |
 | Outcome | What the semantics gives for a parse tree: an error code or none, and a standard output (DSM-11). |
 | Gap | A semantic fragment whose case the Lean code cannot give without deciding something that no norm says. |
+| Example that is not a whole program | A semantic fragment whose code is no whole program, outside the exception of [CEX-31](../../../../clean-examples/specs/module.md#the-program) for a fragment with `expect=error`: it uses a name that it does not declare, that no norm defines, and whose use with no declaration does not give its error code by a norm. It is a defect of the example, not a gap of the norms. |
 | Stale citation of the script, stale cited norm | As derive-grammar.md defines them, for the script of this use case. |
 
 The binding words are those of [writing-specs.md](../../../../../../../specs/writing-specs.md#how-to-read-the-rules); the text after `Rationale:` explains and does not bind.
@@ -186,7 +188,7 @@ Feature: Derive the semantics of Clean from the norms
         | id      | line |
         | FUN-16  | {"type":"fragment","id":"FUN-16","hash":"509f049c","cases":["run"],"expected_output":"FUN-17@0c1d2e3f","parse_tree_hash":"7a6b5c4d","state":"derived","reason":null,"issue":null} |
         | TYP-472 | {"type":"fragment","id":"TYP-472","hash":"<its norm hash>","cases":["error SEM001"],"expected_output":null,"parse_tree_hash":"<its hash>","state":"derived","reason":null,"issue":null} |
-        | STA-9   | {"type":"fragment","id":"STA-9","hash":"<its norm hash>","cases":["run"],"expected_output":null,"parse_tree_hash":"<its hash>","state":"pending","reason":"STA-9 uses the name score, which it does not declare and no norm declares: STA-9@<its norm hash>","issue":"<URL of its issue>"} |
+        | STA-9   | {"type":"fragment","id":"STA-9","hash":"<its norm hash>","cases":["run"],"expected_output":null,"parse_tree_hash":"<its hash>","state":"pending","reason":"STA-9 is not a whole program (CEX-31): it uses the name score, which it does not declare and no norm defines: STA-9@<its norm hash>","issue":"<URL of its issue>"} |
         | SEM-183 | {"type":"fragment","id":"SEM-183","hash":"78c5dddb","cases":[],"expected_output":null,"parse_tree_hash":null,"state":"pending","reason":"the opening line is none of the forms of CEX-4","issue":null} |
         | COR-638 | {"type":"fragment","id":"COR-638","hash":"9d3a4f10","cases":["run"],"expected_output":null,"parse_tree_hash":null,"state":"pending","reason":"the grammar does not parse it","issue":null} |
 
@@ -231,19 +233,20 @@ Feature: Derive the semantics of Clean from the norms
       And the script never cuts it
 
   Rule: DSM-7 The script gives the Lean code the parse tree of each fragment in a generic form, and holds nothing specific to Clean
-    Rationale: without its keywords and operators, the tree of "integer x = 42" loses "integer", and the semantics could not tell one type from another. Deliberate design: the bridge is generic, so that every choice about Clean is in the Lean code, where it cites its norms; and the script builds the parser with the code of the script of the grammar, so that the semantics parses each fragment exactly as the check of the grammar does.
+    Rationale: without its keywords and operators, the tree of "integer x = 42" loses "integer", and the semantics could not tell one type from another. Deliberate design: the bridge is generic, so that every choice about Clean is in the Lean code, where it cites its norms; and the script builds the parser with the code of the script of the grammar, so that the semantics parses each fragment exactly as the check of the grammar does. Deliberate design: a program of several files reaches the Lean code as one value of the same type "Fragment.Tree", under names that no grammar of Lark can give, so that the fixed files stay as they are and the tree of an example of one file stays the same.
 
     Scenario: The parse
       When the script parses the case text of a semantic fragment that has a case
       Then it builds the parser from the grammar as DGR-11 and DGR-13 build it: the same options, the same indenter, the same refusal of a space in the indentation
+      And it splits the case text into the files of its program and parses each file alone, in their order, as DGR-19 says
       And it keeps in the tree every token that Lark leaves out by default, a keyword or an operator that the grammar writes as a string among them, except a token of a terminal that the grammar names with one leading "_", such as "_NL", "_INDENT" and "_DEDENT"
       And a token keeps the type that Lark gives it: the name of its terminal, or, for a string of the grammar, a name that Lark makes, such as "PRINT" or "__ANON_0", which starts with two "_" and is kept
       And it keeps the rules as the grammar shapes them: a rule whose name starts with "_" or "?" is inlined as Lark inlines it
 
     Scenario: A fragment that the grammar does not parse
-      Given the parse of the case text of "COR-638" fails
+      Given the parse of the case text of "COR-638" fails: for a program of several files, the parse of one of its files fails
       When the script gives its "parse_tree_hash"
-      Then it is null, and the work list gives the message of the failure as "parse_error"
+      Then it is null, and the work list gives the message of the failure as "parse_error", worded as DGR-19 says: for a program of several files, the message of the first file that does not parse
       And the fragment is pending with the reason "the grammar does not parse it", whatever else it holds
       And no fragment with no case, or with no form of CEX-4, is parsed
 
@@ -277,6 +280,35 @@ Feature: Derive the semantics of Clean from the norms
         token RPAR )
         """
       And the parse tree hash is computed from this text
+
+    Scenario: The parse tree of a program of several files
+      Given the case text of a semantic fragment holds one or more file lines, and every file of its program parses
+      When the script gives its parse tree
+      Then it is a rule "%program" with one child per file, in the order of the files
+      And the child of a file is a rule "%file" with two children: a token of the type "%path" whose text is the path of the file, or "absent" when the file has no path; then the tree of its file text
+      And the lines before the first file line are in no part of it
+      And no grammar of Lark gives a rule or a token type with a "%": the names "%program", "%file" and "%path" never meet a rule or a terminal of the grammar
+      And, illustrative, the serialized tree of the program of the two files of DGR-19 "The files of a program of two files" is
+        """
+        rule %program 2
+        rule %file 2
+        token %path app/utils.cln
+        <the serialized tree of the file text of app/utils.cln>
+        rule %file 2
+        token %path app/main.cln
+        <the serialized tree of the file text of app/main.cln>
+        """
+
+    Scenario: The parse tree of a program of one file
+      Given the case text of a semantic fragment holds no file line
+      When the script gives its parse tree
+      Then it is the tree of its one file, with no "%program" and no "%file"
+      And so its serialized tree and its parse tree hash stay as an earlier version of the plugin gave them, and its status line stays valid
+
+    Scenario: The fixed files and a program of several files
+      When the Lean code reads the parse tree of a program of several files
+      Then it reads it as any other value of "Fragment.Tree", through "Clean.outcome" (DSM-11): the fixed files hold no type and no function for the files
+      And "Clean/Syntax.lean" finds each file, with its path, in the children of the rule "%program"
 
     Scenario: The tree for the deriver
       When the deriver runs "tree STA-9 FUN-16"
@@ -339,13 +371,36 @@ Feature: Derive the semantics of Clean from the norms
       And it marks the fragment "pending", with a reason that says what the norms leave open and cites at least one norm involved, as "<norm ID>@<norm hash>"
       And it goes on with the next item of the work list
 
-    Scenario: A name that a valid example uses without declaring it
-      Given the fragment "STA-9" uses the name "score", which its code does not declare
-      And no norm declares "score" for it, nor says in what context a valid example builds (open question 1 of clean-examples)
+    Scenario: An example that is not a whole program
+      Given the fragment "STA-9", with "expect=valid", uses the name "score", which its code does not declare, in none of the files of its program
+      And no norm defines "score": no norm of the language, and no library that a spec of the project specifies
       When the deriver derives it
-      Then it invents no declaration of "score", no value and no type for it, and no context in which an undeclared name is known
-      And "STA-9" is a gap: "pending", with a reason that names the name and cites the fragment, such as "STA-9 uses the name score, which it does not declare and no norm declares: STA-9@<its norm hash>"
-      And it gets its own issue in layer 1 at once (DSM-14), as every other gap does
+      Then it invents no declaration of "score", no value and no type for it, and no context in which an undeclared name is known: nothing outside the code of an example builds its program (CEX-32)
+      And "STA-9" is an example that is not a whole program: "pending", with a reason of the form "<norm ID> is not a whole program (CEX-31): it uses <the name or the names>, which it does not declare and no norm defines: <norm ID>@<norm hash>", that names each such name and cites the fragment, and then any other norm involved, such as "STA-9 is not a whole program (CEX-31): it uses the name score, which it does not declare and no norm defines: STA-9@<its norm hash>"
+      And CEX-31 is cited as text, not as "<norm ID>@<norm hash>": it is a rule of the examples, not a norm of layer 2
+      And it gets its own issue in layer 1 at once, as a defect of the example (DSM-14)
+      And the same holds for a fragment with "expect=error" that uses "score" and does not declare it, when no norm gives its error code for a name that is used and not declared
+
+    Scenario: An example of the error of an undeclared name
+      Given the fragment "SEM-40" opens with "```clean-language expect=error code=SEM002", and its code uses the variable "lenght", which it does not declare
+      And a norm gives the error code "SEM002" for a variable that is used and declared in no enclosing scope
+      When the deriver derives it
+      Then "SEM-40" is no example that is not a whole program: the exception of CEX-31 covers "lenght"
+      And it is checked against its case "error SEM002" as any fragment (DSM-11): "derived" when the Lean code, from that norm, gives "SEM002", and a gap when it cannot without deciding something that no norm says
+      And when its code also uses another name that it does not declare, whose use gives no "SEM002", such as a function "report", it is an example that is not a whole program, for that name only
+
+    Scenario: A reason of an earlier version
+      Given the status line of "STA-9", written by an earlier version of the plugin, is pending with the reason "STA-9 uses the name score, which it does not declare and no norm declares: STA-9@<its norm hash>"
+      When the use case runs, and nothing puts "STA-9" on the work list (DSM-12)
+      Then its status line and its issue stay as they are: the work list does not list a fragment for the words of its reason
+      And the deriver writes the reason of CEX-31 the next time it writes the status line of "STA-9"
+
+    Scenario: A program of several files that imports a file
+      Given the program of a fragment has the files "app/utils.cln" and "app/main.cln", and "app/main.cln" names "app/utils.cln" in its "import:"
+      When the deriver derives it
+      Then the Lean code finds the imported file only by its path, among the files of the program, and only as the norms define "import:"
+      And when no norm says what "import:" means, such as while layer 1 holds no spec of modules, the fragment is a gap: "pending", with a reason that says so and cites the fragment and the norms involved
+      And the Lean code never resolves an import by a guess: no other path, no name of a file, no order of the files that a norm does not give
 
     Scenario: An output or an error code that the norms do not explain
       Given the expected output of a fragment, or its error code, does not follow from the prose norms that the Lean code cites
@@ -481,11 +536,11 @@ Feature: Derive the semantics of Clean from the norms
       When the script runs "check"
       Then it does what DGR-13 "No fragment yet" says: it checks only the meta line, the fixed files and the citations of the script, builds nothing, and exits with 0 when they pass
 
-  Rule: DSM-14 Each pending fragment that is a gap gets its own issue in layer 1 at once (NRM-8), and the derivation goes on
-    Rationale: a gap is fixed in layer 1 (LAY-5); one issue per fragment, opened at once, is how layer 1 learns of it, as for the grammar.
+  Rule: DSM-14 Each pending fragment that is a gap, or an example that is not a whole program, gets its own issue in layer 1 at once (NRM-8), and the derivation goes on
+    Rationale: a gap and an example that is not a whole program are fixed in layer 1 (LAY-5); one issue per fragment, opened at once, is how layer 1 learns of it, as for the grammar.
 
     Scenario: As for the grammar
-      When the deriver marks a semantic fragment pending as a gap
+      When the deriver marks a semantic fragment pending as a gap, or as an example that is not a whole program
       Then the use case opens its issue at once, as DGR-14 says, with no yes of the user and no parent, with these differences only (complete list):
         | in DGR-14                                                      | here |
         | the label "derive-grammar"                                     | the label "derive-semantics" |
@@ -495,6 +550,15 @@ Feature: Derive the semantics of Clean from the norms
         | the hand-off names "specs-derived/grammar/" and its use case   | it names "specs-derived/semantics/" and "/clean-derived-norms:derive-semantics" |
         | the verification on the status line of the grammar             | the verification on the status line of the semantics: after "/norms-management:build", the fragment is "derived" and "check" no longer lists it as pending |
       And a fragment pending with a fixed reason of DSM-5 gets no issue of its own (DSM-5)
+
+    Scenario: The issue of an example that is not a whole program
+      Given "STA-9" is pending because it is not a whole program (DSM-10), with no issue
+      When the use case opens its issue at once, as for a gap, with the same search for a duplicate, title form and order of the body, and the differences of "As for the grammar"
+      Then its labels are exactly "finding" and "derive-semantics", without "question": CEX-31 decides that the example must declare what it uses, so nothing waits for a decision on the norms
+      And the gap in one sentence is "an example that is not a whole program (CEX-31)"
+      And in place of "Decision needed", the body holds "Fix needed": the example declares each of them as a real part of its program, or repeats the declaration that another Clean example shows (CEX-33); never a stub, a fake stand-in for a name defined elsewhere (CEX-33), nor a focus comment (CEX-34); and when the specs define no such declaration yet, the specs define it first, and the example stays pending until then
+      And the hand-off asks for that fix; its first step shows the user the fragment and the names that it does not declare, and waits for the yes; and its verification is that, after "/norms-management:build", the fragment is no longer pending for that reason
+      And the full template is in "SKILL.md"
 
   Rule: DSM-15 The use case ends by showing what it did, the issues it opened, and the result of the check
     Rationale: the report is what the person, and the build (NRM-11), see of the run.

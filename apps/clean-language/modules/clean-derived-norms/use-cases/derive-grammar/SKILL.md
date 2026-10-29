@@ -6,7 +6,7 @@ description: Derive the Lark grammar of Clean in specs-derived/grammar/ of the r
 # derive-grammar
 
 Implements [specs/derive-grammar.md](specs/derive-grammar.md) (DGR), with the
-rules of the module, CDN-1 to CDN-5, in [module.md](../../specs/module.md),
+rules of the module, CDN-1 to CDN-6, in [module.md](../../specs/module.md),
 and the interface of a derived-norms generator, NRM-1 to NRM-11, of the plugin
 `norms-management`. Each step below names the rule it follows.
 
@@ -129,6 +129,8 @@ context small. For each file:
        print(f"== {i}@{t.norm_hash(i)} cases={m.case_kinds(n)} expected_line={m.expected_line(n)} {n['file']}")
        print(m.fragment_lines(t, n)[0])
        print(m.case_text(t, n), end="")
+       fs = m.program_files(m.case_text(t, n))
+       if fs[0].file_line: print("-- files:", [(f.number_of_file, f.path_of_file_line, f.first_line_in_case_text) for f in fs])
    PY
    ```
 
@@ -141,6 +143,20 @@ context small. For each file:
    `accept`; `expect=syntax-error ... line=<n>` is `reject`, with `<n>` the
    expected line; any other opening line gives `[]`. The error code is not
    checked (CDN-4). You decide nothing about the case.
+
+   A case text with file lines (a line that starts at column 1 with
+   `// file:`) holds a program of several files (DGR-19 (The script splits
+   the case text into the files of its program, and parses each file alone,
+   as a whole source file (CDN-6))); the snippet then prints `-- files:`,
+   each file with its number, its path (None when it has none) and the line
+   of the case text where it starts. The script splits the files from those
+   lines alone, and parses each file alone, in order, from `start`, as a
+   whole source file; the lines before the first file line are not parsed.
+   So write the grammar for a source file: never a rule that joins two
+   files, or that reads a file line as more than a comment. The expected
+   line counts the lines of the whole case text. The form of a path, two
+   files with one path, which file holds `start:`: none of it is yours to
+   check (CDN-4).
 2. Read the prose norms the fragments need: the section of the file around
    them in `specs-repo-annotated/`, and the norms about the syntax they use
    (lexical, expressions, statements, file structure). A norm's hash is the
@@ -302,7 +318,10 @@ commit from `data/tree.jsonl`, the version from the plugin's
 plugin, or `none`. Exit 2 (a missing or malformed input, or a plugin with no
 version): show the message, it wrote nothing.
 
-`check` prints one line per problem, `<check>: <ID or key>: <what>`, then
+`check` prints one line per problem, `<check>: <ID or key>: <what>`; for a
+program of several files, the message of a failure names the line of the
+case text, then the file and its line, such as
+`line 9 (file 2, app/main.cln, line 3): UnexpectedToken: ...` (DGR-19). Then
 the last line
 `fragments: <d> derived, <p> pending; accept parsed <a>/<A>; reject rejected <r>/<R>; problems: <n>`
 (DGR-13 (The script checks the grammar and the status file, and pending

@@ -60,6 +60,10 @@ OPENING_FORMS = (
     (re.compile(r"clean-language expect=error code=" + CODE), "accept"),
 )
 NO_FORM_REASON = "the opening line is none of the forms of CEX-4"
+# A file line starts at column 1 with "// file:"; its path follows "// file: " (CDN-6,
+# DGR-19, Terms: File line, path of a file line).
+FILE_LINE_START = "// file:"
+FILE_PATH_START = "// file: "
 FIXED_NAMES = ("start", "_NL", "_INDENT", "_DEDENT", "NAME", "RESERVED")
 
 
@@ -289,6 +293,61 @@ def case_text(tree, node):
     while out and not out[-1].strip(BLANKS):
         out.pop()
     return "\n".join(out) + "\n"
+
+
+class ProgramFile:
+    """One file of the program of a case text: its number, the path of its file line, its offset, its first line and its file text.
+
+    path_of_file_line is None when the file has no path; file_line is False only for the
+    one file of a case text that holds no file line.
+
+    Spec: DGR-19.
+    """
+
+    def __init__(self, number_of_file, path_of_file_line, offset_of_file, first_line_in_case_text, file_text, file_line):
+        """Hold the facts of one file.
+
+        Spec: DGR-19.
+        """
+        self.number_of_file = number_of_file
+        self.path_of_file_line = path_of_file_line
+        self.offset_of_file = offset_of_file
+        self.first_line_in_case_text = first_line_in_case_text
+        self.file_text = file_text
+        self.file_line = file_line
+
+
+def program_files(text):
+    """The files of the program of a case text, split from its file lines alone, in their order.
+
+    Each file runs from its file line to the line before the next one, or to
+    the last line; its file text is those lines, each followed by one line
+    feed, without the blank lines at its end. The lines before the first file
+    line belong to no file. A case text with no file line is one file with no
+    path: the whole case text, at offset 0.
+
+    Spec: DGR-19.
+    """
+    lines = text.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    starts = [index for index, line in enumerate(lines) if line.startswith(FILE_LINE_START)]
+    if not starts:
+        return [ProgramFile(1, None, 0, 1, text, False)]
+    offsets, position = [], 0
+    for line in lines:
+        offsets.append(position)
+        position += len(line) + 1
+    files = []
+    for number, start in enumerate(starts, 1):
+        end = starts[number] if number < len(starts) else len(lines)
+        body = lines[start:end]
+        while len(body) > 1 and not body[-1].strip(BLANKS):
+            body.pop()
+        head = lines[start]
+        path = head[len(FILE_PATH_START):] if head.startswith(FILE_PATH_START) else None
+        files.append(ProgramFile(number, path, offsets[start], start + 1, "\n".join(body) + "\n", True))
+    return files
 
 
 def reject_threshold(text, line):
@@ -828,22 +887,51 @@ def parse_error_span(error, indenter, text):
     return 0, 0
 
 
-def try_parse(parser, indenter, text):
-    """Parse a case: None when it parses, else (start, end, message).
+def parse_program(parser, indenter, text):
+    """Parse the files of the program of a case text alone, in their order, up to the first that does not parse.
 
-    A DedentError or any other error of the indenter is a case that does not parse.
+    Returns (files, trees, None) when every file parses, else (files, None,
+    (start, end, message)), the place of the failure moved by the offset of
+    its file into the case text. A DedentError or any other error of the
+    indenter is a file that does not parse.
 
-    Spec: DGR-13.
+    Spec: DGR-13, DGR-19.
     """
-    indenter.source = text
-    try:
-        parser.parse(text)
-        return None
-    except Exception as error:  # noqa: BLE001 - every failure is a failed parse
-        start, end = parse_error_span(error, indenter, text)
-        first = (str(error).strip().split("\n") or [""])[0]
-        line = text.count("\n", 0, min(start, len(text))) + 1
-        return start, end, f"line {line}: {type(error).__name__}: {first}"
+    files = program_files(text)
+    trees = []
+    for file in files:
+        indenter.source = file.file_text
+        try:
+            trees.append(parser.parse(file.file_text))
+        except Exception as error:  # noqa: BLE001 - every failure is a failed parse
+            start, end = parse_error_span(error, indenter, file.file_text)
+            return files, None, (file.offset_of_file + start, file.offset_of_file + end, failure_message(file, start, error))
+    return files, trees, None
+
+
+def failure_message(file, start, error):
+    """The message of a failure: "line <n>: ...", and, with a file line, the file and its line.
+
+    <n> counts the lines of the whole case text.
+
+    Spec: DGR-13, DGR-19.
+    """
+    first = (str(error).strip().split("\n") or [""])[0]
+    line_in_file = file.file_text.count("\n", 0, min(start, len(file.file_text))) + 1
+    line = file.first_line_in_case_text + line_in_file - 1
+    if not file.file_line:
+        return f"line {line}: {type(error).__name__}: {first}"
+    path = file.path_of_file_line if file.path_of_file_line is not None else "no path"
+    return f"line {line} (file {file.number_of_file}, {path}, line {line_in_file}): {type(error).__name__}: {first}"
+
+
+def try_parse(parser, indenter, text):
+    """Parse the program of a case: None when every file parses, else (start, end, message) in the case text.
+
+    Spec: DGR-13, DGR-19.
+    """
+    _, _, failure = parse_program(parser, indenter, text)
+    return failure
 
 
 # ---------------------------------------------------------------- the plugin

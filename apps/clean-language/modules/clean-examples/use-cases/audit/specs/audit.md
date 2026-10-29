@@ -19,7 +19,7 @@ A use case of the module `clean-examples`, specified in [module.md](../../../spe
 | Suspect | A fenced block or an indented code block (CommonMark 4.4) of a selected file that is neither a Clean example nor an expected output block, and that CAU-6 takes for a Clean source file. A suspect is not a violation: a person decides. |
 | Finding | One violation or one suspect in the report. |
 
-The terms repository, spec file, fenced block, info string, Clean example, expected output block, blank line, opening line, attribute, code, code line, section line, Clean source file, error code, definition, registry, registry row, retired code and violation are those of [module.md](../../../specs/module.md#terms).
+The terms repository, spec file, fenced block, info string, Clean example, expected output block, blank line, opening line, attribute, code, code line, section line, Clean source file, file line, path of a file line, file of a program, program, error code, definition, registry, registry row, retired code and violation are those of [module.md](../../../specs/module.md#terms).
 
 ## Run the audit
 
@@ -84,6 +84,28 @@ Feature: Audit the Clean examples of a layer
       Given a Clean example with "expect=syntax-error code=SYN002 line=1" whose code line 1 is "integer x = 5"
       When the audit runs
       Then the report holds no violation of CEX-10 for it
+
+    Scenario Outline: The files of a program
+      Given a selected file holds at line 30 a Clean example with "<opening line>", whose code lines are <code>, "\t" a tab
+      When the audit runs
+      Then the report holds <violations>
+
+      Examples:
+        | opening line                                    | code                                                                                   | violations                         |
+        | clean-language expect=valid                     | "// file: app/a.cln", "functions:", "\tvoid f()", "// file: app/main.cln", "start:", "\tf()" | no violation                       |
+        | clean-language expect=valid                     | "start:", "// file: a.cln", "start:"                                                    | a violation of CEX-36 at line 31   |
+        | clean-language expect=valid                     | "// file: a.cln", "start:", "// file: a.cln", "functions:"                              | a violation of CEX-37 at line 33   |
+        | clean-language expect=valid                     | "// file: a.cln", "functions:", "// file: b.cln", "tests:"                              | a violation of CEX-38 at line 30   |
+        | clean-language expect=valid                     | "// file: a.cln", "start:", "// file: b.cln", "start:"                                  | a violation of CEX-38 at line 34   |
+        | clean-language expect=error code=SEM004         | "// file: a.cln", "functions:", "// file: b.cln", "tests:"                              | no violation                       |
+        | clean-language expect=valid                     | "// file: ../a.cln", "start:"                                                           | a violation of CEX-11 at line 31   |
+        | clean-language expect=valid                     | "//file: a.cln", "start:"                                                               | a violation of CEX-11 at line 31   |
+        | clean-language expect=syntax-error code=SYN011 line=1 | "// file: a.cln", "start:"                                                        | a violation of CEX-39 at line 30   |
+
+    Scenario: A program of one file
+      Given a Clean example with "expect=valid" whose code holds no file line and no section line "start:"
+      When the audit runs
+      Then the report holds no violation of CEX-36 to CEX-39 for it
 
     Scenario: An error code with neither a definition nor a registry row
       Given a Clean example with "expect=error code=SEM999"
@@ -175,7 +197,7 @@ Feature: Audit the Clean examples of a layer
         | CEX-7  | an error needs a code whose prefix is not SYN                           |
         | CEX-9  | the expected outcome goes on the opening line, not in a fails: comment  |
         | CEX-10 | code at column 1 outside a section                                      |
-        | CEX-11 | a second file line, or a file line that is not line 1                   |
+        | CEX-11 | a file line is // file: at column 1, one space and a path of the form of CEX-11 |
         | CEX-13 | a space in the indentation                                              |
         | CEX-15 | a second definition of the error code                                   |
         | CEX-16 | the error code has neither a definition nor a registry row              |
@@ -183,6 +205,10 @@ Feature: Audit the Clean examples of a layer
         | CEX-18 | a definition of a retired code                                          |
         | CEX-27 | an expected output block goes right after a Clean example with expect=valid, one at most |
         | CEX-28 | the info string of an expected output block is exactly clean-language-output |
+        | CEX-36 | code before the first file line                                         |
+        | CEX-37 | a second file with the same path                                        |
+        | CEX-38 | a valid program of several files has start: in exactly one file         |
+        | CEX-39 | the line of a syntax-error is a file line or before the first file line |
 
   Rule: CAU-9 The audit gives the same report for the same files
     Scenario: Two runs
