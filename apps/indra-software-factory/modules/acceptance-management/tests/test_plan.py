@@ -28,6 +28,7 @@ PLUGIN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT = os.path.join(PLUGIN, "use-cases", "plan", "plan.py")
 SKILL = os.path.join(PLUGIN, "use-cases", "plan", "SKILL.md")
 CHECKS = os.path.join(PLUGIN, "scripts", "acceptance_repository_checks.py")
+FILES = os.path.join(PLUGIN, "scripts", "acceptance_repository_files.py")
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1182,6 +1183,8 @@ class Writing(Fixture):
             self.assertNotIn(forbidden, prepared["command"])
         r = self.approve(prepared)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        # PLN-12 names no expected head: the command prints no commit (prints_the_commit=False of ACU-75).
+        self.assertIsNone(re.search(r"^[0-9a-f]{40}$", r.stdout, re.M), r.stdout)
         log = self.remote_log()
         self.assertTrue(log.startswith(prepared["message"] + "\n"), log)
         self.assertEqual(log.split("--\n")[1].strip(), "M\tplan.json")
@@ -1580,7 +1583,7 @@ class Writing(Fixture):
 
     def test_python_3_9(self):
         import ast
-        for path in (SCRIPT, CHECKS):
+        for path in (SCRIPT, CHECKS, FILES):
             tree = ast.parse(read(path), feature_version=(3, 9))
             self.assertTrue(tree.body)
 

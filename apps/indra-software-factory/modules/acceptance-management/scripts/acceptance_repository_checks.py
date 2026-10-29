@@ -1,12 +1,15 @@
-"""The checks of ACU-74, shared by every use case of this module that runs from the acceptance repository.
+"""The checks of ACU-74 and ACU-75, shared by every use case of this module that runs from the acceptance repository.
 
 Spec: specs/module.md of acceptance-management, ACU-74 (The files of the
 acceptance repository): before it reads anything else, the use case define
-(ACU-58) and the use case plan (PLN-2) run these checks, with no model, in
-this order (complete list); the first that fails ends the use case, which
-writes nothing and says "acceptance-management:<use case>: <message>". Each
-message binds byte for byte; this module returns it without the prefix, which
-each use case adds.
+(ACU-58), the use case plan (PLN-2) and the use case write-acceptance-tests
+(WAT-2) run these checks, with no model, in this order (complete list); the
+first that fails ends the use case, which writes nothing and says
+"acceptance-management:<use case>: <message>". Each message binds byte for
+byte; this module returns it without the prefix, which each use case adds.
+ACU-75: the checks before a commit, and the command that makes them again,
+stages, commits and pushes (used by define, ACU-71; plan, PLN-12; and
+write-acceptance-tests, WAT-12).
 
 API:
 
@@ -30,9 +33,41 @@ API:
     heading_title(lines, an_id) -> str | None
         ACU-7, ACU-8: the title of the heading "# <an_id> <title>" on the first
         of `lines`, or None when the heading does not meet ACU-7 or ACU-8.
+    acceptance_json_of(data) -> dict | None
+        ACU-6: the object of the bytes of acceptance.json when it meets ACU-6,
+        as the paragraph "acceptance.json meets ACU-6" of that clause says, or
+        None; the one check of every use case of the module (define,
+        write-acceptance-tests).
+    problems_of_values(code_repositories, values) -> list[str]
+        ACU-77: the message of each value of "test_command" and "product" in
+        `values` that ACU-77 refuses (all but its row of a field that is not
+        empty), in the order of the fields, of the entries and of the rows;
+        define checks with it the values that the requester states (ACU-77),
+        and write-acceptance-tests the values at HEAD (WAT-2).
+    code_repositories(repositories) -> list[str]
+        <owner>/<name> of each entry of layer 4 of project.json, in its order.
     git(cwd, *args, binary=False), out(cwd, *args), show(cwd, revision, path),
     ls_tree(cwd, revision, *paths), default_branch(cwd)
         The git helpers that the checks use, for the use cases too.
+    checks_before_commit(root, acceptance_repository, expected_head) -> (branch, message | None)
+        ACU-75: the rows in their order, made by the script that builds the
+        command of a commit; `branch` is the default branch found.
+    json_text(value) -> str
+        The JSON text that the scripts print, valid UTF-8 whatever path or
+        value it holds.
+    diff_of_a_file(path, bytes_at_head, bytes_in_working_tree) -> str
+        ACU-75: the diff of one file of a commit, as every use case shows it.
+    commit_command(prefix, root, acceptance_repository, branch, expected_head, paths, subject, body,
+                   prints_the_commit=True) -> str
+        ACU-75: the shell command that makes the rows again (all but the row of
+        the default branch) before it stages anything, and exits 3 with the
+        message of the first that fails; then stages each path by its name,
+        commits only them, pushes to `branch` (a rejected push exits 4 with the
+        message of ACU-75) and, with `prints_the_commit`, prints the 40 hex
+        digits of the commit pushed as its last line (the expected head of
+        the next command of define, ACU-71, and of write-acceptance-tests,
+        WAT-12; plan, PLN-12, names none and passes False). It prints nothing
+        of the output of its fetch and its push.
 
 The context starts as {"cwd", "arguments"}, and the checks add, in this order:
 "root", "project_bytes", "project", "repositories" (the entries of
@@ -48,9 +83,11 @@ Python 3.9 or later, standard library only.
 
 from __future__ import annotations
 
+import difflib
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import unicodedata
@@ -62,6 +99,12 @@ from deny_code_repositories import owner_name, valid_path  # noqa: E402
 
 NORM_ID = re.compile(r"[A-Z]{3,}(?:-[1-9][0-9]*)?")  # ACU-56, R61
 PREFIX_FORM = re.compile(r"[A-Z]{3,}")
+DONE_PROFILES = ("prototype", "product", "critical")  # ACU-19
+FIELDS_OF_ACCEPTANCE_JSON = {"default_done_profile": str, "last_area_id": int, "last_unit_id": int,
+                             "last_scenario_id": int, "test_command": str, "product": dict}  # ACU-6
+FIELDS_OF_AN_ENTRY_OF_PRODUCT = ({"build", "env"}, {"build", "env", "published"})  # ACU-6
+ENV_NAME = re.compile(r"[A-Z_][A-Z0-9_]*")  # ACU-6
+VARIABLES_OF_TEST_COMMAND = ("ACCEPTANCE_TARGET", "ACCEPTANCE_REPORT")  # ACU-6
 NODE_KINDS = {"file", "section", "heading", "paragraph", "code_block", "html_block", "link_ref_def", "table",
               "table_row", "table_cell", "block_quote", "list", "item"}  # R61
 
@@ -72,6 +115,84 @@ class Refusal(Exception):
     def __init__(self, message):
         super().__init__(message)
         self.message = message
+
+
+# ---------------------------------------------------------------- acceptance.json (ACU-6)
+
+def acceptance_json_of(data):
+    """ACU-6, "acceptance.json meets ACU-6": the object of `data` (the bytes of acceptance.json) when it is one JSON
+    object with exactly the fields of ACU-6, each of its type and form, every entry of "product" an object with
+    exactly "build" and "env", or "build", "env" and "published", each a string, and "env" a name of A-Z, 0-9 and _
+    that does not start with a digit, and every string valid Unicode (no lone surrogate, which a JSON escape can
+    write); otherwise None. An empty string or an empty object meets it; the keys of "product", whether a command
+    holds anything, and the values of "env" beyond their form are not part of it."""
+    try:
+        found = json.loads(data.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, AttributeError, RecursionError):
+        return None
+    if not isinstance(found, dict) or set(found) != set(FIELDS_OF_ACCEPTANCE_JSON) or not strings_ok(found):
+        return None
+    for field, kind in FIELDS_OF_ACCEPTANCE_JSON.items():
+        value = found[field]
+        if not isinstance(value, kind) or isinstance(value, bool) or (kind is int and value < 0):
+            return None
+    if found["default_done_profile"] not in DONE_PROFILES:
+        return None
+    for entry in found["product"].values():
+        if not (isinstance(entry, dict) and set(entry) in FIELDS_OF_AN_ENTRY_OF_PRODUCT
+                and all(isinstance(value, str) for value in entry.values()) and ENV_NAME.fullmatch(entry["env"])):
+            return None
+    return found
+
+
+# ---------------------------------------------------------------- the values of test_command and product (ACU-77)
+
+def code_repositories(repositories):
+    """<owner>/<name> of each entry of layer 4 of project.json, in its order."""
+    return [f"{e['owner']}/{e['name']}" for e in repositories if e.get("layer") == 4]
+
+
+def is_command(value):
+    """ACU-77: a string, valid Unicode (ACU-6), that holds a character other than spaces, tabs and characters that
+    break a line (ACU-8)."""
+    return isinstance(value, str) and strings_ok(value) and not all(c in " \t" or breaks_a_line(c) for c in value)
+
+
+def problems_of_values(known_code_repositories, values):
+    """ACU-77: the message of each value of "test_command" and "product" in `values` that ACU-77 refuses, other than
+    for a field that is not empty: that of test_command, then those of each entry of product in its order, each in the
+    order of the rows of the table of ACU-77, then those of two entries with the same env."""
+    problems = []
+    if "test_command" in values and not is_command(values["test_command"]):
+        problems.append("test_command is not a command")
+    if "product" not in values:
+        return problems
+    product = values["product"]
+    if not isinstance(product, dict) or not product:
+        problems.append("product has no entry")
+        return problems
+    names = {}
+    for key, entry in product.items():
+        if key not in known_code_repositories:
+            problems.append(f"{text_of(key)} is not a code repository of project.json")
+        if not isinstance(entry, dict) or set(entry) not in FIELDS_OF_AN_ENTRY_OF_PRODUCT:
+            problems.append(f"the entry {text_of(key)} of product has not the fields of ACU-6")
+            continue
+        for field in ("build", "published"):
+            if field in entry and not is_command(entry[field]):
+                problems.append(f"{field} of {text_of(key)} is not a command")
+        env = entry["env"]
+        if not isinstance(env, str) or not ENV_NAME.fullmatch(env):
+            problems.append(f"env {text_of(env)} of {text_of(key)} is not a name of A-Z, 0-9 and _ that does not "
+                            "start with a digit")
+        elif env in VARIABLES_OF_TEST_COMMAND:
+            problems.append(f"env {env} of {text_of(key)} is a variable of test_command (ACU-6)")
+        else:
+            names[env] = names.get(env, 0) + 1
+    for env, count in names.items():
+        if count > 1:
+            problems.append(f"env {env} is named by more than one entry of product")
+    return problems
 
 
 # ---------------------------------------------------------------- the title (ACU-7, ACU-8)
@@ -96,10 +217,45 @@ def text_of(value):
     return "".join(f"\\u{ord(c):04x}" if breaks_a_line(c) or _lone_surrogate(c) else c for c in text)
 
 
+def json_text(value):
+    """The JSON text of `value` on one line, as the scripts print it: every character as it is, but each character
+    that breaks a line and each lone surrogate (a byte that is not UTF-8, in a path decoded with surrogateescape)
+    written as its JSON escape \\u and 4 lower-case hex digits, so that the output is always valid UTF-8, no path
+    forges a line or a terminal escape of the output (ACU-58), and print never fails."""
+    text = json.dumps(value, ensure_ascii=False)
+    return "".join(f"\\u{ord(c):04x}" if breaks_a_line(c) or _lone_surrogate(c) else c for c in text)
+
+
+def _line_of_a_diff(line):
+    """ACU-75: one line of a diff, each character that breaks a line, other than the tab and the line feed that ends
+    the line, written as \\u and 4 lower-case hex digits."""
+    body = line[:-1] if line.endswith("\n") else line
+    return "".join(f"\\u{ord(c):04x}" if (breaks_a_line(c) and c != "\t") or _lone_surrogate(c) else c
+                   for c in body) + "\n"
+
+
+def _lines_of_a_diff(data):
+    """The lines of a file for its diff, split only at the line feed, each with its line feed."""
+    parts = (data or b"").decode("utf-8", "replace").split("\n")
+    return [part + "\n" for part in parts[:-1]] + ([parts[-1]] if parts[-1] else [])
+
+
+def diff_of_a_file(path, bytes_at_head, bytes_in_working_tree):
+    """ACU-75: the diff of one file of a commit, as define (ACU-71), plan (PLN-12) and write-acceptance-tests (WAT-12)
+    show it: a line with its path printed as ACU-58 says, after "new " or "deleted " when HEAD or the working tree
+    holds none, then its unified diff against HEAD, so that no path or text of a file forges a line of the diff."""
+    printed = text_of(path)
+    head = "deleted " if bytes_in_working_tree is None else ("new " if bytes_at_head is None else "")
+    lines = difflib.unified_diff(_lines_of_a_diff(bytes_at_head), _lines_of_a_diff(bytes_in_working_tree),
+                                 "/dev/null" if bytes_at_head is None else f"a/{printed}",
+                                 "/dev/null" if bytes_in_working_tree is None else f"b/{printed}")
+    return f"{head}{printed}\n" + "".join(_line_of_a_diff(line) for line in lines)
+
+
 def heading_title(lines, an_id):
     """The title of the heading "# <an_id> <title>" on the first line, or None: a title holds a character that is not
     a space or a tab, and no character for which breaks_a_line is true (ACU-8)."""
-    found = re.fullmatch(re.escape(f"# {an_id} ") + r"(.*\S.*)", lines[0], re.DOTALL) if lines else None
+    found = re.fullmatch(re.escape(f"# {an_id} ") + r"(.*[^ \t].*)", lines[0], re.DOTALL) if lines else None
     if not found or any(breaks_a_line(c) for c in found.group(1)):
         return None
     return found.group(1)
@@ -451,3 +607,55 @@ def locate(cwd):
         if message is not None:
             raise Refusal(message)
     return context
+
+
+
+# ---------------------------------------------------------------- the checks before a commit (ACU-75)
+
+def checks_before_commit(root, acceptance_repository, expected_head):
+    """ACU-75, in its order: the fetch, the default branch (found after the fetch, so that an unreachable origin gives
+    the message of the fetch), origin moved, HEAD ahead of origin, HEAD no longer the expected head. Returns
+    (the default branch, None), or (None, the message of the first row that fails)."""
+    if git(root, "fetch", "-q", "origin").returncode != 0:
+        return None, f"cannot fetch {acceptance_repository}"
+    branch = default_branch(root)
+    if not branch:
+        return None, f"cannot find the default branch of {acceptance_repository}"
+    if out(root, "rev-list", "--count", f"HEAD..refs/remotes/origin/{branch}") != "0":
+        return None, f"origin/{branch} moved; run the skill again"
+    if out(root, "rev-list", "--count", f"refs/remotes/origin/{branch}..HEAD") != "0":
+        return None, f"the acceptance repository has commits that are not on origin/{branch}"
+    if out(root, "rev-parse", "HEAD") != expected_head:
+        return None, f"origin/{branch} moved; run the skill again"
+    return branch, None
+
+
+def commit_command(prefix, root, acceptance_repository, branch, expected_head, paths, subject, body,
+                   prints_the_commit=True):
+    """ACU-75: the command of one commit. It fetches again first, so that a move of the default branch, or a commit
+    that another session adds to HEAD, while the requester reads the diff stops it, with status 3, before it stages
+    anything; it stages and commits each path by its name, never a folder; a rejected push exits 4 with its message;
+    with `prints_the_commit`, a pushed commit prints its 40 hex digits, the expected head of the next command."""
+    if not paths:
+        raise ValueError("a commit names at least one path")
+    r = shlex.quote(root)
+    ps = " ".join(shlex.quote(p) for p in paths)
+    g = f"git --literal-pathspecs -C {r}"
+    cannot = shlex.quote(prefix + f"cannot fetch {acceptance_repository}")
+    moved = shlex.quote(prefix + f"origin/{branch} moved; run the skill again")
+    behind = shlex.quote(f"HEAD..refs/remotes/origin/{branch}")
+    ahead = shlex.quote(f"refs/remotes/origin/{branch}..HEAD")
+    not_on_origin = shlex.quote(prefix + f"the acceptance repository has commits that are not on origin/{branch}")
+    rejected_before = shlex.quote(prefix + "push rejected; commit ")
+    rejected_after = shlex.quote(f" is not on origin/{branch}; run git pull --rebase, then git push, and run the "
+                                 "skill again")
+    return (f"{{ git -C {r} fetch -q origin >/dev/null 2>&1 || {{ echo {cannot}; (exit 3); }}; }}"
+            f" && {{ test \"$(git -C {r} rev-list --count {behind})\" = 0 || {{ echo {moved}; (exit 3); }}; }}"
+            f" && {{ test \"$(git -C {r} rev-list --count {ahead})\" = 0"
+            f" || {{ echo {not_on_origin}; (exit 3); }}; }}"
+            f" && {{ test \"$(git -C {r} rev-parse HEAD)\" = {shlex.quote(expected_head)}"
+            f" || {{ echo {moved}; (exit 3); }}; }}"
+            f" && {g} add -f -- {ps} && {g} commit -q -m {shlex.quote(subject)} -m {shlex.quote(body)} -- {ps}"
+            f" && {{ git -C {r} push -q origin {shlex.quote('HEAD:' + branch)} >/dev/null 2>&1"
+            f" || {{ echo {rejected_before}\"$(git -C {r} rev-parse HEAD | cut -c1-7)\"{rejected_after}; (exit 4); }}; }}"
+            + (f" && git -C {r} rev-parse HEAD" if prints_the_commit else ""))

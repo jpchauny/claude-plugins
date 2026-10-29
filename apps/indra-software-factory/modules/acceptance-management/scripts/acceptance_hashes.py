@@ -47,7 +47,12 @@ NORM_TAG = re.compile(rf"^@({NORM_ID})$")
 ACCEPTANCE_UNIT_TAG = re.compile(r"^@unit:(AU-[1-9][0-9]*)$")
 SC_TAG = re.compile(r"^@(SC-[1-9][0-9]*)$")
 NORM_CITATION = re.compile(rf"^- ({NORM_ID})@([0-9a-f]{{8}}): (\S.*)$")  # ACU-8, ACU-56
-CITATION = re.compile(r"(?<![A-Za-z0-9_-])((?:AU|AA|SC)-[1-9][0-9]*)@([0-9a-f]{8})(?![0-9A-Za-z])")  # ACU-56
+# ACU-56, "a citation found in a line": an ID and "@" and 8 lower-case hex digits, between two boundaries: before
+# the ID the start of the line or a character that is not a letter or a number of Unicode, "_" or "-"; after the 8
+# hex digits the end of the line or such a character. The one definition of it: the evidence run and every use
+# case of this module use these two.
+CITATION = re.compile(r"(?<![\w-])((?:AU|AA|SC)-[1-9][0-9]*)@([0-9a-f]{8})(?![\w-])")
+NORM_CITATION_IN_LINE = re.compile(rf"(?<![\w-])({NORM_ID})@([0-9a-f]{{8}})(?![\w-])")
 FORBIDDEN = ("Feature:", "Rule:", "Background:", "Example:", "Scenario Outline:", "Scenario Template:",
              "Examples:", "Scenarios:")  # ACU-54
 

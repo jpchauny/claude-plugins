@@ -2,9 +2,9 @@
 
 **Audience:** The requesters of a project, who approve its acceptance areas and acceptance units; whoever builds the skill `define` of the plugin `acceptance-management`
 
-**Scope:** The use case in which the acceptance architect analyses every norm of layer 2 against every acceptance area and every acceptance unit of the acceptance repository, and creates, changes and deletes acceptance areas and acceptance units, with their scenarios, in changes that the requester approves. A script, with no model, computes the inventory that the analysis starts from and checks every file before it is committed
+**Scope:** The use case in which the acceptance architect analyses every norm of layer 2 against every acceptance area and every acceptance unit of the acceptance repository, and creates, changes and deletes acceptance areas and acceptance units, with their scenarios, and fills `test_command` and `product` of `acceptance.json` while they are empty, in changes that the requester approves. A script, with no model, computes the inventory that the analysis starts from and checks every file before it is committed
 
-A use case of the module `acceptance-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). Out of scope: the increments and `plan.json`, which the implementation planner decides ([ACU-44](../../../specs/module.md#the-plan-of-implementation)); the acceptance tests, which the test agent writes ([ACU-11](../../../specs/module.md#acceptance-tests-and-independent-evidence)); the record of the evidence ([ACU-35](../../../specs/module.md#done-is-a-state-not-an-event)); the fields `default_done_profile`, `test_command` and `product` of `acceptance.json` ([ACU-43](../../../specs/module.md#the-files-of-the-acceptance-repository)); the review of the norms of [ACU-15](../../../specs/module.md#the-review-of-the-norms-selected), which is open question 1; the derived norms; layers 0, 1, 2 and 4.
+A use case of the module `acceptance-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). Out of scope: the increments and `plan.json`, which the implementation planner decides ([ACU-44](../../../specs/module.md#the-plan-of-implementation)); the acceptance tests, which the test agent writes ([ACU-11](../../../specs/module.md#acceptance-tests-and-independent-evidence)); the record of the evidence ([ACU-35](../../../specs/module.md#done-is-a-state-not-an-event)); the field `default_done_profile` of `acceptance.json`, and a `test_command` or a `product` that is not empty ([ACU-43](../../../specs/module.md#the-files-of-the-acceptance-repository)); the review of the norms of [ACU-15](../../../specs/module.md#the-review-of-the-norms-selected), which is open question 1; the derived norms; layers 0, 1, 2 and 4.
 
 ## Terms
 
@@ -15,7 +15,7 @@ A use case of the module `acceptance-management`, specified in [module.md](../..
 | Norms commit | The head of the default branch of the remote `origin` of the norms repository, after the fetch of [ACU-74](../../../specs/module.md#the-files-of-the-acceptance-repository). |
 | Inventory | The JSON object that the script of ACU-60 prints. |
 | Citation status | What the norms commit says of one norm citation of `## Norms` of an acceptance unit: `current`, `changed` or `retired` (ACU-62). |
-| Change | One item of the proposal: to add, change or delete one acceptance area or one acceptance unit, with every other file that ACU-10 and ACU-70 make it touch, and the file of each acceptance unit out of which it moves a scenario or a norm citation (ACU-67). |
+| Change | One item of the proposal: to add, change or delete one acceptance area or one acceptance unit, with every other file that ACU-10 and ACU-70 make it touch, and the file of each acceptance unit out of which it moves a scenario or a norm citation (ACU-67); or to fill `test_command` and `product` of `acceptance.json` (ACU-77). |
 | Proposal | The numbered list of changes that the skill shows to the requester (ACU-64). |
 | Acceptance unit with evidence | An acceptance unit whose record holds at least one line. |
 | Expected head | Of a command of ACU-71: the commit from which the requester saw the acceptance repository, which the command must find at `HEAD`: `acceptance_commit` of the inventory for the first command of the invocation, and for each later one the commit that the command before it pushed, whose 40 hex digits that command prints as its last line. |
@@ -68,7 +68,7 @@ Feature: Define the acceptance areas and acceptance units
         | condition | message |
         | "units/AU-3.md" is the first path, in sorted order, with an uncommitted change among "acceptance.json" and the files of "areas/" and "units/" | uncommitted change in units/AU-3.md |
         | "units/AU-4.md" is the first path, in sorted order, of an untracked file under "areas/" or "units/", a file that a ".gitignore" names included | untracked file units/AU-4.md |
-        | "acceptance.json" is not one JSON object with the fields of ACU-6, each of its type | acceptance.json does not meet ACU-6 |
+        | "acceptance.json" does not meet ACU-6, as the paragraph "acceptance.json meets ACU-6" of ACU-6 says | acceptance.json does not meet ACU-6 |
 
     Scenario: Other uncommitted changes
       Given the acceptance repository has an uncommitted change in "tests/AU-3/test_export.py" or in "records/AU-3.jsonl"
@@ -176,11 +176,20 @@ Feature: Define the acceptance areas and acceptance units
         | "units/AU-3.md"      | a line of the "gherkin" block starts, after spaces and tabs, with a word that ACU-54 excludes        | Scenario Outline: is not allowed in ## Scenarios                            |
         | "units/AU-3.md"      | "## Scenarios" is not one "gherkin" code block (in an acceptance area, nor the line "None.")                    | ## Scenarios is not one gherkin block                                       |
         | "units/AU-3.md"      | a scenario has no tag "@SC-<n>", or more than one, or "<n>" has a leading zero                       | scenario "Three invoices give three rows" has not exactly one tag @SC-<n>   |
+        | "units/AU-3.md"      | the name of a scenario (ACU-54) is empty: its "Scenario:" line holds nothing after "Scenario:" but spaces and tabs | scenario has no name                                                        |
+        | "units/AU-3.md"      | the name of a scenario holds a character that ACU-8 forbids in a title (ACU-54), such as a carriage return | scenario "A cancelled\rinvoice" has a character that breaks a line |
+        | "units/AU-3.md"      | the name of a scenario holds a citation found in a line (ACU-56)                                     | scenario "A cancelled invoice CSV@deadbeef gives no row" holds a citation |
+        | "units/AU-3.md"      | the title holds a citation found in a line (ACU-56)                                                  | title holds a citation                                                      |
+        | "areas/AA-1.md"      | the title holds a citation found in a line (ACU-56)                                                  | title holds a citation                                                      |
         | the repository       | two scenarios have the tag "@SC-5"                                                                   | SC-5 is the ID of more than one scenario                                    |
         | the repository       | "units/AU-9.md" exists and "last_unit_id" is 8                                                       | AU-9 is greater than last_unit_id of acceptance.json                        |
         | the repository       | a file of "areas/" or "units/" is not named "<area ID>.md" or "<unit ID>.md" of its folder           | not the file of an acceptance area or an acceptance unit                                           |
         | the working tree     | "units/AU-2.md" is new, and "last_unit_id" was 3 at "HEAD", or "HEAD" holds "units/AU-3.md"           | AU-2 was already given                                                      |
         | the working tree     | "last_unit_id" is not the highest of its value at "HEAD" and the numbers of the unit IDs at "HEAD" and in the working tree | last_unit_id of acceptance.json is 4, not 5           |
+
+    Scenario: The name of a scenario in a message
+      Then in each message of the table above, the name of a scenario is printed between double quotes when it holds no character that ACU-58 escapes in a path, and otherwise as ACU-58 says for a path, whose JSON text brings its own double quotes; so no name forges a line of the output
+      And an error of the name of a scenario has the line that the other errors of that scenario have, the first line of its text (ACU-54), and the error "title holds a citation" has line 1
 
     Scenario: The same checks for each kind of ID
       Then the errors "AU-9 is greater than last_unit_id of acceptance.json", "AU-2 was already given" and "last_unit_id of acceptance.json is 4, not 5" hold for acceptance areas and scenarios alike, with "last_area_id" and "last_scenario_id"
@@ -249,14 +258,17 @@ Feature: Define the acceptance areas and acceptance units
       And an example is "Layer 2 at 9fceb02: 240 norms. Layer 3 at 1a410ef: 2 acceptance areas, 5 acceptance units; 1 norm citation changed, 0 retired; 0 format errors."
 
     Scenario: The form of the proposal
-      Then the skill shows the proposal as below, where what binds is one numbered line per change, in the order add acceptance area, add acceptance unit, change acceptance unit, change acceptance area, delete acceptance unit, delete acceptance area, and in the order of the IDs within each, starting with "add", "change" or "delete", then "acceptance area" or "acceptance unit", its ID and its title in quotes, and the lines of ACU-66 and ACU-68; not the rest of the wording:
+      Then the skill shows the proposal as below, where what binds is one numbered line per change, in the order fill acceptance.json, add acceptance area, add acceptance unit, change acceptance unit, change acceptance area, delete acceptance unit, delete acceptance area, and in the order of the IDs within each, starting with "fill acceptance.json" (ACU-77), or with "add", "change" or "delete", then "acceptance area" or "acceptance unit", its ID and its title in quotes, and the lines of ACU-66, ACU-68 and ACU-77; not the rest of the wording:
         """
-        1. add acceptance area AA-2 "Customers"
-        2. add acceptance unit AU-4 "Register a customer" in AA-2: norms CUS-1, CUS-2; scenarios SC-10, SC-11
-        3. change acceptance unit AU-3 "Export the invoices to CSV": INV-12 0c1d2e3f -> 7d6e5f40; scenario SC-5 changed
+        1. fill acceptance.json: test_command, product
+           test_command: pytest "$ACCEPTANCE_TARGET" --junitxml "$ACCEPTANCE_REPORT"
+           product acme/billing-code-api: build make dist && echo "$PWD/dist/app"; env PRODUCT_CMD
+        2. add acceptance area AA-2 "Customers"
+        3. add acceptance unit AU-4 "Register a customer" in AA-2: norms CUS-1, CUS-2; scenarios SC-10, SC-11
+        4. change acceptance unit AU-3 "Export the invoices to CSV": INV-12 0c1d2e3f -> 7d6e5f40; scenario SC-5 changed
            AU-3 -> pending: its evidence goes stale (test 2, validation 1)
            AA-1: its evidence goes stale (test 1)
-        4. delete acceptance unit AU-2 "Cancel an invoice": INV-9 left layer 2; tests/AU-2/ deleted; scenario SC-9 of AA-1 changed
+        5. delete acceptance unit AU-2 "Cancel an invoice": INV-9 left layer 2; tests/AU-2/ deleted; scenario SC-9 of AA-1 changed
            AU-2 has evidence (test 3, validation 1): it is deleted only with its own yes
         Gaps of layer 1, one issue each after your yes:
           a. AU-4: no norm states what is shown when the email is already registered
@@ -275,17 +287,76 @@ Feature: Define the acceptance areas and acceptance units
       Then the skill does not add it, and says that it is a work item, not an acceptance unit (ACU-1)
 
     Scenario: The requester rejects a change
-      Given the requester rejects change 1, "add acceptance area AA-2"
-      Then the skill drops it, says which other changes need it, here change 2, and revises them before the proposal is final
+      Given the requester rejects change 2, "add acceptance area AA-2"
+      Then the skill drops it, says which other changes need it, here change 3, and revises them before the proposal is final
 
     Scenario: The proposal is final
       When the requester says that the proposal is final
       Then the skill writes nothing before that, and only the changes of the final proposal afterwards
 
     Scenario: Nothing to propose
-      Given the analysis finds no change, and the requester asks for none
+      Given the analysis finds no change, the requester asks for none, and the proposal holds no change "fill acceptance.json" (ACU-77)
       Then the skill writes nothing
       And it says "acceptance-management:define: no change to propose"
+
+  Rule: ACU-77 While "test_command" or "product" of "acceptance.json" is empty at "HEAD", the proposal holds a change that fills it with the values that the requester states (ACU-43)
+    Rationale: the test agent writes no acceptance test until both fields hold a value (WAT-2), and only the requester knows how the product of each code repository is built, since the skill reads no code repository (ACU-12, LAY-8); asking for them in the proposal that the requester already reviews fills them as early as they are known, through the same approval and the same checks as every other change (LAY-9, ACU-69). A field that holds a value is out of the scope of define: the acceptance architect changes it by hand, in a commit that the requester approves (ACU-43), since a change of it changes how the evidence is produced from then on and is rare enough not to need a use case.
+
+    Scenario: The questions
+      Given "test_command" of "acceptance.json" at "HEAD" is the empty string, or "product" is the empty object
+      When the skill has said the summary of ACU-64, and before it shows the proposal
+      Then it asks the requester, as numbered questions, the value of each field that is empty: for "test_command", the command that runs the acceptance tests of one folder (ACU-6); for "product", for each code repository of layer 4 of "project.json", whether the acceptance tests need its product build, and then its "build", its "env" and, when it publishes a product build, its "published"
+      And it may propose "test_command" from the language and the test framework that the requester names, and the name of each "env"; it never proposes a "build" or a "published", which only the requester states
+      And it reads no code repository to find a value (ACU-12, LAY-8); the requester may take the values from what the implementing agent reports (ACU-43)
+
+    Scenario: A field that holds a value (must not)
+      Given "test_command" of "acceptance.json" at "HEAD" is not the empty string
+      Then the skill asks nothing of "test_command", and no change of the proposal changes it
+      And the same holds for a "product" that is not the empty object, and always for "default_done_profile"
+
+    Scenario: The change
+      Given the requester stated the value of at least one empty field
+      Then the proposal holds, as its first change, the change "fill acceptance.json", which fills each empty field whose value the requester stated, and nothing else
+      And under its line it shows one line per value: "test_command: <command>", and one line "product <owner>/<name>: build <command>; env <name>" per entry of "product", followed by "; published <command>" when the entry has one, in the order in which the requester gave the entries
+      And a command, a name or a key is shown as ACU-58 says for a path, so that no value forges a line of the proposal
+      And the lines of the example of ACU-64 bind byte for byte once filled
+
+    Scenario: The requester does not know a value yet
+      Given the requester states no value for "test_command"
+      Then the change fills only the other field, or the proposal holds no change "fill acceptance.json" when the requester stated no value at all
+      And before the choice of ACU-71 the skill says, for each field that stays empty, "acceptance-management:define: acceptance.json keeps test_command empty; /acceptance-management:write-acceptance-tests stops until define fills it (WAT-2)", with "product" for the other field
+
+    Scenario Outline: A value that ACU-77 refuses
+      Given the requester states <value>
+      Then the script refuses it, the skill says "acceptance-management:define: <message>" and asks the requester the value again, and the proposal holds no value that the script refuses
+      And the paragraph "acceptance.json meets ACU-6" of ACU-6 also refuses, in an "acceptance.json" at "HEAD", these values of the table (complete list): a "test_command" that is not a string or not valid Unicode; a "product" that is not an object; an entry that has not the fields of ACU-6; a "build" or a "published" that is not a string or not valid Unicode; an "env" that is not of the form of ACU-6
+      And only ACU-77 refuses the others (complete list): a command that holds only spaces, tabs and characters that break a line (ACU-8); a "product" with no entry; a key that is not a code repository of "project.json"; an "env" that is a variable of "test_command"; two entries with the same "env"; a value for a field that is not empty at "HEAD"
+      And an "acceptance.json" at "HEAD" whose values only that second list refuses, written by hand, still meets ACU-6, and write-acceptance-tests refuses it (WAT-2)
+      And the message binds byte for byte once filled, where "acme/billing-code-api" and "PRODUCT_CMD" stand for the key and the name found, each printed as ACU-58 says for a path
+
+      Examples:
+        | value                                                                                                   | message                                                                                             |
+        | a "test_command" that is not a string, that holds only spaces, tabs and characters that break a line (ACU-8), or that is not valid Unicode (ACU-6) | test_command is not a command                                                                       |
+        | a "product" that is not an object, or that has no entry                                                 | product has no entry                                                                                |
+        | an entry of "product" whose key is not "<owner>/<name>" of an entry of "project.json" with "layer" 4    | acme/billing-code-api is not a code repository of project.json                                      |
+        | an entry that is not an object with the fields "build" and "env", and "published" or no other field     | the entry acme/billing-code-api of product has not the fields of ACU-6                              |
+        | an entry whose "build" is not a string, holds only spaces, tabs and characters that break a line (ACU-8), or is not valid Unicode (ACU-6) | build of acme/billing-code-api is not a command                                                     |
+        | an entry whose "published" is not a string, holds only spaces, tabs and characters that break a line (ACU-8), or is not valid Unicode (ACU-6) | published of acme/billing-code-api is not a command                                                 |
+        | an entry whose "env" is not a string of "A"-"Z", "0"-"9" and "_" that does not start with a digit       | env PRODUCT_CMD of acme/billing-code-api is not a name of A-Z, 0-9 and _ that does not start with a digit |
+        | an entry whose "env" is "ACCEPTANCE_TARGET" or "ACCEPTANCE_REPORT"                                      | env PRODUCT_CMD of acme/billing-code-api is a variable of test_command (ACU-6)                      |
+        | two entries with the same "env"                                                                         | env PRODUCT_CMD is named by more than one entry of product                                          |
+        | a value for a field that is not empty at "HEAD"                                                         | test_command of acceptance.json is not empty; define fills only an empty field (ACU-43)             |
+
+    Scenario Outline: The acceptance tests that the implementing agents will not run (ACU-49)
+      Given the change fills "product"
+      And <condition>
+      Then under the line of the change the proposal shows the line "<line>", one per code repository found, in the order of "project.json"
+      And the line binds byte for byte once filled, where "acme/billing-code-api" and "acme/billing-code-web" stand for the code repositories found, and a list of code repositories is joined by ", "
+
+      Examples:
+        | condition                                                                                                   | line                                                                                                  |
+        | "acme/billing-code-web" is a code repository of layer 4 of "project.json", and "product" has no entry for it | acme/billing-code-web has no entry in product: its implementing agent runs no acceptance test (ACU-49) |
+        | the entry of "acme/billing-code-api" has no "published", and "product" has an entry for "acme/billing-code-web" | acme/billing-code-api has no published: no acceptance test runs in the tasks of acme/billing-code-web (ACU-49) |
 
   Rule: ACU-65 New IDs follow the next IDs of the inventory; an ID never changes and is never given again, and a title may change (ACU-5, ACU-55)
     Rationale: an ID is what every other file, test, record and commit uses to name an acceptance area, an acceptance unit or a scenario (ACU-5); an ID that changed or was given again would make an old record or test name another thing, while a title only describes, and may change freely (ACU-5).
@@ -310,7 +381,7 @@ Feature: Define the acceptance areas and acceptance units
 
     Scenario: The field is raised in the commit that gives the ID
       Given a commit adds AU-4 and scenarios SC-10 and SC-11
-      Then the same commit sets "last_unit_id" to 4 and "last_scenario_id" to 11, and changes no other field of "acceptance.json"
+      Then the same commit sets "last_unit_id" to 4 and "last_scenario_id" to 11, and changes no other field of "acceptance.json" than those that a change "fill acceptance.json" of the same commit fills (ACU-77)
 
   Rule: ACU-66 The proposal says which evidence each change makes stale; it avoids touching acceptance units with evidence; deleting or splitting one needs its own yes
     Rationale: evidence of an acceptance unit is the work of layer 4 and of the test agent, and a change of its unit hash makes it stale (ACU-27); the requester must see that cost before accepting the change, and deleting or splitting an acceptance unit with evidence loses that work, so it needs its own yes.
@@ -408,6 +479,7 @@ Feature: Define the acceptance areas and acceptance units
       When the skill has written the files of a commit
       Then every norm citation in the file of an acceptance unit that it wrote has the citation status "current"
       And the inventory of the working tree (ACU-60) shows no error in a file that the commit writes, and no other error that the inventory at "HEAD" does not hold with the same path and message
+      And "acceptance.json" differs from "HEAD" only in the fields that ACU-73 lets the skill write, and each value of "test_command" and "product" that differs from "HEAD" is one that ACU-77 does not refuse
 
     Scenario: An error already at HEAD
       Given "units/AU-7.md" has an error at "HEAD", and the requester rejected the change that fixes it, or it comes in a later commit
@@ -454,7 +526,7 @@ Feature: Define the acceptance areas and acceptance units
 
     Scenario Outline: The commit message
       Given a commit holds <changes>
-      Then its subject is "<subject>", followed by an empty line and one line "<verb> <ID>" per change of the commit, in the order of the proposal
+      Then its subject is "<subject>", followed by an empty line and one line "<verb> <ID>" per change of the commit, in the order of the proposal, the line of the change of ACU-77 being "fill acceptance.json"
 
       Examples:
         | changes                       | subject                                  |
@@ -464,6 +536,7 @@ Feature: Define the acceptance areas and acceptance units
         | one addition of an acceptance area       | docs: add acceptance area                |
         | one change of an acceptance area         | docs: change acceptance area             |
         | one deletion of an acceptance area       | docs: delete acceptance area             |
+        | one filling of acceptance.json           | docs: fill acceptance.json               |
         | more than one change          | docs: change acceptance areas and units  |
 
     Scenario: A body
@@ -478,6 +551,7 @@ Feature: Define the acceptance areas and acceptance units
       Given "units/AU-1.md" and "areas/AA-1.md" differ from "HEAD", and the only change of the commit is "change AU-1", which moves nothing out of "areas/AA-1.md"
       Then the script builds no command, and says "areas/AA-1.md differs from HEAD, and no change of the commit names it (ACU-71)"
       And the path in that message is printed as ACU-58 says for the path found
+      And "test_command" or "product" of "acceptance.json" belongs only to the change "fill acceptance.json": when either differs from "HEAD" and no change of the commit is "fill acceptance.json", the script builds no command, and says "acceptance.json differs from HEAD in test_command or product, and no change of the commit names it (ACU-71)"
       And a file belongs to a change as the term change says: the file of its ID, the files of "tests/<unit ID>/" of a deleted acceptance unit, "acceptance.json", the file out of which it moves a scenario or a norm citation (ACU-67), and the file of an acceptance area with a scenario at "HEAD" that crosses an acceptance unit that the change deletes, moves to another acceptance area, or makes no longer cite a norm of a tag of that scenario (ACU-10, ACU-70)
 
     Scenario: The requester refuses the command of the one commit
@@ -512,35 +586,44 @@ Feature: Define the acceptance areas and acceptance units
       Then the messages of ACU-75 that ACU-71 says bind byte for byte once filled with the stand-ins that ACU-75 states
 
   Rule: ACU-72 After its commits the skill names the agents that come next, and in a run it hands off as ACU-41 says
-    Rationale: the commits of define are worth nothing to layer 4 until the plan of implementation and the acceptance tests follow them (ACU-37); naming each agent with its command tells the requester where to go, and naming none when nothing they read changed sends nobody to work for nothing.
+    Rationale: the commits of define are worth nothing to layer 4 until the plan of implementation and the acceptance tests follow them (ACU-37); naming each agent with its command tells the requester where to go, and naming none when nothing they read changed, or the test agent when write-acceptance-tests would refuse to start because "test_command" or "product" is empty (WAT-2), sends nobody to work for nothing.
 
     Scenario: The line after the commits
       Given the commits are pushed
       Then the skill says one line "Next: <parts>.", where the parts are joined by "; ", in this order (complete list):
         | part                                                     | when                                                                                   |
         | the implementation planner updates plan.json with /acceptance-management:plan | the commits added or deleted an acceptance unit, or changed the unit hash of one |
-        | the test agent updates the acceptance tests of <IDs>     | the commits created or changed the area hash or the unit hash of an acceptance area or an acceptance unit     |
-      And "<IDs>" are those acceptance areas and acceptance units, the acceptance areas first, each in the order of the numbers, joined by ", "
+        | the test agent updates the acceptance tests of <IDs> with /acceptance-management:write-acceptance-tests | the commits created or changed the area hash or the unit hash of an acceptance area or an acceptance unit, or filled "test_command" or "product" of "acceptance.json" (ACU-77); and neither "test_command" nor "product" of "acceptance.json" is empty at "HEAD"; and "HEAD" holds an acceptance area or an acceptance unit |
+      And "<IDs>" are those acceptance areas and acceptance units, or, when the commits filled "test_command" or "product", every acceptance area and every acceptance unit that "HEAD" holds; the acceptance areas first, each in the order of the numbers, joined by ", "
       And when no part applies, the skill says no line "Next:"
 
     Scenario: Two parts
-      Given the commits changed the unit hash of AU-3 and added AU-4
-      Then the skill says "Next: the implementation planner updates plan.json with /acceptance-management:plan; the test agent updates the acceptance tests of AU-3, AU-4."
+      Given the commits changed the unit hash of AU-3 and added AU-4, and neither "test_command" nor "product" of "acceptance.json" is empty at "HEAD"
+      Then the skill says "Next: the implementation planner updates plan.json with /acceptance-management:plan; the test agent updates the acceptance tests of AU-3, AU-4 with /acceptance-management:write-acceptance-tests."
 
     Scenario: Only a title
       Given the commits changed only the title of AU-3
       Then the skill says no line "Next:", since no unit hash and no area hash changed (ACU-52)
 
+    Scenario: Hash changed, product still empty
+      Given the commits changed the unit hash of AU-3, and "product" of "acceptance.json" is still the empty object at "HEAD"
+      Then the line "Next:" holds no part of the test agent, since write-acceptance-tests would refuse to start (WAT-2); here it says "Next: the implementation planner updates plan.json with /acceptance-management:plan."
+
+    Scenario: Only acceptance.json filled
+      Given "HEAD" holds AA-1, AU-1, AU-2 and AU-3, and the only commit filled "product", while "test_command" already held a value
+      Then the skill says "Next: the test agent updates the acceptance tests of AA-1, AU-1, AU-2, AU-3 with /acceptance-management:write-acceptance-tests."
+
     Scenario: In a run
       Given the skill runs as the step of layer 3 of a run
-      Then it does as ACU-64 to ACU-71 say, and the step goes on only once the requester has decided on every change (ACU-37, ACU-41)
+      Then it does as ACU-64 to ACU-71 and ACU-77 say, and the step goes on only once the requester has decided on every change (ACU-37, ACU-41)
       And when its line "Next:" holds the part of the implementation planner, the step goes on with /acceptance-management:plan (ACU-37, PLN-1)
+      And then, whatever its line "Next:" holds, when neither "test_command" nor "product" of "acceptance.json" is empty at "HEAD", the step goes on with /acceptance-management:write-acceptance-tests, which proposes every acceptance test that is missing or stale, also those that no commit of this step changed (ACU-37, WAT-1)
 
-  Rule: ACU-73 The skill writes only the files of the acceptance areas and the acceptance units, the ID fields of acceptance.json and the deletion of the tests of a deleted acceptance unit (must not)
-    Rationale: the acceptance architect decides only what an acceptance area and an acceptance unit are (ACU-44, ACU-48); keeping it to its own files keeps a change of define from changing the plan of implementation, the evidence or the tests of the test agent, and the commands that may change the files or the index of many paths would destroy the work of other sessions.
+  Rule: ACU-73 The skill writes only the files of the acceptance areas and the acceptance units, the ID fields of acceptance.json, its test_command and product while they are empty, and the deletion of the acceptance tests of a deleted acceptance unit (must not)
+    Rationale: the acceptance architect decides only what an acceptance area and an acceptance unit are, and fills the fields of acceptance.json that ACU-43 gives it (ACU-44, ACU-48); keeping it to its own files keeps a change of define from changing the plan of implementation, the evidence or the acceptance tests of the test agent, and the commands that may change the files or the index of many paths would destroy the work of other sessions.
 
     Scenario: What the skill writes (complete list)
-      Then the skill writes only "areas/<area ID>.md", "units/<unit ID>.md", the fields "last_area_id", "last_unit_id" and "last_scenario_id" of "acceptance.json", and the deletion of the files of "tests/<unit ID>/" of an acceptance unit that it deletes
+      Then the skill writes only "areas/<area ID>.md", "units/<unit ID>.md", the fields "last_area_id", "last_unit_id" and "last_scenario_id" of "acceptance.json", the fields "test_command" and "product" of "acceptance.json" when they are empty at "HEAD" (ACU-77), and the deletion of the files of "tests/<unit ID>/" of an acceptance unit that it deletes
       And it writes no file of "records/", no other file of "tests/", no "plan.json", and no other field of "acceptance.json"
 
     Scenario: No increment

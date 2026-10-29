@@ -142,6 +142,13 @@ class Citations(unittest.TestCase):
                 "# AA-1@3b0900fb: Billing\n# XAU-3@efc7ae86: no\n# AU-03@efc7ae86: no\n# INV-7@5a627175: no\n")
         self.assertEqual(h.citations(text), [("AU-3", "efc7ae86"), ("SC-5", "147d88d2"), ("AA-1", "3b0900fb")])
 
+    def test_acu56_a_citation_found_in_a_line_has_a_boundary_on_each_side(self):
+        """The evidence run and write-acceptance-tests find the same citations (WAT-7)."""
+        for text in ("SC-5@147d88d2_v2", "SC-5@147d88d2-2", "SC-5@147d88d2é", "éSC-5@147d88d2", "_SC-5@147d88d2"):
+            self.assertEqual(h.citations(text), [], text)
+        self.assertEqual(h.citations("(SC-5@147d88d2)."), [("SC-5", "147d88d2")])
+        self.assertEqual(h.NORM_CITATION_IN_LINE.findall("XINV-7@5a627175 INV-7@5a627175_v2"), [("XINV-7", "5a627175")])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,13 +1,13 @@
 ---
 name: define
-description: Act as the acceptance architect of layer 3 - analyse every norm of layer 2, read at the head of the default branch of the norms repository, against every acceptance area and acceptance unit of the acceptance repository, and propose the acceptance areas, the acceptance units and their Gherkin scenarios to add, change or delete; revise the proposal with the requester, then write the approved changes and commit them, in one commit or one per change, each after the requester's yes. Runs only from the acceptance repository, takes no argument, and is also the step of layer 3 of a run. Use only when the user types /acceptance-management:define, or asks in words to define, change or delete acceptance areas or acceptance units ("define las unidades de aceptación", "crea un área de aceptación", "cambia la unidad AU-3", "borra la unidad", "define the acceptance units"). Never on your own when the user only talks about acceptance units.
+description: Act as the acceptance architect of layer 3 - analyse every norm of layer 2, read at the head of the default branch of the norms repository, against every acceptance area and acceptance unit of the acceptance repository, and propose the acceptance areas, the acceptance units and their Gherkin scenarios to add, change or delete, and, while they are empty, the test_command and product of acceptance.json that the requester states; revise the proposal with the requester, then write the approved changes and commit them, in one commit or one per change, each after the requester's yes. Runs only from the acceptance repository, takes no argument, and is also the step of layer 3 of a run. Use only when the user types /acceptance-management:define, or asks in words to define, change or delete acceptance areas or acceptance units ("define las unidades de aceptación", "crea un área de aceptación", "cambia la unidad AU-3", "borra la unidad", "define the acceptance units"). Never on your own when the user only talks about acceptance units.
 ---
 
 # define
 
 The acceptance architect: creates, changes and deletes the acceptance areas
 and the acceptance units. Implements [specs/define.md](specs/define.md)
-(ACU-57 to ACU-73), with the checks of ACU-74, the files of ACU-6 to ACU-8 and
+(ACU-57 to ACU-73 and ACU-77), with the checks of ACU-74, the files of ACU-6 to ACU-8 and
 the hashes of ACU-50 to ACU-56 of [module.md](../../specs/module.md). Never start it on your own
 (ACU-57).
 
@@ -15,22 +15,24 @@ the hashes of ACU-50 to ACU-56 of [module.md](../../specs/module.md). Never star
 and `REPO` is `"$(git rev-parse --show-toplevel)"` of the working directory.
 `<norms commit>` is `norms_commit` of step 1, the same for the whole invocation.
 `<expected head>` is `acceptance_commit` of step 1 for the first command of
-step 6, and then the last line of the output of the command that was last
+step 7, and then the last line of the output of the command that was last
 pushed (ACU-71).
 
 ## Rules of every invocation
 
 - Write only `areas/<area ID>.md`, `units/<unit ID>.md`, the ID fields of
-  `acceptance.json` (only through `DEFINE ids`), and the deletion of the files
-  of `tests/<unit ID>/` of an acceptance unit you delete (only through `DEFINE
-  delete-tests`). Never write `records/`, any other file of `tests/`,
-  `plan.json`, or any other field of `acceptance.json` (ACU-73).
+  `acceptance.json` (only through `DEFINE ids`), `test_command` and `product`
+  of `acceptance.json` while they are empty at `HEAD` (only through `DEFINE
+  fill`), and the deletion of the files of `tests/<unit ID>/` of an acceptance
+  unit you delete (only through `DEFINE delete-tests`). Never write
+  `records/`, any other file of `tests/`, `plan.json`, or any other field of
+  `acceptance.json` (ACU-73, ACU-77).
 - Never name an increment, never write a line `Increment:`, never decide
   anything of `plan.json` (ACU-9, ACU-44, ACU-48).
 - Read layer 2 only through the output of `DEFINE`; never read or open a file
   of the norms repository, nor the specs repository or a code repository (ACU-59,
   LAY-8). Write nothing in layers 0, 1, 2 and 4, other than the issues of
-  step 5.
+  step 6.
 - Commit and push only with the command that `DEFINE commit` prints, as it is,
   in one Bash call. Never use `git stash`, `reset`, `checkout`, `restore`,
   `clean`, `git add` of a folder, `git add -A`, `git add .` or
@@ -61,8 +63,8 @@ its output and stop: nothing is written. Otherwise keep its
 JSON: `acceptance_repository`, `norms_repository`, `specs_repository` (null
 when `project.json` has not exactly one entry of layer 1),
 `acceptance_default_branch`, `norms_default_branch`, `norms_commit`,
-`acceptance_commit`
-and `summary`.
+`acceptance_commit`, `summary`, `empty_fields_of_acceptance_json` and
+`code_repositories`.
 
 ## 2. Inventory (ACU-60, ACU-61, ACU-62)
 
@@ -75,7 +77,49 @@ acceptance unit, their norm citations with their `citation_status`, their scenar
 and their `errors`, the `errors` of the repository and `next_ids`. Then say
 `summary` of step 1, as it is (ACU-64).
 
-## 3. Analyse (ACU-63, ACU-67, ACU-68, ACU-70)
+## 3. Fill acceptance.json (ACU-77)
+
+Only when `empty_fields_of_acceptance_json` of step 1 is not empty; otherwise
+go to step 4, and never propose a value for `test_command`, `product` or
+`default_done_profile`: a field that holds a value is changed by hand,
+outside define, in a commit that the requester approves (ACU-43).
+
+1. Ask the requester, as numbered questions, the value of each empty field:
+   - `test_command`: the shell command that, at the root of the acceptance
+     repository, runs the acceptance tests of the folder `$ACCEPTANCE_TARGET`
+     and may write a JUnit XML report to `$ACCEPTANCE_REPORT` (ACU-6). You
+     may propose one from the language and test framework the requester
+     names, such as `pytest "$ACCEPTANCE_TARGET" --junitxml
+     "$ACCEPTANCE_REPORT"`;
+   - `product`: for each repository of `code_repositories`, whether the
+     acceptance tests need its product build; if so, its `build` (the command
+     that, at the root of that code repository, builds the product build and
+     prints as its last line the value the tests use: a path, or the URL of a
+     running service), its `env` (you may propose the name, of `A`-`Z`,
+     `0`-`9` and `_`) and, when it publishes a product build, its
+     `published`. Never propose a `build` or a `published`: only the
+     requester states them.
+
+   Never read a code repository to find a value (ACU-12, LAY-8); the
+   requester may take them from what the implementing agent reports. A value
+   the requester does not know yet is left out.
+2. Write the values stated, and only those, as one JSON object with
+   `test_command` and/or `product` (`{}` when none), with the Write tool, in a
+   file of a folder made with `mktemp -d`, outside every repository. Then:
+
+   ```sh
+   DEFINE fill REPO <file> --dry-run
+   ```
+
+   On exit 1, say its lines as they are, ask the requester again for the
+   values they name, and run it again. On exit 0 keep its JSON: `change` (the
+   line of the change, or null), `lines` (the lines under it) and
+   `fields_left_empty`.
+3. When `change` is not null, the proposal holds it as its first change,
+   `fill acceptance.json`, with `lines` under it, each as it is. Each time the
+   requester changes a value, rewrite the file and run the dry run of item 2 again.
+
+## 4. Analyse (ACU-63, ACU-67, ACU-68, ACU-70)
 
 Each time the skill runs, analyse every norm of the inventory against every
 acceptance area and every acceptance unit, whatever changed:
@@ -115,20 +159,24 @@ The requester may propose changes; add them, with the next IDs and a title
 that you propose, unless one breaks a clause of module.md, which you say
 (ACU-64).
 
-## 4. Propose (ACU-64, ACU-65, ACU-66)
+## 5. Propose (ACU-64, ACU-65, ACU-66, ACU-77)
 
-Show the proposal: one numbered line per change, in the order add acceptance area, add
-acceptance unit, change acceptance unit, change acceptance area, delete acceptance unit, delete acceptance area, and in the order of
-the IDs within each; each starts with `add`, `change` or `delete`, then
-`acceptance area` or `acceptance unit`, its ID and its title in quotes, then what it does:
+Show the proposal: one numbered line per change, in the order fill acceptance.json
+(step 3), add acceptance area, add acceptance unit, change acceptance unit, change acceptance area, delete acceptance unit, delete acceptance area, and in the order of
+the IDs within each; each starts with `fill acceptance.json` (step 3), or
+with `add`, `change` or `delete`, then `acceptance area` or `acceptance unit`,
+its ID and its title in quotes, then what it does:
 
 ```text
-1. add acceptance area AA-2 "Customers"
-2. add acceptance unit AU-4 "Register a customer" in AA-2: norms CUS-1, CUS-2; scenarios SC-10, SC-11
-3. change acceptance unit AU-3 "Export the invoices to CSV": INV-12 0c1d2e3f -> 7d6e5f40; scenario SC-5 changed
+1. fill acceptance.json: test_command, product
+   test_command: pytest "$ACCEPTANCE_TARGET" --junitxml "$ACCEPTANCE_REPORT"
+   product acme/billing-code-api: build make dist && echo "$PWD/dist/app"; env PRODUCT_CMD
+2. add acceptance area AA-2 "Customers"
+3. add acceptance unit AU-4 "Register a customer" in AA-2: norms CUS-1, CUS-2; scenarios SC-10, SC-11
+4. change acceptance unit AU-3 "Export the invoices to CSV": INV-12 0c1d2e3f -> 7d6e5f40; scenario SC-5 changed
    AU-3 -> pending: its evidence goes stale (test 2, validation 1)
    AA-1: its evidence goes stale (test 1)
-4. delete acceptance unit AU-2 "Cancel an invoice": INV-9 left layer 2; tests/AU-2/ deleted; scenario SC-9 of AA-1 changed
+5. delete acceptance unit AU-2 "Cancel an invoice": INV-9 left layer 2; tests/AU-2/ deleted; scenario SC-9 of AA-1 changed
    AU-2 has evidence (test 3, validation 1): it is deleted only with its own yes
 Gaps of layer 1, one issue each after your yes:
   a. AU-4: no norm states what is shown when the email is already registered
@@ -149,15 +197,19 @@ Gaps of layer 1, one issue each after your yes:
   scenario of the acceptance area crosses, the line `<area ID>: its evidence goes stale
   (<counts>)`. `<counts>` are those of `evidence`, `<kind> <n>` joined by
   `, `, kinds with 0 left out.
-- When the analysis finds no change and the requester asks for none, say
+- When the proposal holds no change, `fill acceptance.json` included, say
   `acceptance-management:define: no change to propose` and stop.
 
 Revise the proposal with the requester until the requester says it is final.
 A rejected change is dropped: say which other changes need it, and revise them.
+When the rejected change is `fill acceptance.json`, rewrite the file of item 2
+of step 3 as `{}` and run its dry run again, so that `fields_left_empty` names
+every field that stays empty.
 
-## 5. Questions on the final proposal (ACU-66, ACU-68, ACU-71)
+## 6. Questions on the final proposal (ACU-66, ACU-68, ACU-71, ACU-77)
 
-In this order, each answered before the next:
+First say each line of `fields_left_empty` of item 2 of step 3, as it is, from its
+last run, made with the values of the final proposal. Then, in this order, each answered before the next:
 
 1. For each change that deletes an acceptance unit with evidence, or moves a scenario or a
    norm citation of it to another acceptance unit: ask `<unit ID> has evidence (<counts>).
@@ -183,7 +235,7 @@ In this order, each answered before the next:
 3. Ask `1. one commit with every change; 2. one commit per change`, and write
    nothing until the requester answers.
 
-## 6. Write and commit (ACU-65, ACU-69, ACU-70, ACU-71)
+## 7. Write and commit (ACU-65, ACU-69, ACU-70, ACU-71, ACU-77)
 
 Answer 1: one round with every change. Answer 2: one round per change, in the
 order of the proposal. Each round:
@@ -192,7 +244,9 @@ order of the proposal. Each round:
    ACU-7 and ACU-8, each norm citation of `## Norms` with the `norm_hash` of
    its norm in `norms` of the inventory. To delete an acceptance unit: `rm -- REPO/units/<unit ID>.md`, then
    `DEFINE delete-tests REPO <unit ID>`; to delete an acceptance area: `rm --
-   REPO/areas/<area ID>.md`.
+   REPO/areas/<area ID>.md`. For the change `fill acceptance.json`:
+   `DEFINE fill REPO <file>`, with the file of step 3 as the requester made
+   it final.
 2. `DEFINE ids REPO`: it sets the ID fields of `acceptance.json` to what the
    round gives (ACU-55).
 3. `DEFINE check REPO --norms-commit <norms commit>`. On exit 1, fix the files
@@ -200,7 +254,8 @@ order of the proposal. Each round:
    while a problem is left (ACU-69).
 4. `DEFINE commit REPO --norms-commit <norms commit> --expected-head <expected head> --change '<verb> <ID>'...`,
    one `--change` per change of the round, in the order of the proposal, with
-   `<verb>` `add`, `change` or `delete`. Show `display` whole, as a `text`
+   `<verb>` `add`, `change` or `delete`, and `--change 'fill acceptance.json'`
+   for the change of step 3. Show `display` whole, as a `text`
    code block, and `command`; ask `Run this command? (yes/no)`; on yes, run
    `command` as it is, in one Bash call. The command fetches again before it
    stages anything, and stops when `HEAD` is no longer `<expected head>` or
@@ -223,7 +278,7 @@ order of the proposal. Each round:
    say its output as it is, run `DEFINE rollback` as in 5, and stop; nothing
    is committed.
 
-## 7. Next (ACU-72)
+## 8. Next (ACU-72)
 
 Once the commits are pushed:
 
@@ -234,4 +289,7 @@ DEFINE next REPO --since <acceptance_commit>
 Say its line as it is; when it prints nothing, say no line `Next:`. In a run,
 the step of layer 3 goes on only now that the requester has decided on every
 change (ACU-37, ACU-41); when the line holds the part of the implementation
-planner, the step goes on with `/acceptance-management:plan` (ACU-37, PLN-1).
+planner, the step goes on with `/acceptance-management:plan` (ACU-37, PLN-1);
+then, whatever the line holds, when neither `test_command` nor `product` of
+`acceptance.json` is empty at `HEAD`, the step goes on with
+`/acceptance-management:write-acceptance-tests` (ACU-37, WAT-1).

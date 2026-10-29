@@ -154,6 +154,8 @@ def read(path):
 class Fixture(unittest.TestCase):
     """A project folder `p` with billing-norms and billing-acceptance, cloned from bare remotes."""
 
+    code_repository_names = ("billing-code",)  # the entries of layer 4 of project.json, in its order
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = os.path.realpath(self.tmp.name)
@@ -163,8 +165,8 @@ class Fixture(unittest.TestCase):
         os.makedirs(self.folder)
         repos = [{"owner": "acme", "name": "billing-specs", "layer": 1, "path": "billing-specs"},
                  {"owner": "acme", "name": "billing-norms", "layer": 2, "path": "billing-norms"},
-                 {"owner": "acme", "name": "billing-acceptance", "layer": 3, "path": "billing-acceptance"},
-                 {"owner": "acme", "name": "billing-code", "layer": 4, "path": "billing-code"}]
+                 {"owner": "acme", "name": "billing-acceptance", "layer": 3, "path": "billing-acceptance"}]
+        repos += [{"owner": "acme", "name": name, "layer": 4, "path": name} for name in self.code_repository_names]
         self.project = json.dumps({"project": "billing", "repositories": repos}, indent=2) + "\n"
         self.norms = self.clone("billing-norms", {
             "data/tree.jsonl": tree_jsonl(),
@@ -390,7 +392,13 @@ class Start(Fixture):
     def test_acu58_acceptance_json_does_not_meet_acu6(self):
         bad = [self.acceptance(last_unit_id=-1), self.acceptance(last_unit_id="3"), self.acceptance(product=[]),
                self.acceptance(increments=[]), self.acceptance(last_area_id=True),
-               self.acceptance(default_done_profile="gold"), "[]"]
+               self.acceptance(default_done_profile="gold"), "[]",
+               # The entries of product are part of ACU-6 too: the one check that write-acceptance-tests shares.
+               self.acceptance(product={"acme/billing-code-api": {"build": "x"}}),
+               self.acceptance(product={"acme/billing-code-api": {"build": "x", "env": "1X"}}),
+               self.acceptance(product={"acme/billing-code-api": {"build": "x", "env": "X", "other": "y"}}),
+               self.acceptance(product={"acme/billing-code-api": {"build": 1, "env": "X"}}),
+               self.acceptance(product={"acme/billing-code-api": "x"})]
         for text in bad:
             with self.subTest(text=text):
                 write(os.path.join(self.acc, "acceptance.json"), text)
@@ -619,6 +627,7 @@ class Inventory(Fixture):
              'scenario "Three invoices give three rows" has not exactly one tag @SC-<n>', 20),
             (AU3.replace("@SC-5 @INV-7", "@SC-5 @SC-7 @INV-7"),
              'scenario "Three invoices give three rows" has not exactly one tag @SC-<n>', 20),
+            (AU3.replace("Scenario: Three invoices give three rows", "Scenario: \t "), "scenario has no name", 20),
         ]
         for text, message, line in cases:
             with self.subTest(message=message):
@@ -640,6 +649,43 @@ class Inventory(Fixture):
         aa1 = self.area_of(self.inventory(), "AA-1")
         self.assertIn('heading is not "# AA-1 <title>"', self.messages(aa1))
         self.assertIsNone(aa1["title"])
+
+    def test_acu8_a_title_of_only_unicode_spaces(self):
+        """ACU-8: a title holds at least one character that is not a space or a tab; a no-break space (U+00A0) or an
+        ideographic space (U+3000) is such a character."""
+        for title in ("\u00a0", "\u3000"):
+            with self.subTest(title=title):
+                au3 = self.unit_errors(AU3.replace("# AU-3 Export the invoices to CSV", "# AU-3 " + title))
+                self.assertNotIn('heading is not "# AU-3 <title>"', self.messages(au3))
+                self.assertEqual(au3["title"], title)
+
+    def test_acu61_acu54_a_name_that_breaks_a_line(self):
+        """ACU-54: the name of a scenario holds no character that ACU-8 forbids in a title; the name is printed as
+        ACU-58 says for a path when it holds one."""
+        for name, printed in (("Three\rinvoices", '"Three\\rinvoices"'), ("Three\u2028rows", '"Three\\u2028rows"'),
+                              ("Three\x1b[2Kinvoices", '"Three\\u001b[2Kinvoices"'), ("Three\x0brows", '"Three\\u000brows"')):
+            with self.subTest(name=name):
+                au3 = self.unit_errors(AU3.replace("Scenario: Three invoices give three rows", "Scenario: " + name))
+                found = [e for e in au3["errors"] if e["message"].endswith("has a character that breaks a line")]
+                self.assertEqual(found, [{"line": 20, "message": f"scenario {printed} has a character that breaks "
+                                                                 "a line"}])
+
+    def test_acu61_acu56_a_title_or_a_name_that_holds_a_citation(self):
+        """ACU-56: a title and the name of a scenario hold no citation found in a line."""
+        for name in ("A CSV@deadbeef row", "Like AU-4@12345678", "(SC-9@1bd67ec5)", "INV@5a627175"):
+            with self.subTest(name=name):
+                au3 = self.unit_errors(AU3.replace("Scenario: Three invoices give three rows", "Scenario: " + name))
+                self.assertIn({"line": 20, "message": f'scenario "{name}" holds a citation'}, au3["errors"])
+        for name in ("A CSV@deadbeef1 row", "xAU-4@12345678", "AU-4@12345678é", "A row@home"):
+            with self.subTest(name=name):
+                au3 = self.unit_errors(AU3.replace("Scenario: Three invoices give three rows", "Scenario: " + name))
+                self.assertEqual(au3["errors"], [])
+        au3 = self.unit_errors(AU3.replace("# AU-3 Export the invoices to CSV", "# AU-3 Export AU-4@12345678"))
+        self.assertEqual((au3["title"], au3["errors"]), ("Export AU-4@12345678",
+                                                         [{"line": 1, "message": "title holds a citation"}]))
+        write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("# AA-1 Billing", "# AA-1 Billing INV-7@5a627175"))
+        self.commit_all(self.acc)
+        self.assertIn("title holds a citation", self.messages(self.area_of(self.inventory(), "AA-1")))
 
     def test_acu61_no_citation(self):
         text = AU3.replace("- INV-7@5a627175: one row per invoice\n- INV-12@0c1d2e3f: amounts with two decimals\n"
@@ -826,8 +872,8 @@ class Inventory(Fixture):
         self.assertEqual(self.unit_of(self.inventory(), "AU-3")["norm_citations"][1]["citation_status"], "changed")
 
 
-class Writing(Fixture):
-    """ACU-65, ACU-69, ACU-70, ACU-71, ACU-72, ACU-73: after the proposal is final."""
+class WritingFixture(Fixture):
+    """The commands of the script after the proposal is final, with no test of its own."""
 
     def script(self, *args, code=0):
         r = self.run_script(*args)
@@ -859,6 +905,10 @@ class Writing(Fixture):
     def add_au4(self):
         write(os.path.join(self.acc, "units", "AU-4.md"),
               unit("AU-4", "Register a customer", "CUS-1@c0c0c0c0", "SC-10"))
+
+
+class Writing(WritingFixture):
+    """ACU-65, ACU-69, ACU-70, ACU-71, ACU-72, ACU-73: after the proposal is final."""
 
     def test_acu65_ids_sets_the_fields(self):
         self.add_au4()
@@ -902,9 +952,27 @@ class Writing(Fixture):
                       [p["message"] for p in self.check(code=1)["problems"]])
 
     def test_acu73_other_fields_of_acceptance_json(self):
+        message = ("only last_area_id, last_unit_id and last_scenario_id, and test_command and product while they "
+                   "are empty at HEAD, may change (ACU-73)")
+        write(os.path.join(self.acc, "acceptance.json"), self.acceptance(default_done_profile="critical"))
+        self.assertIn(message, [p["message"] for p in self.check(code=1)["problems"]])
         write(os.path.join(self.acc, "acceptance.json"), self.acceptance(test_command="pytest"))
-        self.assertIn("only last_area_id, last_unit_id and last_scenario_id may change (ACU-73)",
-                      [p["message"] for p in self.check(code=1)["problems"]])
+        self.commit_all(self.acc)
+        write(os.path.join(self.acc, "acceptance.json"), self.acceptance(test_command="pytest -x"))
+        self.assertIn(message, [p["message"] for p in self.check(code=1)["problems"]])
+
+    def test_acu69_acu77_a_filled_value_is_checked(self):
+        """test_command and product, empty at HEAD, may be filled, with values that ACU-77 does not refuse."""
+        write(os.path.join(self.acc, "acceptance.json"), self.acceptance(test_command="pytest"))
+        self.assertEqual(self.check()["problems"], [])
+        write(os.path.join(self.acc, "acceptance.json"), self.acceptance(test_command=" \n"))
+        problems = self.check(code=1)["problems"]
+        self.assertEqual([(p["path"], p["message"]) for p in problems],
+                         [("acceptance.json", "test_command is not a command")])
+        write(os.path.join(self.acc, "acceptance.json"),
+              self.acceptance(product={"acme/billing-code": {"build": "make", "env": "ACCEPTANCE_REPORT"}}))
+        self.assertEqual([p["message"] for p in self.check(code=1)["problems"]],
+                         ["env ACCEPTANCE_REPORT of acme/billing-code is a variable of test_command (ACU-6)"])
 
     def test_acu71_one_commit_add_unit(self):
         self.add_au4()
@@ -1042,7 +1110,9 @@ class Writing(Fixture):
         cases = [(["add AU-4"], "docs: add acceptance unit"), (["change AU-3"], "docs: change acceptance unit"),
                  (["delete AU-2"], "docs: delete acceptance unit"), (["add AA-2"], "docs: add acceptance area"),
                  (["change AA-1"], "docs: change acceptance area"), (["delete AA-1"], "docs: delete acceptance area"),
-                 (["add AU-4", "change AU-3"], "docs: change acceptance areas and units")]
+                 (["fill acceptance.json"], "docs: fill acceptance.json"),
+                 (["add AU-4", "change AU-3"], "docs: change acceptance areas and units"),
+                 (["fill acceptance.json", "add AU-4"], "docs: change acceptance areas and units")]
         sys.path.insert(0, os.path.dirname(SCRIPT))
         try:
             import define
@@ -1190,6 +1260,19 @@ class Writing(Fixture):
         # The next change takes the IDs that follow those already committed (ACU-65).
         self.assertEqual(self.inventory()["next_ids"], {"acceptance_area": "AA-2", "acceptance_unit": "AU-5", "scenario": "SC-11"})
 
+    def test_acu58_rollback_prints_a_path_that_breaks_a_line_as_an_escape(self):
+        """ACU-58: the JSON output of rollback writes a character that breaks a line, such as U+2028, U+0085 or
+        U+009B, as \\u and 4 lower-case hex digits, so that no path forges a line or a terminal escape."""
+        name = "t\u2028x\u0085y\u009bz.py"
+        write(os.path.join(self.acc, "tests", "AU-2", name), "old")
+        self.commit_all(self.acc)
+        os.remove(os.path.join(self.acc, "units", "AU-2.md"))
+        for output in (self.script("delete-tests", self.acc, "AU-2"),
+                       self.script("rollback", self.acc, "--change", "delete AU-2")):
+            self.assertIn('"tests/AU-2/t\\u2028x\\u0085y\\u009bz.py"', output)
+            self.assertFalse(any(c in output for c in "\u2028\u0085\u009b"))
+            self.assertIn(f"tests/AU-2/{name}", json.loads(output))
+
     def test_acu71_rollback(self):
         self.script("delete-tests", self.acc, "AU-2")
         os.remove(os.path.join(self.acc, "units", "AU-2.md"))
@@ -1211,7 +1294,15 @@ class Writing(Fixture):
         self.assertEqual(self.approve(plan).returncode, 0)
         self.assertTrue(self.remote_log().startswith("docs: change acceptance unit\n\nchange AU-3\n"))
 
+    def fields_filled(self):
+        """A commit made outside the skill that fills test_command and product, so that the part of the test agent of
+        ACU-72 can apply."""
+        write(os.path.join(self.acc, "acceptance.json"), self.acceptance(
+            test_command="pytest", product={"acme/billing-code-api": {"build": "make", "env": "APP"}}))
+        self.commit_all(self.acc)
+
     def test_acu72_next_line(self):
+        self.fields_filled()
         since = git(self.acc, "rev-parse", "HEAD").stdout.strip()
         self.assertEqual(self.script("next", self.acc, "--since", since), "")
         write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("# AU-3 Export the invoices to CSV",
@@ -1225,10 +1316,12 @@ class Writing(Fixture):
         self.commit_all(self.acc)
         self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
                          "Next: the implementation planner updates plan.json with /acceptance-management:plan; "
-                         "the test agent updates the acceptance tests of AU-3, AU-4.")
+                         "the test agent updates the acceptance tests of AU-3, AU-4 with "
+                         "/acceptance-management:write-acceptance-tests.")
         write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("Then the CSV", "Then the file"))
         self.commit_all(self.acc)
-        self.assertIn("of AA-1, AU-3, AU-4.", self.script("next", self.acc, "--since", since))
+        self.assertIn("of AA-1, AU-3, AU-4 with /acceptance-management:write-acceptance-tests.",
+                      self.script("next", self.acc, "--since", since))
 
     def test_acu72_since_is_not_a_commit_of_head(self):
         for since in ("nonexistent", "0" * 40):
@@ -1255,25 +1348,229 @@ class Writing(Fixture):
 
     def test_acu72_a_unit_hash_changed_with_no_new_test(self):
         """A change of the unit hash outside "## Norms" and "## Scenarios" names both agents."""
+        self.fields_filled()
         since = git(self.acc, "rev-parse", "HEAD").stdout.strip()
         write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("- The unit does not export to PDF.\n", ""))
         self.commit_all(self.acc)
         self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
                          "Next: the implementation planner updates plan.json with /acceptance-management:plan; "
-                         "the test agent updates the acceptance tests of AU-3.")
+                         "the test agent updates the acceptance tests of AU-3 with "
+                         "/acceptance-management:write-acceptance-tests.")
+
+    def test_acu72_hash_changed_product_still_empty(self):
+        """ACU-72, "Hash changed, product still empty": no part of the test agent while a field is empty at HEAD,
+        since write-acceptance-tests would refuse to start (WAT-2)."""
+        write(os.path.join(self.acc, "acceptance.json"), self.acceptance(test_command="pytest"))
+        self.commit_all(self.acc)
+        since = self.head()
+        write(os.path.join(self.acc, "units", "AU-3.md"), AU3.replace("- The unit does not export to PDF.\n", ""))
+        self.commit_all(self.acc)
+        self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
+                         "Next: the implementation planner updates plan.json with /acceptance-management:plan.")
+        write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("Then the CSV", "Then the file"))
+        self.commit_all(self.acc)
+        self.assertEqual(self.script("next", self.acc, "--since", self.head() + "~1"), "")
 
     def test_acu72_only_an_area(self):
+        self.fields_filled()
         since = git(self.acc, "rev-parse", "HEAD").stdout.strip()
         write(os.path.join(self.acc, "areas", "AA-1.md"), AA1.replace("Then the CSV", "Then the file"))
         self.commit_all(self.acc)
         self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
-                         "Next: the test agent updates the acceptance tests of AA-1.")
+                         "Next: the test agent updates the acceptance tests of AA-1 with "
+                         "/acceptance-management:write-acceptance-tests.")
 
     def test_hash_command(self):
         path = os.path.join(self.acc, "units", "AU-3.md")
         out = json.loads(self.script("hash", path))
         self.assertEqual((out["unit_hash"], [s["scenario_hash"] for s in out["scenarios"]]),
                          ("efc7ae86", ["147d88d2", "a67eb609"]))
+
+
+TEST_COMMAND = 'pytest "$ACCEPTANCE_TARGET" --junitxml "$ACCEPTANCE_REPORT"'
+PRODUCT = {"acme/billing-code-api": {"build": 'make dist && echo "$PWD/dist/app"', "env": "PRODUCT_CMD"},
+           "acme/billing-code-web": {"build": "make serve-local", "env": "WEB_URL",
+                                     "published": "echo https://staging.billing.example.com"}}
+LEFT_EMPTY = PREFIX + ("acceptance.json keeps {} empty; /acceptance-management:write-acceptance-tests stops until "
+                       "define fills it (WAT-2)")
+
+
+class Fill(WritingFixture):
+    """ACU-77: while test_command or product of acceptance.json is empty at HEAD, define fills it with the values
+    that the requester states; and ACU-69, ACU-71, ACU-72, ACU-73 for that change."""
+
+    code_repository_names = ("billing-code-api", "billing-code-web", "billing-code-cli")
+
+    def fill(self, values, *extra, code=0):
+        path = os.path.join(self.root, "values", "fill.json")
+        write(path, json.dumps(values))
+        r = self.run_script("fill", self.acc, path, *extra)
+        self.assertEqual(r.returncode, code, r.stdout + r.stderr)
+        return json.loads(r.stdout) if code == 0 else r.stdout.strip()
+
+    def test_acu77_start_names_the_empty_fields_and_the_code_repositories(self):
+        out = self.started()
+        self.assertEqual(out["empty_fields_of_acceptance_json"], ["test_command", "product"])
+        self.assertEqual(out["code_repositories"],
+                         ["acme/billing-code-api", "acme/billing-code-web", "acme/billing-code-cli"])
+
+    def test_acu77_the_change_and_the_lines_of_acu49(self):
+        before = read(os.path.join(self.acc, "acceptance.json"))
+        out = self.fill({"test_command": TEST_COMMAND, "product": PRODUCT}, "--dry-run")
+        self.assertEqual(out, {
+            "change": "fill acceptance.json: test_command, product",
+            "lines": [
+                'test_command: pytest "$ACCEPTANCE_TARGET" --junitxml "$ACCEPTANCE_REPORT"',
+                'product acme/billing-code-api: build make dist && echo "$PWD/dist/app"; env PRODUCT_CMD',
+                "product acme/billing-code-web: build make serve-local; env WEB_URL; "
+                "published echo https://staging.billing.example.com",
+                "acme/billing-code-cli has no entry in product: its implementing agent runs no acceptance test "
+                "(ACU-49)",
+                "acme/billing-code-api has no published: no acceptance test runs in the tasks of "
+                "acme/billing-code-web (ACU-49)"],
+            "fields_left_empty": []})
+        self.assertEqual(read(os.path.join(self.acc, "acceptance.json")), before)
+
+    def test_acu77_a_value_that_breaks_a_line_is_shown_as_its_json_text(self):
+        out = self.fill({"test_command": "pytest\nrm -rf /"}, "--dry-run")
+        self.assertEqual(out["lines"], ['test_command: "pytest\\nrm -rf /"'])
+        with self.subTest("the name of a code repository, in the lines of ACU-49"):
+            project = json.loads(self.project)
+            project["repositories"].append({"owner": "acme", "name": "a\nb", "layer": 4, "path": "billing-code-x"})
+            text = json.dumps(project, indent=2) + "\n"
+            write(os.path.join(self.acc, "project.json"), text)
+            self.commit_all(self.acc)
+            write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), text)
+            self.commit_all(self.norms)
+            api, odd = "acme/billing-code-api", "acme/a\nb"
+            out = self.fill({"product": {api: {"build": "make", "env": "X"}}}, "--dry-run")
+            self.assertIn('"acme/a\\nb" has no entry in product: its implementing agent runs no acceptance test '
+                          '(ACU-49)', out["lines"])
+            out = self.fill({"product": {api: {"build": "make", "env": "X"}, odd: {"build": "make", "env": "Y"}}},
+                            "--dry-run")
+            self.assertEqual(out["lines"][-2:], [
+                f'{api} has no published: no acceptance test runs in the tasks of "acme/a\\nb" (ACU-49)',
+                f'"acme/a\\nb" has no published: no acceptance test runs in the tasks of {api} (ACU-49)'])
+            self.assertFalse(any("\n" in line for line in out["lines"]))
+
+    def test_acu77_the_requester_does_not_know_a_value_yet(self):
+        out = self.fill({"test_command": TEST_COMMAND}, "--dry-run")
+        self.assertEqual((out["change"], out["fields_left_empty"]),
+                         ("fill acceptance.json: test_command", [LEFT_EMPTY.format("product")]))
+        out = self.fill({}, "--dry-run")
+        self.assertEqual(out, {"change": None, "lines": [],
+                               "fields_left_empty": [LEFT_EMPTY.format("test_command"),
+                                                     LEFT_EMPTY.format("product")]})
+
+    def test_acu77_a_value_that_does_not_meet_acu6(self):
+        api = "acme/billing-code-api"
+        cases = [
+            ({"test_command": " \t\n"}, "test_command is not a command"),
+            # ACU-77, ACU-8: every character that breaks a line, not only the line feed and the carriage return.
+            ({"test_command": "\u2028"}, "test_command is not a command"),
+            ({"test_command": " \x0c\x0b\x85\u2029"}, "test_command is not a command"),
+            ({"product": {api: {"build": "\u2028", "env": "X"}}}, f"build of {api} is not a command"),
+            ({"test_command": 3}, "test_command is not a command"),
+            ({"test_command": "pytest \udcff"}, "test_command is not a command"),
+            ({"product": {api: {"build": "make \ud800", "env": "X"}}}, f"build of {api} is not a command"),
+            ({"product": {}}, "product has no entry"),
+            ({"product": []}, "product has no entry"),
+            ({"product": {"acme/billing-code": {"build": "make", "env": "X"}}},
+             "acme/billing-code is not a code repository of project.json"),
+            ({"product": {api: {"build": "make"}}}, f"the entry {api} of product has not the fields of ACU-6"),
+            ({"product": {api: {"build": "make", "env": "X", "url": "u"}}},
+             f"the entry {api} of product has not the fields of ACU-6"),
+            ({"product": {api: {"build": " ", "env": "X"}}}, f"build of {api} is not a command"),
+            ({"product": {api: {"build": "make", "env": "X", "published": ""}}},
+             f"published of {api} is not a command"),
+            ({"product": {api: {"build": "make", "env": "web-url"}}},
+             f"env web-url of {api} is not a name of A-Z, 0-9 and _ that does not start with a digit"),
+            ({"product": {api: {"build": "make", "env": "9X"}}},
+             f"env 9X of {api} is not a name of A-Z, 0-9 and _ that does not start with a digit"),
+            ({"product": {api: {"build": "make", "env": "ACCEPTANCE_TARGET"}}},
+             f"env ACCEPTANCE_TARGET of {api} is a variable of test_command (ACU-6)"),
+            ({"product": {api: {"build": "make", "env": "X"}, "acme/billing-code-web": {"build": "m", "env": "X"}}},
+             "env X is named by more than one entry of product"),
+            ({"product": {"acme/a\nb": {"build": "make", "env": "X"}}},
+             '"acme/a\\nb" is not a code repository of project.json'),
+        ]
+        for values, message in cases:
+            with self.subTest(message=message):
+                self.assertEqual(self.fill(values, "--dry-run", code=1), PREFIX + message)
+                self.assertEqual(self.fill(values, code=1), PREFIX + message)
+        self.assertEqual(self.check()["written"], [])
+
+    def test_acu77_a_field_that_holds_a_value(self):
+        write(os.path.join(self.acc, "acceptance.json"), self.acceptance(test_command="pytest"))
+        self.commit_all(self.acc)
+        self.assertEqual(self.started()["empty_fields_of_acceptance_json"], ["product"])
+        self.assertEqual(self.fill({"test_command": "pytest -x"}, "--dry-run", code=1),
+                         PREFIX + "test_command of acceptance.json is not empty; define fills only an empty field "
+                                  "(ACU-43)")
+        out = self.fill({}, "--dry-run")
+        self.assertEqual(out["fields_left_empty"], [LEFT_EMPTY.format("product")])
+
+    def test_acu77_acu71_acu72_fill_commit_and_next(self):
+        since = self.head()
+        self.assertEqual(self.fill({"test_command": TEST_COMMAND, "product": PRODUCT}),
+                         ["test_command", "product"])
+        data = read(os.path.join(self.acc, "acceptance.json"))
+        self.assertEqual(json.loads(data), json.loads(self.acceptance(test_command=TEST_COMMAND, product=PRODUCT)))
+        before = self.acceptance().split("\n")
+        changed = [line for line in data.split("\n") if line not in before]
+        self.assertEqual(len(changed), 2, changed)  # only the lines of the two fields filled
+        self.assertEqual(self.check(), {"written": ["acceptance.json"], "problems": []})
+        plan = self.commit("fill acceptance.json")
+        self.assertEqual(plan["paths"], ["acceptance.json"])
+        self.assertEqual(plan["message"], "docs: fill acceptance.json\n\nfill acceptance.json")
+        r = self.approve(plan)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.remote_log().startswith("docs: fill acceptance.json\n\nfill acceptance.json\n"))
+        self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
+                         "Next: the test agent updates the acceptance tests of AA-1, AU-1, AU-2, AU-3 with "
+                         "/acceptance-management:write-acceptance-tests.")
+
+    def test_acu72_only_product_filled(self):
+        write(os.path.join(self.acc, "acceptance.json"), self.acceptance(test_command="pytest"))
+        self.commit_all(self.acc)
+        since = self.head()
+        self.fill({"product": {"acme/billing-code-api": {"build": "make", "env": "APP"}}})
+        self.commit_all(self.acc)
+        self.assertEqual(self.script("next", self.acc, "--since", since).strip(),
+                         "Next: the test agent updates the acceptance tests of AA-1, AU-1, AU-2, AU-3 with "
+                         "/acceptance-management:write-acceptance-tests.")
+
+    def test_acu72_one_field_left_empty_names_nobody(self):
+        since = self.head()
+        self.fill({"test_command": "pytest"})
+        self.commit_all(self.acc)
+        self.assertEqual(self.script("next", self.acc, "--since", since), "")
+
+    def test_acu71_one_commit_with_the_fill_and_a_unit(self):
+        self.fill({"test_command": TEST_COMMAND})
+        self.add_au4()
+        self.script("ids", self.acc)
+        self.assertEqual(self.commit("add AU-4", code=1),
+                         PREFIX + "acceptance.json differs from HEAD in test_command or product, and no change of "
+                                  "the commit names it (ACU-71)")
+        plan = self.commit("fill acceptance.json", "add AU-4")
+        self.assertEqual(plan["message"], "docs: change acceptance areas and units\n\nfill acceptance.json\nadd AU-4")
+        self.assertEqual(self.approve(plan).returncode, 0)
+        pushed = json.loads(git(self.acc, "show", "origin/main:acceptance.json").stdout)
+        self.assertEqual((pushed["test_command"], pushed["last_unit_id"]), (TEST_COMMAND, 4))
+
+    def test_acu71_fill_that_fills_nothing(self):
+        self.add_au4()
+        self.script("ids", self.acc)
+        self.assertEqual(self.commit("fill acceptance.json", "add AU-4", code=1),
+                         PREFIX + "fill acceptance.json: acceptance.json is not filled as it says")
+
+    def test_acu71_rollback_of_the_fill(self):
+        before = read(os.path.join(self.acc, "acceptance.json"))
+        self.fill({"test_command": TEST_COMMAND})
+        self.assertEqual(json.loads(self.script("rollback", self.acc, "--change", "fill acceptance.json")),
+                         ["acceptance.json"])
+        self.assertEqual(read(os.path.join(self.acc, "acceptance.json")), before)
 
 
 if __name__ == "__main__":

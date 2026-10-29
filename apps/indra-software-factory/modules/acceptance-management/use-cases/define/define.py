@@ -2,12 +2,18 @@
 
 Spec: specs/define.md of this folder, and specs/module.md of the module. The
 fingerprints (ACU-51 to ACU-54) are those of scripts/acceptance_hashes.py of the
-module, and the checks that every use case of the module shares (ACU-74) those
-of scripts/acceptance_repository_checks.py, which this script imports.
+module; the checks that every use case of the module shares (ACU-74), the
+checks before a commit, the commit command and the diff of a file of a
+commit (ACU-75) those of
+scripts/acceptance_repository_checks.py; and the inventory (ACU-60 to ACU-62:
+the norms, the files of areas/ and units/, their format errors and the
+citation statuses, and the ID fields of ACU-55 and ACU-61) that of
+scripts/acceptance_repository_files.py, which write-acceptance-tests reads
+too. This script imports all three.
 
 Usage (REPO is the working directory of the skill; every command reads, and
-only `ids`, `delete-tests` and `rollback` write, in the acceptance repository
-only):
+only `ids`, `fill`, `delete-tests` and `rollback` write, in the acceptance
+repository only):
 
     define.py start REPO [-- ARG...]
         ACU-74, then ACU-58: the checks, in their order, with the fetch of
@@ -16,8 +22,11 @@ only):
         prints one JSON object: "acceptance_repository" and
         "norms_repository" (<owner>/<name>), "specs_repository" (<owner>/<name>
         of the entry of layer 1, or null), "acceptance_default_branch" and
-        "norms_default_branch", "norms_commit", "acceptance_commit" and
-        "summary" (the line of ACU-64).
+        "norms_default_branch", "norms_commit", "acceptance_commit",
+        "summary" (the line of ACU-64), "empty_fields_of_acceptance_json"
+        ("test_command" and "product" when each is empty at HEAD, ACU-77) and
+        "code_repositories" (<owner>/<name> of each entry of layer 4 of
+        project.json, in its order).
     define.py inventory REPO --norms-commit SHA [--worktree]
         ACU-60, ACU-61, ACU-62: prints the inventory, at HEAD, or with
         --worktree of areas/, units/ and acceptance.json as they are on disk.
@@ -28,10 +37,22 @@ only):
     define.py ids REPO
         ACU-55, ACU-65: sets last_area_id, last_unit_id and last_scenario_id of
         acceptance.json on disk to the value that ACU-61 asks, and nothing else.
+    define.py fill REPO FILE [--dry-run]
+        ACU-77: FILE, outside the repository, is one JSON object with the
+        values that the requester stated, "test_command" and/or "product".
+        Checks each value; on a problem prints one line
+        "acceptance-management:define: <message>" per problem and exits 1.
+        With --dry-run prints a JSON object: "change" (the line of the change,
+        or null when FILE fills nothing), "lines" (the lines under it) and
+        "fields_left_empty" (the message of each field that stays empty).
+        Without it writes the values into acceptance.json on disk, nothing
+        else, and prints the fields filled.
     define.py delete-tests REPO UNIT_ID
         ACU-10, ACU-70: deletes from the working tree each file of
         tests/<unit ID>/ that HEAD holds.
     define.py commit REPO --norms-commit SHA --expected-head SHA --change "<verb> <ID>"...
+        (a change is "add", "change" or "delete" and an area ID or a unit ID,
+        or "fill acceptance.json")
         ACU-71, ACU-75: fetches; when the fetch fails, the default branch
         cannot be found, origin/<branch> moved, HEAD holds a commit that
         origin/<branch> does not, or HEAD is not the expected head, prints the
@@ -67,11 +88,9 @@ specs: "acceptance_unit", "acceptance_area", "unit_hash", "norm_citations"...
 
 from __future__ import annotations
 
-import difflib
 import json
 import os
 import re
-import shlex
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -81,23 +100,15 @@ sys.dont_write_bytecode = True
 
 import acceptance_hashes as hashes  # noqa: E402
 import acceptance_repository_checks as checks  # noqa: E402
-from acceptance_repository_checks import default_branch, git, ls_tree, out, read_tree, show  # noqa: E402
+from acceptance_repository_checks import git, ls_tree, out, show  # noqa: E402
+from acceptance_repository_files import (ACCEPTANCE_AREA_FILE, ACCEPTANCE_UNIT_FILE, ID_FIELDS, Layer3,  # noqa: E402
+                                         acceptance_ok, expected_fields, field_line, inventory, number, plural,
+                                         public, read_norms)
 
 PREFIX = "acceptance-management:define: "
-PROFILES = ("prototype", "product", "critical")  # ACU-19
-KINDS = ("test", "demo", "validation", "deviation", "event")  # ACU-35
-ID_FIELDS = (("acceptance_area", "AA", "last_area_id"), ("acceptance_unit", "AU", "last_unit_id"),
-             ("scenario", "SC", "last_scenario_id"))  # ACU-55
-ACCEPTANCE_FIELDS = {"default_done_profile": str, "last_area_id": int, "last_unit_id": int,
-                     "last_scenario_id": int, "test_command": str, "product": dict}  # ACU-6
-ACCEPTANCE_UNIT_FILE = re.compile(r"units/(AU-[1-9][0-9]*)\.md")
-ACCEPTANCE_AREA_FILE = re.compile(r"areas/(AA-[1-9][0-9]*)\.md")
 CHANGE = re.compile(r"(add|change|delete) ((?:AA|AU)-[1-9][0-9]*)")
-SC_LIKE = re.compile(r"@SC-([0-9]+)")
-ACCEPTANCE_UNIT_PARTS = ["## Narrative", "## Norms", "## Scenarios", "## Non-goals", "## Assumptions"]  # ACU-8
-ACCEPTANCE_AREA_PARTS = ["## Purpose", "## Scenarios"]  # ACU-7
-ASSUMPTION_END = re.compile(r"\(([^()]*)\)\.?$")
-NARRATIVE = (re.compile(r"In order to \S"), re.compile(r"As an? \S"), re.compile(r"I want \S"))
+FILL_CHANGE = ("fill", "acceptance.json")  # ACU-77: the change that fills test_command and product
+FILLABLE_FIELDS = ("test_command", "product")  # ACU-43, ACU-77: filled by define only while empty at HEAD
 
 
 class Stop(Exception):
@@ -120,508 +131,7 @@ def locate(cwd):
         raise Stop(refusal.message)
 
 
-# ---------------------------------------------------------------- layer 2
-
-def read_norms(where, commit):
-    """The norms at the norms commit (ACU-60): one dict per norm, in the order of data/tree.jsonl."""
-    data = show(where["norms_repository_path"], commit, "data/tree.jsonl")
-    if data is None:
-        raise Stop(f"{where['norms_repository']} has no data/tree.jsonl at {commit[:7]}")
-    try:
-        nodes = read_tree(data)
-    except (ValueError, UnicodeDecodeError):
-        raise Stop(f"{where['norms_repository']}: data/tree.jsonl is not valid")
-    norms, seen = [], set()
-    for node in nodes:
-        if node["id"] in seen:
-            continue
-        seen.add(node["id"])
-        norms.append({"norm_id": node["id"], "file": node["file"], "kind": node["kind"],
-                      "parent_norm_id": node.get("parent"), "norm_hash": node["tree_hash"][:8].lower(),
-                      "own_text": node["own_text"]})
-    return norms
-
-
-# ---------------------------------------------------------------- layer 3: the files
-
-def acceptance_ok(data):
-    """ACU-6: the object of acceptance.json, or None when it does not meet ACU-6."""
-    try:
-        obj = json.loads(data.decode("utf-8"))
-    except (ValueError, UnicodeDecodeError, AttributeError, RecursionError):
-        return None
-    if not isinstance(obj, dict) or set(obj) != set(ACCEPTANCE_FIELDS):
-        return None
-    for field, kind in ACCEPTANCE_FIELDS.items():
-        value = obj[field]
-        if not isinstance(value, kind) or isinstance(value, bool):
-            return None
-        if kind is int and value < 0:
-            return None
-    if obj["default_done_profile"] not in PROFILES:
-        return None
-    return obj
-
-
-def number(an_id):
-    return int(an_id.split("-")[1])
-
-
-def _err(errors, line, message):
-    errors.append({"line": line, "message": message})
-
-
-def _parts(lines, start):
-    """The parts of a file: (preamble indexes, [(heading, index of its line, [content indexes])]).
-
-    A part starts at a line that starts with "## " outside a code fence."""
-    heads, fence = [], False
-    for i in range(start, len(lines)):
-        stripped = lines[i].lstrip(" \t")
-        if stripped.startswith("```"):
-            fence = not fence
-            continue
-        if not fence and lines[i].startswith("## "):
-            heads.append(i)
-    preamble = list(range(start, heads[0] if heads else len(lines)))
-    parts = []
-    for k, head in enumerate(heads):
-        end = heads[k + 1] if k + 1 < len(heads) else len(lines)
-        parts.append((lines[head], head, list(range(head + 1, end))))
-    return preamble, parts
-
-
-def _trimmed(lines, indexes):
-    """The indexes of a part without its empty lines at either end."""
-    indexes = list(indexes)
-    while indexes and lines[indexes[0]] == "":
-        indexes.pop(0)
-    while indexes and lines[indexes[-1]] == "":
-        indexes.pop()
-    return indexes
-
-
-def _check_parts(lines, parts, expected, errors, name):
-    """ACU-7, ACU-8: the parts are those expected, in their order."""
-    names = [p[0] for p in parts]
-    if names == expected:
-        return True
-    line = None
-    for k, (heading, index, _) in enumerate(parts):
-        if k >= len(expected) or heading != expected[k]:
-            line = index + 1
-            break
-    _err(errors, line, f"parts are not those of {name}")
-    return False
-
-
-def _gherkin(lines, indexes, errors, allow_none):
-    """ACU-7, ACU-8: whether "## Scenarios" is one gherkin block (or "None." in an acceptance area)."""
-    body = _trimmed(lines, indexes)
-    if allow_none and [lines[i] for i in body] == ["None."]:
-        return True
-    ok = (len(body) >= 2 and lines[body[0]].strip() == "```gherkin" and lines[body[-1]].strip() == "```"
-          and not any(lines[i].lstrip(" \t").startswith("```") for i in body[1:-1]))
-    if not ok:
-        _err(errors, (body[0] + 1) if body else None, "## Scenarios is not one gherkin block")
-        return False
-    for i in body[1:-1]:
-        stripped = lines[i].lstrip(" \t")
-        for word in hashes.FORBIDDEN:
-            if stripped.startswith(word):
-                _err(errors, i + 1, f"{word} is not allowed in ## Scenarios")
-                break
-    return True
-
-
-def _scenarios(data, lines, errors, in_acceptance_area):
-    """ACU-50, ACU-54: the scenarios of a file, with the errors of their tags."""
-    found = []
-    allowed = "@SC-<n>, @<norm ID> or @unit:<unit ID>" if in_acceptance_area else "@SC-<n> or @<norm ID>"
-    for s in hashes.scenarios(data):
-        tag_line = s.line
-        sc_like = [t for t in s.tags if SC_LIKE.fullmatch(t)]
-        for tag in s.tags:
-            if (SC_LIKE.fullmatch(tag) or hashes.NORM_TAG.match(tag)
-                    or (in_acceptance_area and hashes.ACCEPTANCE_UNIT_TAG.match(tag))):
-                continue
-            _err(errors, tag_line, f"tag {tag} is not {allowed}")
-        if s.scenario_id is None or len(sc_like) != 1:
-            _err(errors, tag_line, f'scenario "{s.name}" has not exactly one tag @SC-<n>')
-            scenario_id = None
-        else:
-            scenario_id = s.scenario_id
-        entry = {"scenario_id": scenario_id, "name": s.name, "scenario_hash": s.scenario_hash,
-                 "norms": list(dict.fromkeys(s.norms))}
-        if in_acceptance_area:
-            entry["acceptance_units"] = list(dict.fromkeys(s.acceptance_units))
-        entry["_line"] = tag_line
-        found.append(entry)
-    return found
-
-
-def parse_acceptance_unit(unit_id, data, ctx):
-    """ACU-8, ACU-52, ACU-60, ACU-61: one acceptance unit of the inventory, with its errors."""
-    acceptance_unit = {"unit_id": unit_id, "path": f"units/{unit_id}.md", "title": None, "area_id": None,
-                       "done_profile": ctx["default_done_profile"], "unit_hash": None, "norm_citations": [],
-                       "scenarios": [], "evidence": ctx["evidence"](unit_id), "errors": []}
-    errors = acceptance_unit["errors"]
-    try:
-        data.decode("utf-8")
-    except UnicodeDecodeError:
-        _err(errors, None, "not UTF-8")
-        return acceptance_unit
-    lines = hashes.lines_of(data)
-    title = checks.heading_title(lines, unit_id)
-    if title is not None:
-        acceptance_unit["title"] = title
-    else:
-        _err(errors, 1, f'heading is not "# {unit_id} <title>"')
-    acceptance_unit["unit_hash"] = hashes.unit_hash(data)
-    preamble, parts = _parts(lines, 1)
-    filled = [i for i in preamble if lines[i] != ""]
-    area_match = re.fullmatch(r"Area: (AA-[1-9][0-9]*)", lines[filled[0]]) if filled else None
-    extra = filled[1:]
-    if area_match:
-        acceptance_unit["area_id"] = area_match.group(1)
-        if acceptance_unit["area_id"] not in ctx["area_ids"]:
-            _err(errors, filled[0] + 1, f"acceptance area {acceptance_unit['area_id']} has no file")
-        nxt = filled[0] + 1
-        if len(filled) > 1 and filled[1] == nxt and lines[nxt].startswith("Profile:"):
-            extra = filled[2:]
-            done_profile = lines[nxt][len("Profile:"):].strip()
-            acceptance_unit["done_profile"] = done_profile
-            if done_profile not in PROFILES:
-                _err(errors, nxt + 1, f"done profile {done_profile} is not prototype, product or critical")
-            elif done_profile == ctx["default_done_profile"]:
-                _err(errors, nxt + 1, f"done profile {done_profile} is the default done profile")
-    else:
-        _err(errors, (filled[0] + 1) if filled else None, 'no line "Area: <area ID>"')
-        extra = filled[1:]
-    in_order = _check_parts(lines, parts, ACCEPTANCE_UNIT_PARTS, errors, "ACU-8")
-    if extra and in_order:
-        _err(errors, extra[0] + 1, "parts are not those of ACU-8")
-    by_name = {}
-    for heading_text, index, content in parts:
-        by_name.setdefault(heading_text, (index, content))
-
-    if "## Narrative" in by_name:
-        index, content = by_name["## Narrative"]
-        body = _trimmed(lines, content)
-        if len(body) != 3 or body != list(range(body[0], body[0] + 3)) or not all(
-                NARRATIVE[k].match(lines[body[k]]) for k in range(3)):
-            _err(errors, index + 1, "narrative is not In order to, As a, I want")
-
-    cited = {}
-    if "## Norms" in by_name:
-        index, content = by_name["## Norms"]
-        items = [i for i in content if lines[i] != ""]
-        if not any(lines[i].startswith("- ") for i in items):
-            _err(errors, index + 1, "no norm citation in ## Norms")
-        for i in items:
-            m = hashes.NORM_CITATION.match(lines[i])
-            if not m:
-                _err(errors, i + 1, "not a norm citation")
-                continue
-            norm_id, hash_in_acceptance_unit = m.group(1), m.group(2)
-            if norm_id in cited:
-                _err(errors, i + 1, f"{norm_id} is cited twice")
-                continue
-            cited[norm_id] = i + 1
-            hash_in_norms_repository = ctx["norm_hashes"].get(norm_id)
-            if hash_in_norms_repository is None:
-                citation_status = "retired"
-            elif hash_in_norms_repository == hash_in_acceptance_unit:
-                citation_status = "current"
-            else:
-                citation_status = "changed"
-            acceptance_unit["norm_citations"].append({
-                "norm_id": norm_id, "hash_in_acceptance_unit": hash_in_acceptance_unit,
-                "citation_status": citation_status, "hash_in_norms_repository": hash_in_norms_repository,
-                "_line": i + 1})
-
-    if "## Scenarios" in by_name:
-        index, content = by_name["## Scenarios"]
-        if _gherkin(lines, content, errors, allow_none=False):
-            acceptance_unit["scenarios"] = _scenarios(data, lines, errors, in_acceptance_area=False)
-    tagged = set()
-    for scenario in acceptance_unit["scenarios"]:
-        for norm_id in scenario["norms"]:
-            tagged.add(norm_id)
-            if norm_id not in cited:
-                _err(errors, scenario["_line"], f"tag @{norm_id} is not in ## Norms")
-    for norm_id, line in cited.items():
-        if norm_id not in tagged:
-            _err(errors, line, f"{norm_id} is checked by no scenario")
-
-    for name in ("## Non-goals", "## Assumptions"):
-        if name not in by_name:
-            continue
-        index, content = by_name[name]
-        body = _trimmed(lines, content)
-        if [lines[i] for i in body] == ["None."]:
-            continue
-        items = [i for i in body if lines[i] != ""]
-        if not items or not all(re.match(r"- \S", lines[i]) for i in items):
-            _err(errors, index + 1, f"{name} is not a list or None.")
-            continue
-        if name == "## Assumptions":
-            for i in items:
-                m = ASSUMPTION_END.search(lines[i])
-                rest = m.group(1) if m else None
-                if rest != "environment" and rest not in ctx["norm_hashes"]:
-                    _err(errors, i + 1, "assumption rests on no norm and not on (environment)")
-    acceptance_unit["_cited"] = list(cited)
-    return acceptance_unit
-
-
-def parse_acceptance_area(area_id, data, ctx, acceptance_units):
-    """ACU-7, ACU-53, ACU-60, ACU-61: one acceptance area of the inventory, with its errors."""
-    acceptance_area = {"area_id": area_id, "path": f"areas/{area_id}.md", "title": None, "area_hash": None,
-                       "acceptance_units": [u["unit_id"] for u in acceptance_units if u["area_id"] == area_id],
-                       "scenarios": [], "evidence": ctx["evidence"](area_id), "errors": []}
-    errors = acceptance_area["errors"]
-    try:
-        data.decode("utf-8")
-    except UnicodeDecodeError:
-        _err(errors, None, "not UTF-8")
-        return acceptance_area
-    lines = hashes.lines_of(data)
-    title = checks.heading_title(lines, area_id)
-    if title is not None:
-        acceptance_area["title"] = title
-    else:
-        _err(errors, 1, f'heading is not "# {area_id} <title>"')
-    acceptance_area["area_hash"] = hashes.area_hash(data)
-    preamble, parts = _parts(lines, 1)
-    filled = [i for i in preamble if lines[i] != ""]
-    in_order = _check_parts(lines, parts, ACCEPTANCE_AREA_PARTS, errors, "ACU-7")
-    by_name = {}
-    for heading_text, index, content in parts:
-        by_name.setdefault(heading_text, (index, content))
-    purpose_empty = "## Purpose" in by_name and not _trimmed(lines, by_name["## Purpose"][1])
-    if in_order and (filled or purpose_empty):
-        _err(errors, (filled[0] + 1) if filled else by_name["## Purpose"][0] + 1, "parts are not those of ACU-7")
-    if "## Scenarios" in by_name:
-        index, content = by_name["## Scenarios"]
-        if _gherkin(lines, content, errors, allow_none=True):
-            acceptance_area["scenarios"] = _scenarios(data, lines, errors, in_acceptance_area=True)
-    by_unit_id = {u["unit_id"]: u for u in acceptance_units}
-    for scenario in acceptance_area["scenarios"]:
-        label = scenario["scenario_id"] or f'"{scenario["name"]}"'
-        if len(scenario["acceptance_units"]) < 2:
-            _err(errors, scenario["_line"], f"scenario {label} crosses fewer than two acceptance units")
-        norms_of_crossed = set()
-        for unit_id in scenario["acceptance_units"]:
-            acceptance_unit = by_unit_id.get(unit_id)
-            if acceptance_unit is None or acceptance_unit["area_id"] != area_id:
-                _err(errors, scenario["_line"], f"{unit_id} is not an acceptance unit of {area_id}")
-            if acceptance_unit is not None:
-                norms_of_crossed.update(acceptance_unit.get("_cited", []))
-        for norm_id in scenario["norms"]:
-            if norm_id not in norms_of_crossed:
-                _err(errors, scenario["_line"], f"tag @{norm_id} is in ## Norms of no acceptance unit it crosses")
-    return acceptance_area
-
-
-# ---------------------------------------------------------------- the inventory
-
-class Layer3:
-    """The files of areas/, units/ and acceptance.json at a commit, or on disk when `rev` is None."""
-
-    def __init__(self, root, rev):
-        self.root, self.rev = root, rev
-
-    def paths(self):
-        if self.rev is not None:
-            return ls_tree(self.root, self.rev, "areas", "units")
-        found = []
-        for top in ("areas", "units"):
-            base = os.path.join(self.root, top)
-            for folder, dirs, files in os.walk(base):
-                dirs.sort()
-                for name in files:
-                    found.append(os.path.relpath(os.path.join(folder, name), self.root).replace(os.sep, "/"))
-        return sorted(found)
-
-    def read(self, path):
-        if self.rev is not None:
-            return show(self.root, self.rev, path)
-        try:
-            with open(os.path.join(self.root, path), "rb") as f:
-                return f.read()
-        except OSError:
-            return None
-
-
-def evidence_counter(root, rev):
-    """ACU-60: the count of the lines of each kind of records/<ID>.jsonl at `rev`."""
-    def count(an_id):
-        counts = {kind: 0 for kind in KINDS}
-        data = show(root, rev, f"records/{an_id}.jsonl") or b""
-        for line in data.decode("utf-8", "replace").split("\n"):
-            try:
-                obj = json.loads(line)
-            except (ValueError, RecursionError):
-                continue
-            if isinstance(obj, dict) and obj.get("kind") in counts:
-                counts[obj["kind"]] += 1
-        return counts
-    return count
-
-
-def _field_line(data, field):
-    """The number of the line of acceptance.json that holds `field`, or None."""
-    for i, line in enumerate((data or b"").decode("utf-8", "replace").split("\n")):
-        if f'"{field}"' in line:
-            return i + 1
-    return None
-
-
-def inventory(where, norms_commit, rev="HEAD", norms=None):
-    """ACU-60: the inventory of the acceptance repository at `rev`, or of the working tree when `rev` is None.
-
-    The keys that start with "_" are for this script only; `public` removes them."""
-    root = where["root"]
-    if norms is None:
-        norms = read_norms(where, norms_commit)
-    source = Layer3(root, rev)
-    errors = []
-    acc_bytes = source.read("acceptance.json")
-    acc = acceptance_ok(acc_bytes) if acc_bytes is not None else None
-    if acc is None:
-        errors.append({"path": "acceptance.json", "line": None, "message": "acceptance.json does not meet ACU-6"})
-        acc = {"default_done_profile": "product", "last_area_id": 0, "last_unit_id": 0, "last_scenario_id": 0}
-    head_rev = rev if rev is not None else "HEAD"
-    ctx = {"default_done_profile": acc["default_done_profile"], "norm_hashes": {n["norm_id"]: n["norm_hash"] for n in norms},
-           "evidence": evidence_counter(root, head_rev)}
-    acceptance_unit_files, acceptance_area_files = {}, {}
-    for path in source.paths():
-        match_of_acceptance_unit_file = ACCEPTANCE_UNIT_FILE.fullmatch(path)
-        match_of_acceptance_area_file = ACCEPTANCE_AREA_FILE.fullmatch(path)
-        if match_of_acceptance_unit_file:
-            acceptance_unit_files[match_of_acceptance_unit_file.group(1)] = path
-        elif match_of_acceptance_area_file:
-            acceptance_area_files[match_of_acceptance_area_file.group(1)] = path
-        else:
-            errors.append({"path": path, "line": None,
-                           "message": "not the file of an acceptance area or an acceptance unit"})
-    ctx["area_ids"] = set(acceptance_area_files)
-    acceptance_units = [parse_acceptance_unit(unit_id, source.read(path) or b"", ctx) for unit_id, path in
-                        sorted(acceptance_unit_files.items(), key=lambda kv: number(kv[0]))]
-    acceptance_areas = [parse_acceptance_area(area_id, source.read(path) or b"", ctx, acceptance_units)
-                        for area_id, path in sorted(acceptance_area_files.items(), key=lambda kv: number(kv[0]))]
-
-    holders = {}
-    for item in sorted(acceptance_areas + acceptance_units, key=lambda x: x["path"]):
-        for scenario in item["scenarios"]:
-            if scenario["scenario_id"]:
-                holders.setdefault(scenario["scenario_id"], []).append((item["path"], scenario["_line"]))
-    for scenario_id, places in sorted(holders.items(), key=lambda kv: number(kv[0])):
-        if len(places) > 1:
-            errors.append({"path": places[0][0], "line": places[0][1],
-                           "message": f"{scenario_id} is the ID of more than one scenario"})
-
-    present = {"acceptance_area": [(a["area_id"], a["path"], None) for a in acceptance_areas],
-               "acceptance_unit": [(u["unit_id"], u["path"], None) for u in acceptance_units],
-               "scenario": [(scenario_id, places[0][0], places[0][1]) for scenario_id, places in holders.items()]}
-    for kind, _, field in ID_FIELDS:
-        for an_id, path, line in sorted(present[kind], key=lambda x: number(x[0])):
-            if number(an_id) > acc[field]:
-                errors.append({"path": path, "line": line,
-                               "message": f"{an_id} is greater than {field} of acceptance.json"})
-
-    tops = {field: max([acc[field]] + [number(an_id) for an_id, _, _ in present[kind]])
-            for kind, _, field in ID_FIELDS}
-    if rev is None:
-        expected, more = worktree_errors(where, acc, acc_bytes, present)
-        errors += more
-        tops = {field: max(tops[field], expected[field]) for field in tops}
-
-    result = {
-        "norms_commit": norms_commit,
-        "acceptance_commit": out(root, "rev-parse", head_rev),
-        "default_done_profile": acc["default_done_profile"],
-        "next_ids": {kind: f"{prefix}-{tops[field] + 1}" for kind, prefix, field in ID_FIELDS},
-        "norms": norms,
-        "acceptance_areas": acceptance_areas,
-        "acceptance_units": acceptance_units,
-        "errors": errors,
-    }
-    return result
-
-
-def head_ids(root):
-    """The area IDs, unit IDs and scenario IDs that HEAD holds in any file, and the fields of acceptance.json there."""
-    head = Layer3(root, "HEAD")
-    ids = {kind: set() for kind, _, _ in ID_FIELDS}
-    for path in head.paths():
-        match_of_acceptance_unit_file = ACCEPTANCE_UNIT_FILE.fullmatch(path)
-        match_of_acceptance_area_file = ACCEPTANCE_AREA_FILE.fullmatch(path)
-        if match_of_acceptance_unit_file:
-            ids["acceptance_unit"].add(match_of_acceptance_unit_file.group(1))
-        elif match_of_acceptance_area_file:
-            ids["acceptance_area"].add(match_of_acceptance_area_file.group(1))
-        else:
-            continue
-        try:
-            for scenario in hashes.scenarios(head.read(path) or b""):
-                if scenario.scenario_id:
-                    ids["scenario"].add(scenario.scenario_id)
-        except UnicodeDecodeError:
-            pass
-    acc = acceptance_ok(head.read("acceptance.json") or b"") or {f: 0 for _, _, f in ID_FIELDS}
-    return ids, acc
-
-
-def expected_fields(root, present):
-    """ACU-55, ACU-61: the value that each ID field must have on disk, and the new IDs already given.
-
-    The value is the highest of the field at HEAD and the numbers of the IDs of its kind at HEAD and on disk, so
-    that a field lower than an ID at HEAD is raised by the next commit. A new ID, not at HEAD, is already given
-    when its number is not above the highest of the field at HEAD and the numbers of the IDs at HEAD."""
-    ids, head_acc = head_ids(root)
-    expected, reused = {}, []
-    for kind, _, field in ID_FIELDS:
-        given = max([head_acc[field]] + [number(an_id) for an_id in ids[kind]])
-        value = given
-        for an_id, path, line in present[kind]:
-            if an_id in ids[kind]:
-                continue
-            if number(an_id) <= given:
-                reused.append((an_id, path, line))
-            else:
-                value = max(value, number(an_id))
-        expected[field] = value
-    return expected, reused
-
-
-def worktree_errors(where, acc, acc_bytes, present):
-    """ACU-61: the value that each ID field must have on disk, and the errors that compare the working tree with
-    HEAD."""
-    errors = []
-    expected, reused = expected_fields(where["root"], present)
-    for an_id, path, line in sorted(reused, key=lambda x: (x[0][:2], number(x[0]))):
-        errors.append({"path": path, "line": line, "message": f"{an_id} was already given"})
-    for _, _, field in ID_FIELDS:
-        if acc[field] != expected[field]:
-            errors.append({"path": "acceptance.json", "line": _field_line(acc_bytes, field),
-                           "message": f"{field} of acceptance.json is {acc[field]}, not {expected[field]}"})
-    return expected, errors
-
-
-def public(value):
-    """The inventory without the keys of this script."""
-    if isinstance(value, dict):
-        return {k: public(v) for k, v in value.items() if not k.startswith("_")}
-    if isinstance(value, list):
-        return [public(v) for v in value]
-    return value
-
-
-def plural(count, noun):
-    return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
-
+# ---------------------------------------------------------------- the summary (ACU-64)
 
 def summary(inv):
     """ACU-64: the line that sums up the inventory."""
@@ -648,14 +158,126 @@ def start(cwd, args):
         raise Stop(f"uncommitted change in {checks.text_of(changed[0])}")
     if untracked:
         raise Stop(f"untracked file {checks.text_of(untracked[0])}")
-    if acceptance_ok(show(root, "HEAD", "acceptance.json") or b"") is None:
+    acceptance_at_head = acceptance_ok(show(root, "HEAD", "acceptance.json") or b"")
+    if acceptance_at_head is None:
         raise Stop("acceptance.json does not meet ACU-6")
     inv = inventory(where, where["norms_commit"])
     return {"acceptance_repository": where["acceptance_repository"], "norms_repository": where["norms_repository"],
             "specs_repository": where["specs_repository"],
             "acceptance_default_branch": where["acceptance_default_branch"],
             "norms_default_branch": where["norms_default_branch"], "norms_commit": where["norms_commit"],
-            "acceptance_commit": inv["acceptance_commit"], "summary": summary(inv)}
+            "acceptance_commit": inv["acceptance_commit"], "summary": summary(inv),
+            "empty_fields_of_acceptance_json": [field for field in FILLABLE_FIELDS
+                                                if is_empty(acceptance_at_head[field])],
+            "code_repositories": code_repositories(where)}
+
+
+# ---------------------------------------------------------------- fill acceptance.json (ACU-43, ACU-77)
+
+def is_empty(value):
+    """ACU-6: test_command is empty as the empty string, product as the empty object."""
+    return value == "" or value == {}
+
+
+def code_repositories(where):
+    """<owner>/<name> of each entry of layer 4 of project.json, in its order."""
+    return checks.code_repositories(where["repositories"])
+
+
+def fill_problems(where, acceptance_at_head, values):
+    """ACU-77: the message of each value that ACU-77 refuses, in the order of the fields and of the entries; the checks
+    of the values are those of the module (scripts/acceptance_repository_checks.py), which write-acceptance-tests
+    makes on the values at HEAD (WAT-2)."""
+    problems = [f"{field} of acceptance.json is not empty; define fills only an empty field (ACU-43)"
+                for field in FILLABLE_FIELDS if field in values and not is_empty(acceptance_at_head[field])]
+    checked = {field: values[field] for field in FILLABLE_FIELDS
+               if field in values and is_empty(acceptance_at_head[field])}
+    return problems + checks.problems_of_values(code_repositories(where), checked)
+
+
+def fill_proposal(where, acceptance_at_head, values):
+    """ACU-77: the line of the change, the lines under it (its values and those of ACU-49), and the message of each
+    field that stays empty."""
+    text_of = checks.text_of
+    filled = [field for field in FILLABLE_FIELDS if field in values]
+    lines = []
+    if "test_command" in values:
+        lines.append(f"test_command: {text_of(values['test_command'])}")
+    if "product" in values:
+        product = values["product"]
+        for key, entry in product.items():
+            line = f"product {text_of(key)}: build {text_of(entry['build'])}; env {text_of(entry['env'])}"
+            if "published" in entry:
+                line += f"; published {text_of(entry['published'])}"
+            lines.append(line)
+        known = code_repositories(where)
+        for repository in known:
+            if repository not in product:
+                lines.append(f"{text_of(repository)} has no entry in product: its implementing agent runs no "
+                             "acceptance test (ACU-49)")
+        for repository in known:
+            if repository in product and "published" not in product[repository]:
+                others = [r for r in known if r in product and r != repository]
+                if others:
+                    lines.append(f"{text_of(repository)} has no published: no acceptance test runs in the tasks of "
+                                 f"{', '.join(text_of(other) for other in others)} (ACU-49)")
+    left_empty = [PREFIX + f"acceptance.json keeps {field} empty; /acceptance-management:write-acceptance-tests "
+                  "stops until define fills it (WAT-2)"
+                  for field in FILLABLE_FIELDS if is_empty(acceptance_at_head[field]) and field not in values]
+    return {"change": f"fill acceptance.json: {', '.join(filled)}" if filled else None, "lines": lines,
+            "fields_left_empty": left_empty}
+
+
+def read_fill_values(path):
+    """The values that the requester stated: one JSON object of test_command and/or product."""
+    try:
+        with open(path, "rb") as f:
+            values = json.loads(f.read().decode("utf-8"))
+    except (OSError, ValueError, UnicodeDecodeError, RecursionError):
+        values = None
+    if not isinstance(values, dict) or not set(values) <= set(FILLABLE_FIELDS):
+        raise Stop(f"{checks.text_of(path)} is not one JSON object of test_command and product")
+    return values
+
+
+def fill(where, path, dry_run):
+    """ACU-77: checks the values; with dry_run, the proposal of the change; otherwise writes them into acceptance.json
+    on disk, changing only the bytes of the empty fields."""
+    root = where["root"]
+    values = read_fill_values(path)
+    acceptance_at_head = acceptance_ok(show(root, "HEAD", "acceptance.json") or b"")
+    if acceptance_at_head is None:
+        raise Stop("acceptance.json does not meet ACU-6")
+    problems = fill_problems(where, acceptance_at_head, values)
+    if problems:
+        raise Stop(("\n" + PREFIX).join(problems))
+    if dry_run:
+        return fill_proposal(where, acceptance_at_head, values)
+    disk_path = os.path.join(root, "acceptance.json")
+    with open(disk_path, "rb") as f:
+        data = f.read()
+    on_disk = acceptance_ok(data)
+    if on_disk is None:
+        raise Stop("acceptance.json does not meet ACU-6")
+    text = data.decode("utf-8")
+    filled = []
+    for field in FILLABLE_FIELDS:
+        if field not in values or on_disk[field] == values[field]:
+            continue
+        empty = '""' if field == "test_command" else r"\{\s*\}"
+        pattern = re.compile(r'("' + field + r'"\s*:\s*)' + empty)
+        if not is_empty(on_disk[field]) or len(pattern.findall(text)) != 1:
+            raise Stop(f"cannot fill {field} of acceptance.json")
+        value = json.dumps(values[field], ensure_ascii=False)
+        text = pattern.sub(lambda m: m.group(1) + value, text)
+        filled.append(field)
+    written_object = acceptance_ok(text.encode("utf-8"))
+    if written_object is None or any(written_object[f] != values.get(f, on_disk[f]) for f in FILLABLE_FIELDS):
+        raise Stop("cannot fill acceptance.json")
+    if filled:
+        with open(disk_path, "wb") as f:
+            f.write(text.encode("utf-8"))
+    return filled
 
 
 def status(root):
@@ -722,9 +344,19 @@ def check(where, norms_commit):
     for path, old_bytes, new_bytes in files:
         if path == "acceptance.json":
             a, b = acceptance_ok(old_bytes or b""), acceptance_ok(new_bytes or b"")
-            if a and b and any(a[k] != b[k] for k in ACCEPTANCE_FIELDS if not k.startswith("last_")):
+            if not (a and b):
+                continue
+            # ACU-73, ACU-77: besides the ID fields, only test_command and product, while they are empty at HEAD,
+            # with values that ACU-77 does not refuse.
+            if a["default_done_profile"] != b["default_done_profile"] or any(
+                    a[k] != b[k] and not is_empty(a[k]) for k in FILLABLE_FIELDS):
                 problems.append({"path": path, "line": None, "message":
-                                 "only last_area_id, last_unit_id and last_scenario_id may change (ACU-73)"})
+                                 "only last_area_id, last_unit_id and last_scenario_id, and test_command and product "
+                                 "while they are empty at HEAD, may change (ACU-73)"})
+            for field in FILLABLE_FIELDS:
+                if a[field] != b[field] and is_empty(a[field]):
+                    for problem in fill_problems(where, a, {field: b[field]}):
+                        problems.append({"path": path, "line": field_line(new_bytes, field), "message": problem})
     return {"written": paths, "problems": problems}
 
 
@@ -795,6 +427,9 @@ def delete_tests(root, unit_id):
 def parse_changes(changes):
     parsed = []
     for change in changes:
+        if change.strip() == " ".join(FILL_CHANGE):
+            parsed.append(FILL_CHANGE)
+            continue
         m = CHANGE.fullmatch(change.strip())
         if not m:
             raise Stop(f"not a change: {change}")
@@ -804,7 +439,9 @@ def parse_changes(changes):
 
 def message(changes):
     """ACU-71: the subject and the body of the commit message."""
-    if len(changes) == 1:
+    if changes == [FILL_CHANGE]:
+        subject = "docs: fill acceptance.json"
+    elif len(changes) == 1:
         verb, an_id = changes[0]
         subject = f"docs: {verb} acceptance {'area' if an_id.startswith('AA-') else 'unit'}"
     else:
@@ -820,15 +457,6 @@ def deleted_tests(root, changes):
         if verb == "delete" and an_id.startswith("AU-"):
             found += [p for p in tests_of(root, an_id) if not os.path.lexists(os.path.join(root, *p.split("/")))]
     return found
-
-
-def unified(path, old, new):
-    a = (old or b"").decode("utf-8", "replace").splitlines(keepends=True)
-    b = (new or b"").decode("utf-8", "replace").splitlines(keepends=True)
-    head = "deleted " if new is None else ("new " if old is None else "")
-    lines = list(difflib.unified_diff(a, b, "/dev/null" if old is None else f"a/{path}",
-                                      "/dev/null" if new is None else f"b/{path}"))
-    return f"{head}{path}\n" + "".join(line if line.endswith("\n") else line + "\n" for line in lines)
 
 
 def _facts(data):
@@ -854,7 +482,8 @@ def strays(root, changes, files):
     an acceptance unit that the change deletes, moves to another acceptance area, or makes cite no longer a norm of
     a tag of that scenario (ACU-10, ACU-70)."""
     disk, head = Layer3(root, None), Layer3(root, "HEAD")
-    named = {f"{'areas' if an_id.startswith('AA-') else 'units'}/{an_id}.md": (verb, an_id) for verb, an_id in changes}
+    named = {f"{'areas' if an_id.startswith('AA-') else 'units'}/{an_id}.md": (verb, an_id) for verb, an_id in changes
+             if (verb, an_id) != FILL_CHANGE}
     now_sc, now_norms = set(), set()
     for path in named:
         sc, cited, _, _ = _facts(disk.read(path))
@@ -903,19 +532,11 @@ def commit(where, norms_commit, change_texts, expected_head):
     changes = parse_changes(change_texts)
     if not changes:
         raise Stop("no change given")
-    # ACU-75, in its order: the fetch, then the default branch, so that an unreachable origin gives the message of the
-    # fetch; every row exits 3, so that the skill puts back what it wrote.
-    if git(root, "fetch", "-q", "origin").returncode != 0:
-        raise Stop(f"cannot fetch {where['acceptance_repository']}", code=3)
-    branch = default_branch(root)
-    if not branch:
-        raise Stop(f"cannot find the default branch of {where['acceptance_repository']}", code=3)
-    if out(root, "rev-list", "--count", f"HEAD..refs/remotes/origin/{branch}") != "0":
-        raise Stop(f"origin/{branch} moved; run the skill again", code=3)
-    if out(root, "rev-list", "--count", f"refs/remotes/origin/{branch}..HEAD") != "0":
-        raise Stop(f"the acceptance repository has commits that are not on origin/{branch}", code=3)
-    if out(root, "rev-parse", "HEAD") != expected_head:
-        raise Stop(f"origin/{branch} moved; run the skill again", code=3)
+    # ACU-75, in its order (scripts/acceptance_repository_checks.py); every row exits 3, so that the skill puts back
+    # what it wrote.
+    branch, refusal = checks.checks_before_commit(root, where["acceptance_repository"], expected_head)
+    if refusal is not None:
+        raise Stop(refusal, code=3)
     result = check(where, norms_commit)
     if result["problems"]:
         raise Stop("the checks of ACU-69 fail:\n" + "\n".join(
@@ -923,7 +544,18 @@ def commit(where, norms_commit, change_texts, expected_head):
     files = written(root)
     present = {p for p, _, new in files if new is not None}
     gone = {p for p, _, new in files if new is None}
+    acceptance_at_head = acceptance_ok(show(root, "HEAD", "acceptance.json") or b"")
+    acceptance_on_disk = acceptance_ok(Layer3(root, None).read("acceptance.json") or b"")
+    fields_filled = bool(acceptance_at_head and acceptance_on_disk and any(
+        acceptance_at_head[f] != acceptance_on_disk[f] for f in FILLABLE_FIELDS))
+    if fields_filled and FILL_CHANGE not in changes:
+        raise Stop("acceptance.json differs from HEAD in test_command or product, and no change of the commit names "
+                   "it (ACU-71)")
     for verb, an_id in changes:
+        if (verb, an_id) == FILL_CHANGE:
+            if not fields_filled:
+                raise Stop("fill acceptance.json: acceptance.json is not filled as it says")
+            continue
         path = f"{'areas' if an_id.startswith('AA-') else 'units'}/{an_id}.md"
         at_head = show(root, "HEAD", path) is not None
         ok = {"add": path in present and not at_head, "change": path in present and at_head,
@@ -939,32 +571,13 @@ def commit(where, norms_commit, change_texts, expected_head):
     tests = deleted_tests(root, changes)
     paths = sorted({p for p, _, _ in files} | set(tests))
     subject, body = message(changes)
-    r = shlex.quote(root)
-    ps = " ".join(shlex.quote(p) for p in paths)
-    g = f"git --literal-pathspecs -C {r}"
-    cannot = shlex.quote(PREFIX + f"cannot fetch {where['acceptance_repository']}")
-    moved = shlex.quote(PREFIX + f"origin/{branch} moved; run the skill again")
-    behind = shlex.quote(f"HEAD..refs/remotes/origin/{branch}")
-    ahead = shlex.quote(f"refs/remotes/origin/{branch}..HEAD")
-    not_on_origin = shlex.quote(PREFIX + f"the acceptance repository has commits that are not on origin/{branch}")
-    rejected_before = shlex.quote(PREFIX + "push rejected; commit ")
-    rejected_after = shlex.quote(f" is not on origin/{branch}; run git pull --rebase, then git push, and run the "
-                                 "skill again")
-    # ACU-71: the command fetches again first, so that a move of the default branch, or a commit that another session
-    # adds to HEAD, while the requester reads the diff stops it, with status 3, before it stages anything. A rejected
-    # push exits 4 with its message; a pushed commit prints its 40 hex digits, the expected head of the next command.
-    command = (f"{{ git -C {r} fetch -q origin 2>/dev/null || {{ echo {cannot}; (exit 3); }}; }}"
-               f" && {{ test \"$(git -C {r} rev-list --count {behind})\" = 0 || {{ echo {moved}; (exit 3); }}; }}"
-               f" && {{ test \"$(git -C {r} rev-list --count {ahead})\" = 0"
-               f" || {{ echo {not_on_origin}; (exit 3); }}; }}"
-               f" && {{ test \"$(git -C {r} rev-parse HEAD)\" = {shlex.quote(expected_head)}"
-               f" || {{ echo {moved}; (exit 3); }}; }}"
-               f" && {g} add -f -- {ps} && {g} commit -q -m {shlex.quote(subject)} -m {shlex.quote(body)} -- {ps}"
-               f" && {{ git -C {r} push -q origin {shlex.quote('HEAD:' + branch)} 2>/dev/null || {{ echo {rejected_before}"
-               f"\"$(git -C {r} rev-parse HEAD | cut -c1-7)\"{rejected_after}; (exit 4); }}; }}"
-               f" && git -C {r} rev-parse HEAD")
-    diffs = [unified(p, old, new) for p, old, new in files]
-    diffs += [unified(p, show(root, "HEAD", p), None) for p in tests]
+    # ACU-71, ACU-75: the command makes the checks again before it stages anything, stages and commits each path by
+    # its name, and prints the 40 hex digits of the commit pushed, the expected head of the next command.
+    command = checks.commit_command(PREFIX, root, where["acceptance_repository"], branch, expected_head, paths,
+                                    subject, body)
+    # ACU-75: the diff of each file, computed by the script of the module that every use case shows.
+    diffs = [checks.diff_of_a_file(p, old, new) for p, old, new in files]
+    diffs += [checks.diff_of_a_file(p, show(root, "HEAD", p), None) for p in tests]
     display = "\n".join(["Diff:", ""] + diffs + ["Commit:", f"    {subject}", ""] +
                         [f"    {line}" for line in body.split("\n")])
     return {"display": display, "paths": paths, "message": f"{subject}\n\n{body}", "command": command,
@@ -1012,7 +625,9 @@ def next_line(root, since):
 
     The part of the implementation planner applies when the commits added or deleted an acceptance unit, or changed
     its unit hash; a change of the title, of "Area:" or of "Profile:" alone, which no hash holds (ACU-52), names
-    nobody."""
+    nobody. The part of the test agent applies only when neither test_command nor product is empty at HEAD, since
+    write-acceptance-tests refuses to start otherwise (WAT-2); it names every acceptance area and acceptance unit of
+    HEAD when the commits filled test_command or product (ACU-77)."""
     since_commit = out(root, "rev-parse", "-q", "--verify", f"{since}^{{commit}}")
     if since_commit is None or git(root, "merge-base", "--is-ancestor", since_commit, "HEAD").returncode != 0:
         raise Stop(f"--since {since} is not a commit of HEAD")
@@ -1041,12 +656,22 @@ def next_line(root, since):
             ids.append((match_of_acceptance_unit_file or match_of_acceptance_area_file).group(1))
             if match_of_acceptance_unit_file:
                 acceptance_units_planned = True
+    acceptance_before = acceptance_ok(old.read("acceptance.json") or b"")
+    acceptance_after = acceptance_ok(new.read("acceptance.json") or b"")
+    if (acceptance_before and acceptance_after
+            and any(is_empty(acceptance_before[f]) for f in FILLABLE_FIELDS)
+            and not any(is_empty(acceptance_after[f]) for f in FILLABLE_FIELDS)):
+        ids = [m.group(1) for m in (ACCEPTANCE_UNIT_FILE.fullmatch(p) or ACCEPTANCE_AREA_FILE.fullmatch(p)
+                                    for p in new.paths()) if m]
+    if acceptance_after is None or any(is_empty(acceptance_after[f]) for f in FILLABLE_FIELDS):
+        ids = []
     ids.sort(key=lambda x: (x[:2] != "AA", number(x)))
     parts = []
     if acceptance_units_planned:
         parts.append("the implementation planner updates plan.json with /acceptance-management:plan")
     if ids:
-        parts.append(f"the test agent updates the acceptance tests of {', '.join(ids)}")
+        parts.append(f"the test agent updates the acceptance tests of {', '.join(ids)} "
+                     "with /acceptance-management:write-acceptance-tests")
     return f"Next: {'; '.join(parts)}." if parts else None
 
 
@@ -1081,43 +706,49 @@ def main(argv):
         for path in args:
             with open(path, "rb") as f:
                 data = f.read()
-            print(json.dumps({"path": path, "unit_hash": hashes.unit_hash(data), "area_hash": hashes.area_hash(data),
-                              "scenarios": [{"scenario_id": s.scenario_id, "name": s.name,
-                                             "scenario_hash": s.scenario_hash}
-                                            for s in hashes.scenarios(data)]}, ensure_ascii=False))
+            print(checks.json_text({"path": path, "unit_hash": hashes.unit_hash(data),
+                                    "area_hash": hashes.area_hash(data),
+                                    "scenarios": [{"scenario_id": s.scenario_id, "name": s.name,
+                                                   "scenario_hash": s.scenario_hash}
+                                                  for s in hashes.scenarios(data)]}))
         return 0
     if not args:
         raise Stop(f"{command}: REPO is required")
     repo, rest = args[0], args[1:]
     if command == "start":
         extra = rest[1:] if rest[:1] == ["--"] else rest
-        print(json.dumps(start(repo, extra), ensure_ascii=False))
+        print(checks.json_text(start(repo, extra)))
         return 0
     where = locate(repo)
     root = where["root"]
     if command == "inventory":
         inv = inventory(where, norms_commit_of(where, rest), None if "--worktree" in rest else "HEAD")
-        print(json.dumps(public(inv), ensure_ascii=False))
+        print(checks.json_text(public(inv)))
         return 0
     if command == "check":
         result = check(where, norms_commit_of(where, rest))
-        print(json.dumps(result, ensure_ascii=False))
+        print(checks.json_text(result))
         return 1 if result["problems"] else 0
     if command == "ids":
-        print(json.dumps(set_ids(root)))
+        print(checks.json_text(set_ids(root)))
+        return 0
+    if command == "fill":
+        if not rest or rest[0].startswith("--"):
+            raise Stop("fill takes the path of a file")
+        print(checks.json_text(fill(where, rest[0], "--dry-run" in rest[1:])))
         return 0
     if command == "delete-tests":
         if len(rest) != 1:
             raise Stop("delete-tests takes one unit ID")
-        print(json.dumps(delete_tests(root, rest[0])))
+        print(checks.json_text(delete_tests(root, rest[0])))
         return 0
     if command == "commit":
         result = commit(where, norms_commit_of(where, rest), option(rest, "--change", many=True),
                         option(rest, "--expected-head"))
-        print(json.dumps(result, ensure_ascii=False))
+        print(checks.json_text(result))
         return 0
     if command == "rollback":
-        print(json.dumps(rollback(root, option(rest, "--change", many=True))))
+        print(checks.json_text(rollback(root, option(rest, "--change", many=True))))
         return 0
     if command == "next":
         line = next_line(root, option(rest, "--since"))
@@ -1133,3 +764,7 @@ if __name__ == "__main__":
     except Stop as stop:
         print(PREFIX + str(stop))
         sys.exit(stop.code)
+    except checks.Refusal as refusal:
+        # The norms of the norms commit cannot be read (scripts/acceptance_repository_files.py, read_norms).
+        print(PREFIX + refusal.message)
+        sys.exit(1)

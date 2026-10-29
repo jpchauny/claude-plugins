@@ -2,8 +2,12 @@
 
 Spec: specs/plan.md of this folder, and specs/module.md of the module. The
 checks of ACU-74 are those of scripts/acceptance_repository_checks.py of the
-module, and the fingerprints (ACU-51, ACU-52, ACU-54) those of
-scripts/acceptance_hashes.py, which this script imports.
+module, with the checks before a commit and the commit command of ACU-75; the
+fingerprints (ACU-51, ACU-52, ACU-54) those of scripts/acceptance_hashes.py;
+and the forms of the paths of areas/ and units/ those of
+scripts/acceptance_repository_files.py, the reading of the files of the
+acceptance repository that define and write-acceptance-tests share. This
+script imports all three.
 
 Usage (REPO is the working directory of the skill; DRAFT is a file in the
 form of plan.json, outside every repository of the project; every command
@@ -68,12 +72,10 @@ specs: "acceptance_unit", "increment_name", "since_the_plan_commit"...
 
 from __future__ import annotations
 
-import difflib
 import json
 import math
 import os
 import re
-import shlex
 import stat
 import sys
 
@@ -85,11 +87,10 @@ sys.dont_write_bytecode = True
 import acceptance_hashes as hashes  # noqa: E402
 import acceptance_repository_checks as checks  # noqa: E402
 from acceptance_repository_checks import git, ls_tree, out, show  # noqa: E402
+from acceptance_repository_files import files_of_layer_3, number, plural  # noqa: E402
 
 PREFIX = "acceptance-management:plan: "
 UNIT_ID = re.compile(r"AU-[1-9][0-9]*")
-ACCEPTANCE_UNIT_FILE = re.compile(r"units/(AU-[1-9][0-9]*)\.md")
-ACCEPTANCE_AREA_FILE = re.compile(r"areas/(AA-[1-9][0-9]*)\.md")
 INCREMENT_FIELDS = ("name", "acceptance_units")  # ACU-39
 PLANNED_ACCEPTANCE_UNIT_FIELDS = ("acceptance_unit", "depends_on", "components")  # ACU-39
 EMPTY_PLAN = {"increments": []}
@@ -113,14 +114,6 @@ class Errors(Stop):
 
 class Said(Stop):
     """A message that already holds PREFIX, printed as it is."""
-
-
-def number(an_id):
-    return int(an_id.split("-")[1])
-
-
-def plural(count, noun):
-    return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
 
 
 # ---------------------------------------------------------------- the checks of plan (PLN-2)
@@ -440,14 +433,7 @@ def inventory(where, norms_commit):
     # The plan commit (Terms): none when HEAD holds no plan.json, even when a commit deleted it.
     plan_commit = (out(root, "log", "-1", "--format=%H", "HEAD", "--", "plan.json") or None
                    if plan_bytes is not None else None)
-    acceptance_unit_files, acceptance_area_files = {}, {}
-    for path in ls_tree(root, "HEAD", "units", "areas"):
-        match_of_acceptance_unit_file = ACCEPTANCE_UNIT_FILE.fullmatch(path)
-        match_of_acceptance_area_file = ACCEPTANCE_AREA_FILE.fullmatch(path)
-        if match_of_acceptance_unit_file:
-            acceptance_unit_files[match_of_acceptance_unit_file.group(1)] = path
-        elif match_of_acceptance_area_file:
-            acceptance_area_files[match_of_acceptance_area_file.group(1)] = path
+    acceptance_unit_files, acceptance_area_files, _ = files_of_layer_3(ls_tree(root, "HEAD", "units", "areas"))
     acceptance_units = []
     for unit_id, path in sorted(acceptance_unit_files.items(), key=lambda kv: number(kv[0])):
         at_plan_commit = show(root, plan_commit, path) if plan_commit else None
@@ -914,14 +900,6 @@ def write(where, norms_commit, draft_path):
     return "plan.json"
 
 
-def unified(old, new):
-    a = (old or b"").decode("utf-8", "replace").splitlines(keepends=True)
-    b = (new or b"").decode("utf-8", "replace").splitlines(keepends=True)
-    head = "new " if old is None else ""
-    lines = list(difflib.unified_diff(a, b, "/dev/null" if old is None else "a/plan.json", "b/plan.json"))
-    return f"{head}plan.json\n" + "".join(line if line.endswith("\n") else line + "\n" for line in lines)
-
-
 def next_line(inventory_of_the_plan, final, found):
     """PLN-13: the line "Next: ..." after the commit is pushed, or None."""
     behind = {u["unit_id"] for u in inventory_of_the_plan["acceptance_units"] if u["behind_layer_2"]}
@@ -958,18 +936,10 @@ def commit(where, norms_commit, acceptance_commit, rename_pairs):
     if out(norms_path, "rev-parse", "-q", "--verify", f"refs/remotes/origin/{norms_branch}^{{commit}}") != norms_commit:
         raise Stop(f"the norms commit {norms_commit} is not the head of the default branch of origin in {norms_name}; "
                    "run the skill again", code=3)
-    # ACU-75, in its order.
-    if git(root, "fetch", "-q", "origin").returncode != 0:
-        raise Stop(f"cannot fetch {name}", code=3)
-    branch = checks.default_branch(root)
-    if not branch:
-        raise Stop(f"cannot find the default branch of {name}", code=3)
-    if out(root, "rev-list", "--count", f"HEAD..refs/remotes/origin/{branch}") != "0":
-        raise Stop(f"origin/{branch} moved; run the skill again", code=3)
-    if out(root, "rev-list", "--count", f"refs/remotes/origin/{branch}..HEAD") != "0":
-        raise Stop(f"the acceptance repository has commits that are not on origin/{branch}", code=3)
-    if out(root, "rev-parse", "HEAD") != acceptance_commit:
-        raise Stop(f"origin/{branch} moved; run the skill again", code=3)
+    # ACU-75, in its order (scripts/acceptance_repository_checks.py).
+    branch, refusal = checks.checks_before_commit(root, name, acceptance_commit)
+    if refusal is not None:
+        raise Stop(refusal, code=3)
     inventory_of_the_plan = inventory(where, norms_commit)
     try:
         written = _read_plan_json(root)
@@ -988,29 +958,13 @@ def commit(where, norms_commit, acceptance_commit, rename_pairs):
     subject = ("docs: change the plan of implementation" if at_head is not None
                else "docs: add the plan of implementation")
     body = "\n".join(line for _, line, _ in found)
-    r = shlex.quote(root)
-    g = f"git --literal-pathspecs -C {r}"
-    cannot = shlex.quote(PREFIX + f"cannot fetch {name}")
-    moved = shlex.quote(PREFIX + f"origin/{branch} moved; run the skill again")
-    behind = shlex.quote(f"HEAD..refs/remotes/origin/{branch}")
-    ahead = shlex.quote(f"refs/remotes/origin/{branch}..HEAD")
-    not_on_origin = shlex.quote(PREFIX + f"the acceptance repository has commits that are not on origin/{branch}")
-    rejected_before = shlex.quote(PREFIX + "push rejected; commit ")
-    rejected_after = shlex.quote(f" is not on origin/{branch}; run git pull --rebase, then git push, and run the "
-                                 "skill again")
-    # PLN-12: the command fetches again first, so that a move of the default branch, or a commit that another
-    # session adds to HEAD, while the requester reads the diff stops it, with status 3, before it stages anything.
-    command = (f"{{ git -C {r} fetch -q origin 2>/dev/null || {{ echo {cannot}; (exit 3); }}; }}"
-               f" && {{ test \"$(git -C {r} rev-list --count {behind})\" = 0 || {{ echo {moved}; (exit 3); }}; }}"
-               f" && {{ test \"$(git -C {r} rev-list --count {ahead})\" = 0"
-               f" || {{ echo {not_on_origin}; (exit 3); }}; }}"
-               f" && {{ test \"$(git -C {r} rev-parse HEAD)\" = {shlex.quote(acceptance_commit)}"
-               f" || {{ echo {moved}; (exit 3); }}; }}"
-               f" && {g} add -f -- plan.json && {g} commit -q -m {shlex.quote(subject)} -m {shlex.quote(body)}"
-               f" -- plan.json"
-               f" && {{ git -C {r} push -q origin {shlex.quote('HEAD:' + branch)} 2>/dev/null || {{ echo {rejected_before}"
-               f"\"$(git -C {r} rev-parse HEAD | cut -c1-7)\"{rejected_after}; (exit 4); }}; }}")
-    display = "\n".join(["Diff:", "", unified(at_head, written), "Commit:", f"    {subject}", ""]
+    # PLN-12, ACU-75: the command makes the checks again before it stages anything, and stages and commits plan.json
+    # only, by its path; it prints nothing after the commit pushed (PLN-12 names no expected head).
+    command = checks.commit_command(PREFIX, root, name, branch, acceptance_commit, ["plan.json"], subject, body,
+                                    prints_the_commit=False)
+    # ACU-75: the diff of plan.json, computed by the script of the module that every use case shows.
+    diff = checks.diff_of_a_file("plan.json", at_head, written)
+    display = "\n".join(["Diff:", "", diff, "Commit:", f"    {subject}", ""]
                         + [f"    {line}" for line in body.split("\n")])
     return {"display": display, "message": f"{subject}\n\n{body}", "command": command,
             "acceptance_default_branch": branch,
