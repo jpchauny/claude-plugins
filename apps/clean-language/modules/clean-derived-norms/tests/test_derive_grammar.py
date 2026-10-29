@@ -11,6 +11,7 @@ import importlib.util
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,12 @@ SCRIPT = MODULE / "use-cases" / "derive-grammar" / "derive_grammar.py"
 _spec = importlib.util.spec_from_file_location("derive_grammar", SCRIPT)
 dg = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(dg)
+# The module script, which the script imports (CDN-7): the same module as the script's.
+sys.path.insert(0, str(MODULE / "scripts"))
+import derived_norms  # noqa: E402
+
+# The code of the script: the script and the module script (DGR, Terms: Code of the script).
+CODE_OF_THE_SCRIPT = derived_norms.read_code_of_the_script(SCRIPT, derived_norms.MODULE_SCRIPT)
 
 SPECS = "f" * 40
 MODEL = "claude-opus-5-5"
@@ -88,7 +95,7 @@ def write_tree(root, nodes, meta=None):
     rows += [{"type": "file", "path": "specs/a.md", "prefix": "TST", "sha256": "0" * 64, "insertions": []}]
     rows += nodes
     (root / "data").mkdir(parents=True, exist_ok=True)
-    (root / dg.TREE_REL).write_text("".join(json.dumps(r) + "\n" for r in rows))
+    (root / derived_norms.TREE_REL).write_text("".join(json.dumps(r) + "\n" for r in rows))
 
 
 def cite(nodes, norm_id, reason="a reason"):
@@ -153,7 +160,7 @@ def good_status(nodes):
 def write_outputs(root, grammar, lines, meta_first=True):
     folder = root / "specs-derived" / "grammar"
     folder.mkdir(parents=True, exist_ok=True)
-    (root / dg.GRAMMAR_REL).write_text(grammar)
+    (root / derived_norms.GRAMMAR_REL).write_text(grammar)
     text = ""
     if meta_first:
         text = json.dumps({"type": "meta", "specs_commit": "", "generator": {}, "model": "",
@@ -207,7 +214,7 @@ def repo(tmp_path):
 
 
 def run_check(root):
-    return dg.check(root, SCRIPT)
+    return dg.check(root, CODE_OF_THE_SCRIPT)
 
 
 def names(problems):
@@ -274,11 +281,11 @@ def add_fragment(root, nodes, own, state="derived", reason=None, issue=None):
 ])
 def test_dgr2_which_code_blocks_are_fragments(opening, status, is_fragment):
     own = opening + "\nx\n" + opening.strip()[:3]
-    assert dg.is_fragment(node("X-1", "code_block", own, status=status)) is is_fragment
+    assert derived_norms.is_fragment(node("X-1", "code_block", own, status=status)) is is_fragment
 
 
 def test_dgr2_a_paragraph_is_not_a_fragment():
-    assert not dg.is_fragment(node("X-1", "paragraph", "```clean-language expect=valid"))
+    assert not derived_norms.is_fragment(node("X-1", "paragraph", "```clean-language expect=valid"))
 
 
 def test_dgr2_a_statement_that_cites_no_fragment_and_serves_none_fails(repo):
@@ -297,7 +304,7 @@ def test_dgr2_a_statement_that_cites_no_fragment_and_serves_none_fails(repo):
 
 def test_dgr2_an_old_clean_block_is_never_a_case(repo):
     root, _ = repo
-    tree = dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     assert [n["id"] for n in tree.fragments] == FRAGMENTS
 
 
@@ -323,7 +330,7 @@ def test_dgr4_seal_writes_the_meta_line_first(repo):
     assert meta["type"] == "meta" and meta["specs_commit"] == SPECS
     assert meta["generator"] == {"plugin": "clean-derived-norms", "version": VERSION, "marketplace_commit": "none"}
     assert meta["model"] == MODEL
-    assert meta["grammar_sha256"] == hashlib.sha256((root / dg.GRAMMAR_REL).read_bytes()).hexdigest()
+    assert meta["grammar_sha256"] == hashlib.sha256((root / derived_norms.GRAMMAR_REL).read_bytes()).hexdigest()
     assert meta["status_sha256"] == hashlib.sha256("\n".join(lines[1:]).encode()).hexdigest()
     assert lines[0] == json.dumps(meta, separators=(",", ":"))
 
@@ -352,7 +359,7 @@ def test_dgr4_the_marketplace_commit_of_the_installed_plugins(tmp_path, plugin):
         "other@m": [{"installPath": str(tmp_path / "elsewhere"), "gitCommitSha": "b" * 40}],
         "clean-derived-norms@m": [{"scope": "project", "installPath": str(plugin), "gitCommitSha": SHA}],
     })
-    assert dg.marketplace_commit() == SHA
+    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == SHA
 
 
 def test_dgr4_the_marketplace_commit_of_the_checkout_that_holds_the_plugin(tmp_path, monkeypatch):
@@ -363,9 +370,9 @@ def test_dgr4_the_marketplace_commit_of_the_checkout_that_holds_the_plugin(tmp_p
     (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"version": VERSION}))
     monkeypatch.setattr(dg, "PLUGIN_ROOT", root)
     installed(tmp_path / "installed_plugins.json", {"p@m": [{"installPath": str(tmp_path / "elsewhere"), "gitCommitSha": "b" * 40}]})
-    assert dg.marketplace_commit() == head
+    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == head
     (root / "dirty").write_text("x\n")
-    assert dg.marketplace_commit() == head
+    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == head
 
 
 @pytest.mark.parametrize("record", [None, "{not json", "[]", '{"plugins": {"p@m": [{"installPath": 5}]}}'])
@@ -373,14 +380,14 @@ def test_dgr4_an_unknown_marketplace_commit_is_none(repo, tmp_path, monkeypatch,
     root, _ = repo
     if record is not None:
         (tmp_path / "installed_plugins.json").write_text(record)
-    assert dg.marketplace_commit() == "none"
+    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == "none"
     assert main_in(root, monkeypatch, "seal", "--model", MODEL) == 0
     assert meta_of(root)["generator"]["marketplace_commit"] == "none"
 
 
 def test_dgr4_an_entry_with_a_sha_that_is_not_40_hex_is_skipped(tmp_path, plugin):
     installed(tmp_path / "installed_plugins.json", {"p@m": [{"installPath": str(plugin), "gitCommitSha": "abc+dirty"}]})
-    assert dg.marketplace_commit() == "none"
+    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == "none"
 
 
 def test_dgr4_seal_writes_the_model_it_is_given(repo, monkeypatch, capsys):
@@ -412,15 +419,15 @@ def test_dgr4_seal_with_a_missing_or_malformed_input_exits_2_and_writes_nothing(
     status = root / dg.STATUS_REL
     pj = plugin / ".claude-plugin" / "plugin.json"
     if breakage == "no-tree":
-        (root / dg.TREE_REL).unlink()
+        (root / derived_norms.TREE_REL).unlink()
     elif breakage == "no-grammar":
-        (root / dg.GRAMMAR_REL).unlink()
+        (root / derived_norms.GRAMMAR_REL).unlink()
     elif breakage == "status-not-json":
         status.write_text(status.read_text() + "{bad\n")
     elif breakage == "status-not-object":
         status.write_text(status.read_text() + "42\n")
     elif breakage == "tree-not-json":
-        (root / dg.TREE_REL).write_text((root / dg.TREE_REL).read_text() + "{bad\n")
+        (root / derived_norms.TREE_REL).write_text((root / derived_norms.TREE_REL).read_text() + "{bad\n")
     elif breakage == "no-plugin-json":
         pj.unlink()
     elif breakage == "plugin-json-not-json":
@@ -595,14 +602,14 @@ def test_dgr5_the_states_of_the_spec():
 
 
 def test_dgr6_case_text_of_a_top_level_fragment():
-    tree = dg.Tree(base_nodes())
-    assert dg.case_text(tree, tree.nodes["TST-1"]) == "start:\n\tprint(1)\n"
+    tree = derived_norms.Tree(base_nodes())
+    assert derived_norms.case_text(tree, tree.nodes["TST-1"]) == "start:\n\tprint(1)\n"
 
 
 def test_dgr6_the_indentation_of_the_fence_is_removed():
-    tree = dg.Tree(base_nodes())
-    assert dg.container_column(tree, tree.nodes["TST-4"]) == 2
-    assert dg.case_text(tree, tree.nodes["TST-4"]) == "start:\n\tprint(4)\n"
+    tree = derived_norms.Tree(base_nodes())
+    assert derived_norms.container_column(tree, tree.nodes["TST-4"]) == 2
+    assert derived_norms.case_text(tree, tree.nodes["TST-4"]) == "start:\n\tprint(4)\n"
 
 
 def test_dgr6_a_fence_indented_in_its_own_line_and_its_container_as_mod73():
@@ -611,10 +618,10 @@ def test_dgr6_a_fence_indented_in_its_own_line_and_its_container_as_mod73():
     nodes = [node("SEC-1", "section", "", parent=None),
              node("ITM-1", "item", prefix, start=0, end=len(prefix) + len(own)),
              node("MOD-73", "code_block", own, parent="ITM-1", start=len(prefix))]
-    tree = dg.Tree(nodes)
-    assert dg.case_text(tree, tree.nodes["MOD-73"]) == "libraries: auth\n"
+    tree = derived_norms.Tree(nodes)
+    assert derived_norms.case_text(tree, tree.nodes["MOD-73"]) == "libraries: auth\n"
     assert dg.case_kinds(tree.nodes["MOD-73"]) == ["accept"]
-    assert dg.fragment_lines(tree, tree.nodes["MOD-73"]) == ["```clean-language expect=valid", "libraries: auth", "```"]
+    assert derived_norms.fragment_lines(tree, tree.nodes["MOD-73"]) == ["```clean-language expect=valid", "libraries: auth", "```"]
 
 
 @pytest.mark.parametrize("lines,expected", [
@@ -625,14 +632,14 @@ def test_dgr6_a_fence_indented_in_its_own_line_and_its_container_as_mod73():
     (["start:", "\t    print(1)"], "start:\n\t    print(1)\n"),
 ])
 def test_dgr6_tabs_spaces_and_line_ends(lines, expected):
-    tree = dg.Tree([node("X-1", "code_block", fence(VALID, *lines), parent=None)])
-    assert dg.case_text(tree, tree.nodes["X-1"]) == expected
+    tree = derived_norms.Tree([node("X-1", "code_block", fence(VALID, *lines), parent=None)])
+    assert derived_norms.case_text(tree, tree.nodes["X-1"]) == expected
 
 
 def test_dgr6_the_case_text_of_lex182():
     own = fence(syntax(2, "SYN011"), "start:", '\tstring notice = "You have {messages.length()} messages"')
-    tree = dg.Tree([node("LEX-182", "code_block", own, parent=None)])
-    assert dg.case_text(tree, tree.nodes["LEX-182"]) == 'start:\n\tstring notice = "You have {messages.length()} messages"\n'
+    tree = derived_norms.Tree([node("LEX-182", "code_block", own, parent=None)])
+    assert derived_norms.case_text(tree, tree.nodes["LEX-182"]) == 'start:\n\tstring notice = "You have {messages.length()} messages"\n'
     assert dg.case_kinds(tree.nodes["LEX-182"]) == ["reject"]
     assert dg.expected_line(tree.nodes["LEX-182"]) == 2
 
@@ -666,12 +673,12 @@ def test_dgr6_no_comment_decides_the_case():
 
 
 def test_dgr6_the_script_cites_no_norm_for_the_case_and_reads_no_marker():
-    source = SCRIPT.read_text()
-    found, bad = dg.script_citations(source)
-    assert bad == []
-    assert "ERR-32" not in [i for _, i, _ in found]
-    assert "fails:" not in source
-    assert 'replace("    ", "\\t")' not in source
+    for _, source in CODE_OF_THE_SCRIPT:
+        found, bad = derived_norms.script_citations(source)
+        assert bad == []
+        assert "ERR-32" not in [i for _, i, _ in found]
+        assert "fails:" not in source
+        assert 'replace("    ", "\\t")' not in source
 
 
 def test_dgr6_one_case_per_fragment_and_no_cut():
@@ -726,7 +733,7 @@ def test_dgr8_one_citation_line_per_norm(repo):
 
 
 def test_dgr8_statements_and_keys():
-    statements, problems = dg.parse_grammar(
+    statements, problems = derived_norms.parse_grammar(
         "// ABC-1@00000000: x\n?expr: a b -> alias\n    | c\n// ABC-1@00000000: x\n%ignore WS\n// ABC-1@00000000: x\n%declare _INDENT\n")
     assert [s.key for s in statements] == ["expr", "%ignore WS", "%declare _INDENT"]
     assert statements[0].refs == {"a", "b", "c"}
@@ -783,14 +790,24 @@ def test_dgr9_a_reason_citation_that_does_not_check(repo):
 
 
 def test_dgr9_a_script_citation_that_does_not_check():
-    tree = dg.Tree(base_nodes())
-    problems = dg.check_script(tree, "x = 1\n    # LEX-20@11111111: one tab per level\n")
-    assert problems == [("script-citation", "LEX-20", "line 2: LEX-20 has the norm hash 8c358626")]
-    assert dg.check_script(tree, "# LEX-20@8c358626:\n") == [("script-citation", "line 1", "not a citation")]
+    tree = derived_norms.Tree(base_nodes())
+    problems = derived_norms.check_script(tree, [("script.py", "x = 1\n    # LEX-20@11111111: one tab per level\n")])
+    assert problems == [("script-citation", "LEX-20", "script.py line 2: LEX-20 has the norm hash 8c358626")]
+    assert derived_norms.check_script(tree, [("script.py", "# LEX-20@8c358626:\n")]) == [("script-citation", "script.py line 1", "not a citation")]
+
+
+def test_dgr9_a_line_of_the_code_of_the_script_is_named_by_its_file():
+    tree = derived_norms.Tree(base_nodes())
+    code = [("use-cases/derive-grammar/derive_grammar.py", "# LEX-21@11111111: a\n"),
+            ("scripts/derived_norms.py", "x = 1\n# LEX-20@11111111: b\n")]
+    assert derived_norms.check_script(tree, code) == [
+        ("script-citation", "LEX-21", "use-cases/derive-grammar/derive_grammar.py line 1: LEX-21 has the norm hash 7474dff8"),
+        ("script-citation", "LEX-20", "scripts/derived_norms.py line 2: LEX-20 has the norm hash 8c358626")]
+    assert [path for path, _ in CODE_OF_THE_SCRIPT] == ["use-cases/derive-grammar/derive_grammar.py", "scripts/derived_norms.py"]
 
 
 def test_dgr9_the_citations_of_the_script_check_against_the_fixture():
-    assert dg.check_script(dg.Tree(base_nodes()), SCRIPT.read_text()) == []
+    assert derived_norms.check_script(derived_norms.Tree(base_nodes()), CODE_OF_THE_SCRIPT) == []
 
 
 # ------------------------------------------------------------------ DGR-10
@@ -812,9 +829,9 @@ def test_dgr10_a_conflict_fails_the_strict_build(repo, monkeypatch):
 
 def fixture_parser(extra=""):
     grammar = good_grammar(base_nodes()) + extra
-    statements, problems = dg.parse_grammar(grammar)
+    statements, problems = derived_norms.parse_grammar(grammar)
     assert problems == []
-    return dg.build_parser(grammar, statements)
+    return derived_norms.build_parser(grammar, statements)
 
 
 def test_dgr11_a_line_break_inside_brackets_does_not_end_a_line(repo):
@@ -890,9 +907,13 @@ def test_dgr11_spaces_inside_an_ignored_block_comment_are_not_indentation():
 
 
 def test_dgr11_dgr18_the_script_cites_lex20_lex21_and_exp27_for_the_indenter():
-    found, bad = dg.script_citations(SCRIPT.read_text())
-    assert bad == []
-    assert sorted((i, h) for _, i, h in found) == [("EXP-27", "f74dba8b"), ("LEX-20", "8c358626"), ("LEX-21", "7474dff8")]
+    cited = {}
+    for path, source in CODE_OF_THE_SCRIPT:
+        found, bad = derived_norms.script_citations(source)
+        assert bad == []
+        cited[path] = sorted((i, h) for _, i, h in found)
+    assert cited == {"use-cases/derive-grammar/derive_grammar.py": [],
+                     "scripts/derived_norms.py": [("EXP-27", "f74dba8b"), ("LEX-20", "8c358626"), ("LEX-21", "7474dff8")]}
 
 
 # ------------------------------------------------------------------ DGR-12
@@ -999,7 +1020,7 @@ def test_dgr12_pending_whose_cited_norm_is_retired_or_gone(repo, how):
 
 def test_dgr12_a_pending_fragment_with_no_form_of_cex4_that_did_not_change(repo):
     root, nodes = repo
-    add_fragment(root, nodes, fence("clean-language", "start:", "\tprint(7)"), "pending", dg.NO_FORM_REASON)
+    add_fragment(root, nodes, fence("clean-language", "start:", "\tprint(7)"), "pending", derived_norms.NO_FORM_REASON)
     assert dg.worklist(root) == []
 
 
@@ -1060,7 +1081,7 @@ def test_dgr12_exit_status_2(tmp_path, repo, monkeypatch, bad):
     path.write_text(good + bad + "\n")
     assert main_in(root, monkeypatch, "worklist") == 2
     path.write_text(good)
-    (root / dg.TREE_REL).write_text((root / dg.TREE_REL).read_text() + bad + "\n")
+    (root / derived_norms.TREE_REL).write_text((root / derived_norms.TREE_REL).read_text() + bad + "\n")
     assert main_in(root, monkeypatch, "worklist") == 2
 
 
@@ -1204,7 +1225,7 @@ def test_dgr13_a_fragment_with_no_form_of_cex4_that_is_derived(repo, monkeypatch
 
 def test_dgr13_a_fragment_with_no_form_of_cex4_that_is_pending_is_not_parsed(repo):
     root, nodes = repo
-    add_fragment(root, nodes, fence("clean-language", "start", "x"), "pending", dg.NO_FORM_REASON)
+    add_fragment(root, nodes, fence("clean-language", "start", "x"), "pending", derived_norms.NO_FORM_REASON)
     problems, summary = run_check(root)
     assert names(problems) == [("pending", "TST-7")]
     assert summary["parsed"] == {"accept": [4, 4], "reject": [1, 1]}
@@ -1244,7 +1265,7 @@ def test_dgr13_the_grammar_does_not_load(repo):
 @pytest.mark.parametrize("missing", ["tree", "grammar", "status"])
 def test_dgr13_missing_inputs_exit_2(repo, monkeypatch, missing):
     root, _ = repo
-    (root / {"tree": dg.TREE_REL, "grammar": dg.GRAMMAR_REL, "status": dg.STATUS_REL}[missing]).unlink()
+    (root / {"tree": derived_norms.TREE_REL, "grammar": derived_norms.GRAMMAR_REL, "status": dg.STATUS_REL}[missing]).unlink()
     assert main_in(root, monkeypatch, "check") == 2
 
 
@@ -1252,7 +1273,7 @@ def test_dgr13_lark_that_cannot_be_loaded_exits_2(repo, monkeypatch):
     root, _ = repo
 
     def no_lark():
-        raise dg.InputError("Lark cannot be loaded: test")
+        raise derived_norms.InputError("Lark cannot be loaded: test")
     monkeypatch.setattr(dg, "import_lark", no_lark)
     assert main_in(root, monkeypatch, "check") == 2
 
@@ -1361,17 +1382,16 @@ def test_dgr13_the_unique_issue_check_names_every_repeat():
             for n, (i, u) in enumerate([("A-1", ISSUE_12), ("B-1", ISSUE_13), ("C-1", ISSUE_12), ("D-1", ISSUE_12)], 2)]
     rows.insert(0, (1, "", {"type": "meta"}, None))
     rows.append((9, "{bad", None, "not JSON"))
-    found = dg.check_unique_issues(rows)
+    found = derived_norms.check_unique_issues(rows)
     assert [(p[0], p[1]) for p in found] == [("issue", "C-1"), ("issue", "D-1")]
     assert all("A-1" in p[2] for p in found)
 
 
 def test_dgr13_a_stale_script_citation_still_fails_check(repo):
     root, _ = repo
-    script = root / "script.py"
-    script.write_text("# LEX-20@11111111: each indentation level is exactly one tab character\n")
-    problems, _ = dg.check(root, script)
-    assert ("script-citation", "LEX-20", "line 1: LEX-20 has the norm hash 8c358626") in problems
+    code = [("script.py", "# LEX-20@11111111: each indentation level is exactly one tab character\n")]
+    problems, _ = dg.check(root, code)
+    assert ("script-citation", "LEX-20", "script.py line 1: LEX-20 has the norm hash 8c358626") in problems
 
 
 def no_fragment_repo(root, grammar=""):
@@ -1396,10 +1416,9 @@ def test_dgr13_no_fragment_yet(tmp_path, monkeypatch, capsys):
 def test_dgr13_no_fragment_yet_still_checks_the_meta_line_and_the_script(tmp_path, monkeypatch):
     root = tmp_path / "repo"
     no_fragment_repo(root)
-    (root / dg.GRAMMAR_REL).write_text("changed\n")
-    script = tmp_path / "script.py"
-    script.write_text("# LEX-21@11111111: mixing tabs and spaces for indentation is not allowed\n")
-    problems, _ = dg.check(root, script)
+    (root / derived_norms.GRAMMAR_REL).write_text("changed\n")
+    code = [("script.py", "# LEX-21@11111111: mixing tabs and spaces for indentation is not allowed\n")]
+    problems, _ = dg.check(root, code)
     assert names(problems) == [("meta", "grammar_sha256"), ("script-citation", "LEX-21")]
     assert main_in(root, monkeypatch, "check") == 1
 
@@ -1424,7 +1443,7 @@ def test_dgr13_no_fragment_yet_with_a_status_file_of_the_local_skill(tmp_path, m
 
 def test_dgr17_a_change_by_hand_after_seal_fails(repo, monkeypatch):
     root, _ = repo
-    path = root / dg.GRAMMAR_REL
+    path = root / derived_norms.GRAMMAR_REL
     path.write_text(path.read_text() + "\n")
     problems, _ = run_check(root)
     assert ("meta", "grammar_sha256") in names(problems)
@@ -1446,7 +1465,7 @@ def tree_repo(root, nodes):
     """A git repository whose history holds data/tree.jsonl with the nodes; the commit."""
     git_init(root)
     write_tree(root, nodes)
-    git(root, "add", "--", dg.TREE_REL)
+    git(root, "add", "--", derived_norms.TREE_REL)
     git(root, "commit", "-q", "-m", "build")
     return git(root, "rev-parse", "HEAD")
 
@@ -1457,24 +1476,24 @@ def with_node(nodes, norm_id, **changes):
 
 def test_dgr18_first_words_cut_at_a_word_and_never_inside_a_code_span():
     text = "- Mixing tabs and spaces for indentation is not allowed (`SYN003`)"
-    assert dg.first_words(text) == "Mixing tabs and spaces for indentation is not allowed"
-    assert "`" not in dg.first_words("`match` takes `x`")
-    assert dg.first_words("## A short title (`SYN001`)") == "A short title (SYN001)"
-    assert dg.first_words("a (b c d e", limit=6) == "a"
-    assert dg.first_words("") == ""
+    assert derived_norms.first_words(text) == "Mixing tabs and spaces for indentation is not allowed"
+    assert "`" not in derived_norms.first_words("`match` takes `x`")
+    assert derived_norms.first_words("## A short title (`SYN001`)") == "A short title (SYN001)"
+    assert derived_norms.first_words("a (b c d e", limit=6) == "a"
+    assert derived_norms.first_words("") == ""
 
 
 def test_dgr18_first_words_never_end_with_an_open_parenthesis_or_backtick():
     for limit in range(1, 70):
-        words = dg.first_words("- Mixing tabs and spaces for indentation is not allowed (`SYN003`), never", limit)
+        words = derived_norms.first_words("- Mixing tabs and spaces for indentation is not allowed (`SYN003`), never", limit)
         assert len(words) <= limit
         assert words.count("(") <= words.count(")") and "`" not in words
         assert not words.endswith(("(", " ", ",", ";", ":", "-"))
 
 
 def test_dgr18_the_text_of_a_leaf_norm_is_its_own_text():
-    tree = dg.Tree(base_nodes())
-    assert dg.norm_text(tree, tree.nodes["LEX-21"]) == "- Mixing tabs and spaces for indentation is not allowed"
+    tree = derived_norms.Tree(base_nodes())
+    assert derived_norms.norm_text(tree, tree.nodes["LEX-21"]) == "- Mixing tabs and spaces for indentation is not allowed"
 
 
 def test_dgr18_the_text_of_a_norm_holds_its_active_children_one_per_line():
@@ -1483,15 +1502,15 @@ def test_dgr18_the_text_of_a_norm_holds_its_active_children_one_per_line():
              node("LST-2", "item", "- one", parent="LST-1"),
              node("LST-3", "item", "- old", parent="LST-1", status="retired"),
              node("LST-4", "item", "- two\n", parent="LST-1")]
-    tree = dg.Tree(nodes)
-    assert dg.norm_text(tree, tree.nodes["LST-1"]) == "- one\n- two"
+    tree = derived_norms.Tree(nodes)
+    assert derived_norms.norm_text(tree, tree.nodes["LST-1"]) == "- one\n- two"
 
 
 def test_dgr18_no_stale_citation_gives_no_item(tmp_path):
     nodes = base_nodes()
     root = tmp_path / "repo"
     tree_repo(root, nodes)
-    assert dg.stale_script_citations(root, dg.Tree(nodes), SCRIPT.read_text()) == []
+    assert derived_norms.stale_script_citations(root, derived_norms.Tree(nodes), CODE_OF_THE_SCRIPT) == []
 
 
 def test_dgr18_a_changed_norm_gives_its_old_and_new_text_and_the_line(tmp_path):
@@ -1500,10 +1519,10 @@ def test_dgr18_a_changed_norm_gives_its_old_and_new_text_and_the_line(tmp_path):
     old_commit = tree_repo(root, nodes)
     write_tree(root, with_node(nodes, "LEX-20", own_text="- one tab per level, never a space", tree_hash="12345678" + "0" * 56))
     text = "x = 1\n    # LEX-20@8c358626: one tab per level\n"
-    items = dg.stale_script_citations(root, dg.load_tree(root), text)
+    items = derived_norms.stale_script_citations(root, derived_norms.load_tree(root), [("script.py", text)])
     assert items == [{"id": "LEX-20", "state": "changed", "current_hash": "12345678",
                       "new_text": "- one tab per level, never a space",
-                      "citations": [{"line": 2, "text": "# LEX-20@8c358626: one tab per level", "cited_hash": "8c358626",
+                      "citations": [{"path": "script.py", "line": 2, "text": "# LEX-20@8c358626: one tab per level", "cited_hash": "8c358626",
                                      "old_text": "- one tab per level", "old_commit": old_commit}]}]
 
 
@@ -1512,11 +1531,11 @@ def test_dgr18_the_old_text_comes_from_the_newest_version_that_has_the_hash(tmp_
     root = tmp_path / "repo"
     tree_repo(root, nodes)
     write_tree(root, with_node(nodes, "LEX-20", own_text="- middle", tree_hash="aaaaaaaa" + "0" * 56))
-    git(root, "add", "--", dg.TREE_REL)
+    git(root, "add", "--", derived_norms.TREE_REL)
     git(root, "commit", "-q", "-m", "build 2")
     middle_commit = git(root, "rev-parse", "HEAD")
     write_tree(root, with_node(nodes, "LEX-20", own_text="- now", tree_hash="bbbbbbbb" + "0" * 56))
-    items = dg.stale_script_citations(root, dg.load_tree(root), "# LEX-20@aaaaaaaa: a\n# LEX-20@8c358626: b\n")
+    items = derived_norms.stale_script_citations(root, derived_norms.load_tree(root), [("script.py", "# LEX-20@aaaaaaaa: a\n# LEX-20@8c358626: b\n")])
     assert len(items) == 1
     assert [(c["line"], c["old_text"]) for c in items[0]["citations"]] == [(1, "- middle"), (2, "- one tab per level")]
     assert items[0]["citations"][0]["old_commit"] == middle_commit
@@ -1529,43 +1548,55 @@ def test_dgr18_a_retired_or_gone_norm_has_no_new_text(tmp_path, change, state):
     tree_repo(root, nodes)
     now = with_node(nodes, "LEX-21", status="retired") if change == "retired" else [n for n in nodes if n["id"] != "LEX-21"]
     write_tree(root, now)
-    items = dg.stale_script_citations(root, dg.load_tree(root), SCRIPT.read_text())
+    items = derived_norms.stale_script_citations(root, derived_norms.load_tree(root), CODE_OF_THE_SCRIPT)
     assert [(i["id"], i["state"], i["current_hash"], i["new_text"]) for i in items] == [("LEX-21", state, None, None)]
     citation = items[0]["citations"][0]
     assert citation["cited_hash"] == "7474dff8" and citation["text"].startswith("# LEX-21@7474dff8: ")
     assert citation["old_text"] == "- Mixing tabs and spaces for indentation is not allowed"
-    assert SCRIPT.read_text().split("\n")[citation["line"] - 1].strip() == citation["text"]
+    assert citation["path"] == "scripts/derived_norms.py"
+    assert (MODULE / citation["path"]).read_text().split("\n")[citation["line"] - 1].strip() == citation["text"]
 
 
 def test_dgr18_an_old_hash_that_no_version_has_gives_null(tmp_path):
     nodes = base_nodes()
     root = tmp_path / "repo"
     tree_repo(root, nodes)
-    items = dg.stale_script_citations(root, dg.Tree(nodes), "# LEX-20@11111111: x\n")
+    items = derived_norms.stale_script_citations(root, derived_norms.Tree(nodes), [("script.py", "# LEX-20@11111111: x\n")])
     assert items[0]["citations"][0]["old_text"] is None and items[0]["citations"][0]["old_commit"] is None
 
 
 def test_dgr18_no_git_history_gives_null_old_text(tmp_path):
     nodes = base_nodes()
     write_tree(tmp_path, nodes)
-    items = dg.stale_script_citations(tmp_path, dg.Tree(nodes), "# LEX-20@11111111: x\n")
+    items = derived_norms.stale_script_citations(tmp_path, derived_norms.Tree(nodes), [("script.py", "# LEX-20@11111111: x\n")])
     assert items[0]["citations"][0]["old_text"] is None
 
 
 def test_dgr18_a_line_that_is_not_a_citation_gives_no_item(tmp_path):
     nodes = base_nodes()
     write_tree(tmp_path, nodes)
-    assert dg.stale_script_citations(tmp_path, dg.Tree(nodes), "# LEX-20@8c358626:\n# LEX-20@8C358626: x\n") == []
+    assert derived_norms.stale_script_citations(tmp_path, derived_norms.Tree(nodes), [("script.py", "# LEX-20@8c358626:\n# LEX-20@8C358626: x\n")]) == []
 
 
 def test_dgr18_one_item_per_norm_in_the_order_of_the_script(tmp_path):
     nodes = base_nodes()
     write_tree(tmp_path, nodes)
     text = "# LEX-21@11111111: a\n# LEX-20@11111111: b\n# LEX-21@22222222: c\n"
-    items = dg.stale_script_citations(tmp_path, dg.Tree(nodes), text)
+    items = derived_norms.stale_script_citations(tmp_path, derived_norms.Tree(nodes), [("script.py", text)])
     assert [(i["id"], [c["line"] for c in i["citations"]]) for i in items] == [("LEX-21", [1, 3]), ("LEX-20", [2])]
     assert list(items[0]) == ["id", "state", "current_hash", "new_text", "citations"]
-    assert list(items[0]["citations"][0]) == ["line", "text", "cited_hash", "old_text", "old_commit"]
+    assert list(items[0]["citations"][0]) == ["path", "line", "text", "cited_hash", "old_text", "old_commit"]
+
+
+def test_dgr18_the_files_of_the_code_of_the_script_in_their_order(tmp_path):
+    nodes = base_nodes()
+    write_tree(tmp_path, nodes)
+    code = [("use-cases/derive-grammar/derive_grammar.py", "# LEX-20@11111111: a\n"),
+            ("scripts/derived_norms.py", "# LEX-21@11111111: b\n# LEX-20@22222222: c\n")]
+    items = derived_norms.stale_script_citations(tmp_path, derived_norms.Tree(nodes), code)
+    assert [(i["id"], [(c["path"], c["line"]) for c in i["citations"]]) for i in items] == [
+        ("LEX-20", [("use-cases/derive-grammar/derive_grammar.py", 1), ("scripts/derived_norms.py", 2)]),
+        ("LEX-21", [("scripts/derived_norms.py", 1)])]
 
 
 def test_dgr18_the_command_prints_one_json_line_per_stale_norm(tmp_path, monkeypatch, capsys):
@@ -1589,7 +1620,7 @@ def test_dgr18_the_command_prints_nothing_when_every_citation_checks(tmp_path, m
 def test_dgr18_the_command_exits_2_without_a_readable_tree(tmp_path, monkeypatch, bad):
     if bad is not None:
         (tmp_path / "data").mkdir()
-        (tmp_path / dg.TREE_REL).write_text(bad + "\n")
+        (tmp_path / derived_norms.TREE_REL).write_text(bad + "\n")
     assert main_in(tmp_path, monkeypatch, "stale-citations") == 2
 
 
@@ -1667,7 +1698,7 @@ TWO_FILES = "\n".join([
 
 
 def test_dgr19_the_files_of_a_program_of_two_files():
-    files = dg.program_files(TWO_FILES)
+    files = derived_norms.program_files(TWO_FILES)
     lines = TWO_FILES.split("\n")
     assert [(f.number_of_file, f.path_of_file_line, f.first_line_in_case_text, f.file_line) for f in files] == [(1, "app/utils.cln", 2, True), (2, "app/main.cln", 7, True)]
     assert files[0].file_text == "\n".join(lines[1:5]) + "\n"
@@ -1678,7 +1709,7 @@ def test_dgr19_the_files_of_a_program_of_two_files():
 
 def test_dgr19_a_case_text_with_no_file_line_is_one_file():
     text = "start:\n\tprint(1)\n"
-    [only] = dg.program_files(text)
+    [only] = derived_norms.program_files(text)
     assert (only.number_of_file, only.path_of_file_line, only.offset_of_file, only.first_line_in_case_text, only.file_text, only.file_line) == (1, None, 0, 1, text, False)
 
 
@@ -1693,7 +1724,7 @@ def test_dgr19_a_case_text_with_no_file_line_is_one_file():
     ("// File: a.cln", None, False),
 ])
 def test_dgr19_only_a_line_that_starts_at_column_1_with_the_mark_opens_a_file(line, path, opens):
-    files = dg.program_files("start:\n\tprint(1)\n" + line + "\nstart:\n\tprint(2)\n")
+    files = derived_norms.program_files("start:\n\tprint(1)\n" + line + "\nstart:\n\tprint(2)\n")
     if opens:
         assert len(files) == 1 and files[0].path_of_file_line == path and files[0].first_line_in_case_text == 3
     else:
@@ -1701,7 +1732,7 @@ def test_dgr19_only_a_line_that_starts_at_column_1_with_the_mark_opens_a_file(li
 
 
 def test_dgr19_a_file_line_inside_a_block_comment_opens_a_file():
-    files = dg.program_files("// file: a.cln\n/* a comment\n// file: b.cln\n*/\n")
+    files = derived_norms.program_files("// file: a.cln\n/* a comment\n// file: b.cln\n*/\n")
     assert [f.path_of_file_line for f in files] == ["a.cln", "b.cln"]
     assert files[0].file_text == "// file: a.cln\n/* a comment\n"
 

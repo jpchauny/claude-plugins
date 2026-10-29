@@ -6,7 +6,7 @@ description: Derive the Lark grammar of Clean in specs-derived/grammar/ of the r
 # derive-grammar
 
 Implements [specs/derive-grammar.md](specs/derive-grammar.md) (DGR), with the
-rules of the module, CDN-1 to CDN-6, in [module.md](../../specs/module.md),
+rules of the module, CDN-1 to CDN-7, in [module.md](../../specs/module.md),
 and the interface of a derived-norms generator, NRM-1 to NRM-11, of the plugin
 `norms-management`. Each step below names the rule it follows.
 
@@ -21,6 +21,15 @@ directory. The script is
 ```sh
 S="${CLAUDE_PLUGIN_ROOT}/use-cases/derive-grammar/derive_grammar.py"
 uv run --with "lark[interegular]" python3 -I -B "$S" <command>
+```
+
+It imports the module script, the code that it shares with the script of
+`derive-semantics` (CDN-7 (The script of each use case of this module
+imports the module script, and no script of a use case imports the script
+of another use case)); the snippets below load it as `m`:
+
+```sh
+M="${CLAUDE_PLUGIN_ROOT}/scripts/derived_norms.py"
 ```
 
 What you read and write (DGR-1 (The use case reads only layer 2 (NRM-3), and
@@ -94,9 +103,9 @@ Then, before you change anything:
 - Count the fragments of the tree:
 
   ```sh
-  uv run --with "lark[interegular]" python3 -I -B - "$S" <<'PY'
+  uv run --with "lark[interegular]" python3 -I -B - "$M" <<'PY'
   import importlib.util as u, pathlib, sys
-  s = u.spec_from_file_location("dg", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
+  s = u.spec_from_file_location("derived_norms", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
   print(len(m.load_tree(pathlib.Path(".")).fragments))
   PY
   ```
@@ -122,11 +131,12 @@ context small. For each file:
    ```sh
    uv run --with "lark[interegular]" python3 -I -B - "$S" <ID> <ID> ... <<'PY'
    import importlib.util as u, pathlib, sys
-   s = u.spec_from_file_location("dg", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
+   s = u.spec_from_file_location("dg", sys.argv[1]); g = u.module_from_spec(s); s.loader.exec_module(g)
+   import derived_norms as m  # the module script, which the script puts on sys.path
    t = m.load_tree(pathlib.Path("."))
    for i in sys.argv[2:]:
        n = t.nodes[i]
-       print(f"== {i}@{t.norm_hash(i)} cases={m.case_kinds(n)} expected_line={m.expected_line(n)} {n['file']}")
+       print(f"== {i}@{t.norm_hash(i)} cases={g.case_kinds(n)} expected_line={g.expected_line(n)} {n['file']}")
        print(m.fragment_lines(t, n)[0])
        print(m.case_text(t, n), end="")
        fs = m.program_files(m.case_text(t, n))
@@ -373,13 +383,13 @@ then the fragment as it is, its opening line and its closing fence included,
 without the indentation of its fence:
 
 ```sh
-uv run --with "lark[interegular]" python3 -I -B - "$S" <ID> <ID> ... <<'PY'
+uv run --with "lark[interegular]" python3 -I -B - "$M" <ID> <ID> ... <<'PY'
 import importlib.util as u, json, pathlib, subprocess, sys
-s = u.spec_from_file_location("dg", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
+s = u.spec_from_file_location("derived_norms", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
 root = pathlib.Path("."); t = m.load_tree(root)
 rows = [json.loads(l) for l in (root / m.TREE_REL).read_text(encoding="utf-8").splitlines() if l.strip()]
 files = {r["path"]: r for r in rows if r.get("type") == "file"}
-st = root / m.STATUS_REL
+st = root / "specs-derived/grammar/clean-language-code-examples-status.jsonl"
 status = {v["id"]: v for v in (json.loads(l) for l in st.read_text(encoding="utf-8").splitlines() if l.strip()) if v.get("type") == "fragment"} if st.is_file() else {}
 kids = {}
 for r in rows:
@@ -606,8 +616,9 @@ to `<scratchpad>/issues-opened.jsonl` as it happens, one JSON line each
 
 ## 5. The issue of a stale citation of the script
 
-The script cites, in its own code, the norms it follows (`# <norm ID>@<norm
-hash>: <reason>`): LEX-20 (each indentation level is exactly one tab
+The code of the script, the script and the module script, cites the norms it
+follows (`# <norm ID>@<norm hash>: <reason>`); today the module script, where
+the indenter is, cites LEX-20 (each indentation level is exactly one tab
 character), LEX-21 (mixing tabs and spaces for indentation is not allowed)
 and EXP-27 (inside an open parenthesis a line continues). When one of those
 norms changes its hash, is retired or is gone, `check` reports
@@ -628,10 +639,12 @@ uv run --with "lark[interegular]" python3 -I -B "$S" stale-citations > <scratchp
 
 Exit 2: show the message in the end report and skip this step. An empty
 file: nothing to open. Otherwise one JSON line per stale cited norm, in the
-order of the script: `id`; `state` (`changed`, `retired` or `gone`);
-`current_hash` and `new_text` (null unless `changed`); and `citations`,
-one per line of the script that cites the norm with a stale hash: `line`,
-`text` (the line, without its indentation), `cited_hash`, `old_text` and
+order of the code of the script (the script, then the module script): `id`;
+`state` (`changed`, `retired` or `gone`); `current_hash` and `new_text`
+(null unless `changed`); and `citations`, one per line of the code of the
+script that cites the norm with a stale hash: `path` (of its file in the
+plugin, such as `scripts/derived_norms.py`), `line` (its number in that
+file), `text` (the line, without its indentation), `cited_hash`, `old_text` and
 `old_commit` (the text of the norm at the cited hash, from the newest
 version of `data/tree.jsonl` in the history of HEAD that has it; both null
 when none has it or git cannot run).
@@ -643,11 +656,11 @@ This writes, for each stale cited norm, `<scratchpad>/script-title-<ID>.txt`,
 from `stale-citations.jsonl`, `data/tree.jsonl` and git:
 
 ```sh
-uv run --with "lark[interegular]" python3 -I -B - "$S" <scratchpad> <<'PY'
+uv run --with "lark[interegular]" python3 -I -B - "$M" <scratchpad> <<'PY'
 import importlib.util as u, json, pathlib, subprocess, sys
-s = u.spec_from_file_location("dg", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
+s = u.spec_from_file_location("derived_norms", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
 root, out = pathlib.Path("."), pathlib.Path(sys.argv[2]); t = m.load_tree(root)
-P = "apps/clean-language/modules/clean-derived-norms/use-cases/derive-grammar/derive_grammar.py"
+A = "apps/clean-language/modules/clean-derived-norms"
 T = "apps/clean-language/modules/clean-derived-norms/tests"
 SPEC = "apps/clean-language/modules/clean-derived-norms/use-cases/derive-grammar/specs/derive-grammar.md"
 norms = subprocess.run(["git", "rev-parse", "--short=8", "HEAD"], capture_output=True, text=True).stdout.strip()
@@ -661,15 +674,16 @@ for l in (out / "stale-citations.jsonl").read_text(encoding="utf-8").splitlines(
     what = {"changed": "changed", "retired": "was retired", "gone": "is gone"}[st]
     now = {"changed": f"now has the norm hash {cur}", "retired": "is retired", "gone": "is gone"}[st]
     head = f"clean-derived-norms derive-grammar: {i} {what}, its citation is stale ({i})"
-    cited = ", ".join(sorted({c["cited_hash"] for c in cs})); at = ", ".join(f"{P}:{c['line']}" for c in cs)
+    cited = ", ".join(sorted({c["cited_hash"] for c in cs})); at = ", ".join(f"{A}/{c['path']}:{c['line']}" for c in cs)
+    where = ", ".join(dict.fromkeys(f"{A}/{c['path']}" for c in cs))
     old = []
     for h in dict.fromkeys(c["cited_hash"] for c in cs):
         c = next(c for c in cs if c["cited_hash"] == h)
         old += [f"Text of {i} at {h} (old, data/tree.jsonl @ {c['old_commit'][:8]}):", "", F + "text", c["old_text"], F, ""] if c["old_text"] is not None else [f"No version of data/tree.jsonl in the history of HEAD has {i} at {h}.", ""]
     newp = [f"Text of {i} now ({cur}):", "", F + "text", new, F] if st == "changed" else [f"{i} is retired in data/tree.jsonl: it has no current text." if st == "retired" else f"{i} is gone: data/tree.jsonl no longer has it."]
-    body = [f"The script of /clean-derived-norms:derive-grammar cites {i} ({tt}), and that citation is stale: {i} {now} (cited at {cited}), at foundation @ {found}.",
-        "`check` fails with the problem `script-citation` until a new version of the plugin changes the script. The lines of the script that cite it:", "",
-        F + "python", *[f"{c['line']}: {c['text']}" for c in cs], F, "", *old, *newp, "",
+    body = [f"The code of the script of /clean-derived-norms:derive-grammar cites {i} ({tt}), and that citation is stale: {i} {now} (cited at {cited}), at foundation @ {found}.",
+        "`check` fails with the problem `script-citation` until a new version of the plugin changes the code of the script. The lines that cite it:", "",
+        F + "python", *[f"{c['path']}:{c['line']}: {c['text']}" for c in cs], F, "", *old, *newp, "",
         "**Decision needed** — does the code still follow from the new text? The options are numbered in the hand-off; none is recommended here.", "",
         "**Hand-off**", H + "text",
         f"You are resolving issue #<N> of jpchauny/claude-plugins: {head}.", "",
@@ -677,12 +691,12 @@ for l in (out / "stale-citations.jsonl").read_text(encoding="utf-8").splitlines(
         "- jpchauny/claude-plugins (local: ~/Documents/claude-plugins) is the marketplace that holds the plugin",
         "  clean-derived-norms; its use case /clean-derived-norms:derive-grammar derives the Lark grammar of Clean",
         "  in specs-derived/grammar/ of Ivan-Pasco/clean-language-norms (layer 2) from the norms of data/tree.jsonl.",
-        f"- Its script, {P}, cites in its own code",
+        f"- The code of its script cites, in {where},",
         f"  the norms it follows, as \"# <norm ID>@<norm hash>: <reason>\" (DGR-9 and DGR-18 of {SPEC});",
         "  a norm hash is the first 8 hex digits of the tree_hash of the norm in data/tree.jsonl of layer 2.",
         f"- {i} ({tt}) {now} (cited at {cited}), at foundation @ {found}, norms @ {norms}.",
         "  The old and the new text are in the body of this issue.",
-        f"Problem: the citation of {i} in the script is stale, so `check` fails with \"script-citation: {i}\", {at}.",
+        f"Problem: the citation of {i} in the code of the script is stale, so `check` fails with \"script-citation: {i}\", {at}.",
         "Decision: open; the user has not decided.",
         "  1. The code still follows from the new text: only the norm hash of the citation changes.",
         "  2. The code no longer follows: change the code and its citation, and the spec and the tests that describe it.",
@@ -692,7 +706,7 @@ for l in (out / "stale-citations.jsonl").read_text(encoding="utf-8").splitlines(
         "1. Present the element to the user, short and simple: the context, the problem, the old and the new text,",
         "   and the options numbered, recommending none: the user chooses. Wait for the yes; change nothing before it.",
         f"2. Change the spec first where it names {i}@{cited} (DGR-11, DGR-18), and have the user approve it (DEV-1).",
-        "   Then change the script as chosen, each citation as \"# <norm ID>@<norm hash>: <reason>\", with the norm hash",
+        "   Then change the code of the script as chosen, each citation as \"# <norm ID>@<norm hash>: <reason>\", with the norm hash",
         f"   of data/tree.jsonl, and every place of the tests that names {i}@{cited}. Show the diff first.",
         f"3. Run the tests: cd ~/Documents/claude-plugins && uv run --with pytest --with \"lark[interegular]\" python3 -I -B -m pytest -q -p no:cacheprovider {T}",
         "4. Release the change as a new version of the plugin: raise the version of its .claude-plugin/plugin.json.",
@@ -702,12 +716,12 @@ for l in (out / "stale-citations.jsonl").read_text(encoding="utf-8").splitlines(
         "Rules (jpchauny/claude-plugins, specs/development.md and its CLAUDE.md): the spec comes first and the user",
         "approves it; the user decides, one element per message; English; files added each by its path, never a folder",
         "or git add -A; never git stash, git reset --hard or git clean: other sessions work in the repository.",
-        f"Done when: no citation of {i} in the script is stale, the new version of the plugin is released, and its",
+        f"Done when: no citation of {i} in the code of the script is stale, the new version of the plugin is released, and its",
         f"check prints no \"script-citation: {i}\". Then close #<N> with a comment that names that version.",
         H, "", f"Found while checking the Lark grammar of Clean (/clean-derived-norms:derive-grammar), foundation @ {found}, norms @ {norms}.", ""]
     (out / f"script-title-{i}.txt").write_text(head, encoding="utf-8")
     (out / f"script-issue-{i}.md").write_text("\n".join(body), encoding="utf-8")
-    (out / f"script-comment-{i}.md").write_text("\n".join(f"Still stale at norms @ {norms}: line {c['line']} cites {i}@{c['cited_hash']}; {i} {now}." for c in cs) + "\n", encoding="utf-8")
+    (out / f"script-comment-{i}.md").write_text("\n".join(f"Still stale at norms @ {norms}: {c['path']} line {c['line']} cites {i}@{c['cited_hash']}; {i} {now}." for c in cs) + "\n", encoding="utf-8")
     print(i, st, head)
 PY
 ```
@@ -721,7 +735,8 @@ clean-derived-norms derive-grammar: <ID> <changed | was retired | is gone>, its 
 ```
 
 Labels, exactly: `finding`, `derive-grammar`. The body holds, in this order:
-what happens; the lines of the script in a `python` block; one old-text block
+what happens; the lines of the code of the script, each with its path and
+number, in a `python` block; one old-text block
 per cited hash, or the sentence that no version has it; the new text, or the
 sentence that the norm is retired or gone; **Decision needed**; the line
 `Related: #<M>, ...` when a closed duplicate counts (step 1 below adds it);
@@ -742,7 +757,7 @@ step 4, with `"kind":"script"` and the norm ID.
    Only an issue whose title begins with `clean-derived-norms derive-grammar: `
    and ends with `(<ID>)` counts. When one that counts is open, open nothing:
    comment on it at once with the comment file, one line per stale citation,
-   `Still stale at norms @ <sha>: line <line> cites <ID>@<cited hash>; <ID>
+   `Still stale at norms @ <sha>: <path> line <line> cites <ID>@<cited hash>; <ID>
    <now has the norm hash <current hash> | is retired | is gone>.`:
 
    ```sh

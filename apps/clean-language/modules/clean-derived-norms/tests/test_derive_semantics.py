@@ -11,6 +11,7 @@ import hashlib
 import importlib.util
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,12 @@ SCRIPT = MODULE / "use-cases" / "derive-semantics" / "derive_semantics.py"
 _spec = importlib.util.spec_from_file_location("derive_semantics", SCRIPT)
 ds = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ds)
+# The module script, which the script imports (CDN-7): the same module as the script's.
+sys.path.insert(0, str(MODULE / "scripts"))
+import derived_norms  # noqa: E402
+
+# The code of the script of this use case: the script alone (DSM-17).
+CODE_OF_THE_SCRIPT = derived_norms.read_code_of_the_script(SCRIPT)
 
 SPECS = "e" * 40
 MODEL = "claude-opus-5-5"
@@ -159,7 +166,7 @@ def lean_code(nodes):
 
 
 def status_line(root, nodes, norm_id, state="derived", reason=None, issue=None):
-    tree = ds.dg.Tree(nodes)
+    tree = derived_norms.Tree(nodes)
     fact = ds.facts(tree, ds.load_grammar(root), tree.nodes[norm_id])
     return {"type": "fragment", "id": norm_id, "hash": tree.norm_hash(norm_id), "cases": fact["cases"],
             "expected_output": fact["expected_output"], "parse_tree_hash": fact["parse_tree_hash"],
@@ -168,7 +175,7 @@ def status_line(root, nodes, norm_id, state="derived", reason=None, issue=None):
 
 def good_status(root, nodes):
     lines = [status_line(root, nodes, i) for i in ("TST-1", "TST-2", "TST-3")]
-    lines.append(status_line(root, nodes, "TST-5", "pending", ds.NO_FORM_REASON))
+    lines.append(status_line(root, nodes, "TST-5", "pending", derived_norms.NO_FORM_REASON))
     lines.append(status_line(root, nodes, "TST-6", "pending", ds.NOT_PARSED_REASON))
     return lines
 
@@ -177,7 +184,7 @@ def write_tree(root, nodes):
     rows = [{"type": "meta", "specs_commit": SPECS, "generator_version": "0.1.0", "retired_prefixes": []},
             {"type": "file", "path": "specs/a.md", "prefix": "TST", "sha256": "0" * 64, "insertions": []}] + nodes
     (root / "data").mkdir(parents=True, exist_ok=True)
-    (root / ds.TREE_REL).write_text("".join(json.dumps(r) + "\n" for r in rows))
+    (root / derived_norms.TREE_REL).write_text("".join(json.dumps(r) + "\n" for r in rows))
 
 
 def write_lean(root, code):
@@ -213,7 +220,7 @@ def repo(tmp_path):
     nodes = base_nodes()
     write_tree(root, nodes)
     (root / "specs-derived" / "grammar").mkdir(parents=True)
-    (root / ds.GRAMMAR_REL).write_text(GRAMMAR)
+    (root / derived_norms.GRAMMAR_REL).write_text(GRAMMAR)
     write_lean(root, lean_code(nodes))
     write_status(root, good_status(root, nodes))
     ds.seal(root, MODEL)
@@ -241,7 +248,7 @@ class FakeLean:
 
 
 def run_check(root):
-    return ds.check(root, SCRIPT)
+    return ds.check(root, CODE_OF_THE_SCRIPT)
 
 
 def names(problems):
@@ -264,7 +271,7 @@ def reseal(root, nodes, code=None, lines=None):
 
 def test_dsm1_no_grammar_exits_2(repo, monkeypatch, capsys):
     root, _ = repo
-    (root / ds.GRAMMAR_REL).unlink()
+    (root / derived_norms.GRAMMAR_REL).unlink()
     for command in (["worklist"], ["tree", "TST-1"], ["check"]):
         assert main_in(root, monkeypatch, *command) == 2
     assert "derive-grammar runs first" in capsys.readouterr().err
@@ -272,7 +279,7 @@ def test_dsm1_no_grammar_exits_2(repo, monkeypatch, capsys):
 
 def test_dsm1_a_grammar_that_does_not_build_exits_2(repo, monkeypatch, capsys):
     root, _ = repo
-    (root / ds.GRAMMAR_REL).write_text("start: undefined_rule\n")
+    (root / derived_norms.GRAMMAR_REL).write_text("start: undefined_rule\n")
     assert main_in(root, monkeypatch, "worklist") == 2
     assert "the grammar does not build" in capsys.readouterr().err
 
@@ -290,13 +297,13 @@ def test_dsm1_check_writes_nothing_in_the_repository(repo, monkeypatch):
 
 def test_dsm2_which_fragments_are_semantic_fragments(repo):
     root, _ = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     assert [n["id"] for n in ds.semantic_fragments(tree)] == SEMANTIC
 
 
 def test_dsm2_the_expected_output_of_a_fragment(repo):
     root, _ = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     assert ds.expected_output(tree, tree.nodes["TST-1"])["id"] == "OUT-1"
     assert ds.expected_output(tree, tree.nodes["TST-2"]) is None  # a paragraph comes next
     assert ds.expected_output(tree, tree.nodes["TST-3"]) is None
@@ -313,7 +320,7 @@ def test_dsm2_the_expected_output_of_a_fragment(repo):
 def test_dsm2_the_expected_output_cases(gap, info, first, found):
     nodes = section("SEC-1", [("A-1", "code_block", fence(first, "start:", '\tprint("a")')), gap,
                               ("A-2", "code_block", fence(info, "a"))])
-    tree = ds.dg.Tree(nodes)
+    tree = derived_norms.Tree(nodes)
     assert (ds.expected_output(tree, tree.nodes["A-1"]) is not None) is found
 
 
@@ -321,7 +328,7 @@ def test_dsm2_the_expected_output_text():
     nodes = section("SEC-1", [("A-1", "code_block", fence("clean-language-output", "Hello, World!", "42")),
                               "\n", ("A-2", "code_block", f"{F}clean-language-output\n{F}"),
                               "\n", ("A-3", "code_block", fence("clean-language-output", "a  ", "", "b"))])
-    tree = ds.dg.Tree(nodes)
+    tree = derived_norms.Tree(nodes)
     assert ds.expected_output_text(tree, tree.nodes["A-1"]) == "Hello, World!\n42\n"
     assert ds.expected_output_text(tree, tree.nodes["A-2"]) == ""
     assert ds.expected_output_text(tree, tree.nodes["A-3"]) == "a  \n\nb\n"
@@ -339,7 +346,7 @@ def test_dsm2_the_expected_output_text_inside_a_list_item():
     for norm_id, own, at in (("A-1", code, start), ("A-2", out, start + len(code) + 4)):
         nodes.append(dict(item_node, id=norm_id, kind="code_block", parent="ITM-1", start=at, end=at + len(own), own_text=own))
     nodes[0]["end"] = item_node["end"]
-    tree = ds.dg.Tree(nodes)
+    tree = derived_norms.Tree(nodes)
     block = ds.expected_output(tree, tree.nodes["A-1"])
     assert block["id"] == "A-2"
     assert ds.expected_output_text(tree, block) == "a\n"
@@ -347,7 +354,7 @@ def test_dsm2_the_expected_output_text_inside_a_list_item():
 
 def test_dsm2_a_misplaced_expected_output_block_is_not_read(repo):
     root, _ = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     facts = [ds.expected_output_citation(tree, n) for n in ds.semantic_fragments(tree)]
     assert not any(f and f.startswith("OUT-2@") for f in facts)
 
@@ -501,7 +508,7 @@ def test_dsm6_the_case_comes_from_the_opening_line(info, cases):
 
 def test_dsm6_no_comment_decides_the_case_or_the_output(repo):
     root, _ = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     fact = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-2"])
     assert fact["cases"] == ["run"] and fact["expected_output"] is None and fact["expected_output_text"] is None
     assert ds.judge("run", None, None, b"anything") is None
@@ -519,7 +526,7 @@ def test_dsm7_the_serialized_tree():
 
 def test_dsm7_keywords_are_kept_and_layout_tokens_left_out(repo):
     root, _ = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     fact = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-1"])
     lines = fact["serialized"].split("\n")
     assert "token PRINT print" in lines and 'token STRING "a"' in lines and "token START start" in lines
@@ -529,14 +536,14 @@ def test_dsm7_keywords_are_kept_and_layout_tokens_left_out(repo):
 
 def test_dsm7_a_fragment_that_the_grammar_does_not_parse(repo):
     root, _ = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     fact = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-6"])
     assert fact["parse_tree_hash"] is None and fact["parse_error"].startswith("line 2: ")
 
 
 def test_dsm7_no_case_is_not_parsed(repo):
     root, _ = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     fact = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-5"])
     assert fact["parse_tree_hash"] is None and fact["parse_error"] is None
 
@@ -623,7 +630,7 @@ def test_dsm8_strings_and_characters_are_not_comments():
 
 def test_dsm8_each_norm_once_and_one_prose_norm(repo):
     root, nodes = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     twice = cite(nodes, "PRO-1") + "\n" + cite(nodes, "PRO-1") + "\ndef f : Nat := 1\n"
     only_fragment = cite(nodes, "TST-1") + "\n" + cite(nodes, "OUT-1") + "\ndef g : Nat := 1\n"
     found = []
@@ -639,7 +646,7 @@ def test_dsm8_each_norm_once_and_one_prose_norm(repo):
 
 def test_dsm9_a_citation_that_does_not_check(repo):
     root, nodes = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     text = "\n".join(["-- PRO-999@4be10a7e: x", "def a : Nat := 1",
                       "-- PRO-1@00000000: x", "def b : Nat := 1",
                       cite(nodes, "PRO-1"), cite(nodes, "TST-6"), "def c : Nat := 1", ""])
@@ -678,7 +685,7 @@ def test_dsm10_no_axiom_and_no_library():
 
 def test_dsm10_no_shortcut_by_a_literal(repo):
     root, nodes = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     literals = [("Clean/Evaluation.lean", 3, "TST-1"), ("Clean/Evaluation.lean", 4, "a\nb\n"), ("Clean/Evaluation.lean", 5, "a\n")]
     found = ds.check_literals(tree, literals, {"TST-1": "a\nb\n"})
     assert names(found) == [("shortcut", "Clean/Evaluation.lean:3"), ("shortcut", "Clean/Evaluation.lean:4")]
@@ -742,7 +749,7 @@ def test_dsm12_a_changed_expected_output(tmp_path, repo):
 
 def test_dsm12_a_changed_parse_tree(repo):
     root, _ = repo
-    (root / ds.GRAMMAR_REL).write_text(GRAMMAR.replace('statement: "print"', 'statement: print_word') + 'print_word: "print"\n')
+    (root / derived_norms.GRAMMAR_REL).write_text(GRAMMAR.replace('statement: "print"', 'statement: print_word') + 'print_word: "print"\n')
     kinds = {(i["kind"], i["id"]) for i in ds.worklist(root)}
     assert ("changed", "TST-1") in kinds and ("changed", "TST-2") in kinds
     assert ("changed", "TST-3") not in kinds
@@ -801,7 +808,7 @@ def test_dsm13_every_check_passes(repo, monkeypatch, capsys):
 
 def test_dsm13_a_case_that_does_not_pass(repo, monkeypatch):
     root, nodes = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     serialized = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-1"])["serialized"]
     FakeLean(monkeypatch, outcomes={serialized: (None, b"a\n", None)})
     problems, summary = run_check(root)
@@ -840,7 +847,7 @@ def test_dsm13_a_pending_gap_reason_must_cite_a_norm(repo, monkeypatch):
 def test_dsm13_missing_inputs_exit_2(repo, monkeypatch, missing):
     root, _ = repo
     FakeLean(monkeypatch)
-    path = {"status": root / ds.STATUS_REL, "lean": root / ds.FOLDER_REL / "Clean.lean", "tree": root / ds.TREE_REL}[missing]
+    path = {"status": root / ds.STATUS_REL, "lean": root / ds.FOLDER_REL / "Clean.lean", "tree": root / derived_norms.TREE_REL}[missing]
     path.unlink()
     assert main_in(root, monkeypatch, "check") == 2
 
@@ -889,7 +896,7 @@ def test_dsm16_a_change_by_hand_after_seal_fails(repo, monkeypatch):
 
 def test_dsm17_the_script_cites_no_norm(repo, monkeypatch, capsys):
     root, _ = repo
-    found, bad = ds.dg.script_citations(SCRIPT.read_text())
+    found, bad = derived_norms.script_citations(SCRIPT.read_text())
     assert found == [] and bad == []
     assert main_in(root, monkeypatch, "stale-citations") == 0
     assert capsys.readouterr().out == ""
@@ -898,9 +905,13 @@ def test_dsm17_the_script_cites_no_norm(repo, monkeypatch, capsys):
 def test_dsm17_a_stale_citation_of_the_script_fails_check(repo, monkeypatch):
     root, nodes = repo
     FakeLean(monkeypatch)
-    fake = root / "script.py"
-    fake.write_text("# PRO-1@11111111: a reason\n")
-    assert ("script-citation", "PRO-1") in names(ds.check(root, fake)[0])
+    problems, _ = ds.check(root, [("script.py", "# PRO-1@11111111: a reason\n")])
+    assert ("script-citation", "PRO-1") in names(problems)
+    assert [p for p in problems if p[0] == "script-citation"][0][2].startswith("script.py line 1: ")
+
+
+def test_dsm17_the_code_of_the_script_is_the_script_alone():
+    assert [path for path, _ in CODE_OF_THE_SCRIPT] == ["use-cases/derive-semantics/derive_semantics.py"]
 
 
 # ------------------------------------------------------------------ the docstrings
@@ -987,7 +998,7 @@ def two_file_repo(root, first_path="// file: app/a.cln", second_path="// file: a
     nodes = section("SEC-1", parts)
     write_tree(root, nodes)
     reseal(root, nodes, lines=good_status(root, nodes) + [status_line(root, nodes, "TST-7")])
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     return nodes, ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-7"])
 
 
@@ -1011,7 +1022,7 @@ def test_dsm7_a_file_with_no_path_has_an_absent_path(repo):
 
 def test_dsm7_the_parse_tree_of_a_program_of_one_file_has_no_files(repo):
     root, _ = repo
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     fact = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-1"])
     assert fact["serialized"].startswith("rule start ") and "%" not in fact["serialized"]
 
@@ -1053,7 +1064,7 @@ def test_dsm10_an_example_of_the_error_of_an_undeclared_name_is_checked_for_its_
     nodes = section("SEC-1", parts)
     write_tree(root, nodes)
     reseal(root, nodes, lines=good_status(root, nodes) + [status_line(root, nodes, "TST-8")])
-    tree = ds.dg.load_tree(root)
+    tree = derived_norms.load_tree(root)
     serialized = ds.facts(tree, ds.load_grammar(root), tree.nodes["TST-8"])["serialized"]
     FakeLean(monkeypatch, outcomes={serialized: ("SEM002", b"", None)})
     problems, summary = run_check(root)

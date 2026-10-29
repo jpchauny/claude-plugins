@@ -6,7 +6,7 @@ description: Derive the semantics of Clean in Lean 4 (abstract syntax, typing, e
 # derive-semantics
 
 Implements [specs/derive-semantics.md](specs/derive-semantics.md) (DSM), with
-the rules of the module, CDN-1 to CDN-6, in [module.md](../../specs/module.md),
+the rules of the module, CDN-1 to CDN-7, in [module.md](../../specs/module.md),
 and the interface of a derived-norms generator, NRM-1 to NRM-11, of the plugin
 `norms-management`. Where a step does what `derive-grammar` does, it says so;
 its `SKILL.md` is `${CLAUDE_PLUGIN_ROOT}/use-cases/derive-grammar/SKILL.md`.
@@ -23,6 +23,15 @@ directory. The script is
 ```sh
 S="${CLAUDE_PLUGIN_ROOT}/use-cases/derive-semantics/derive_semantics.py"
 uv run --with "lark[interegular]" python3 -I -B "$S" <command>
+```
+
+It imports the module script, the code that it shares with the script of
+`derive-grammar`, the parser of the grammar among it (CDN-7 (The script of
+each use case of this module imports the module script, and no script of a
+use case imports the script of another use case)):
+
+```sh
+M="${CLAUDE_PLUGIN_ROOT}/scripts/derived_norms.py"
 ```
 
 What you read and write (DSM-1 (The use case reads only layer 2 and the
@@ -353,10 +362,10 @@ and the derivation goes on)):
 - The search for a duplicate lists the issues with the label
   `derive-semantics`:
   `gh issue list -R Ivan-Pasco/clean-language-foundation --state all --label derive-semantics -L 5000 --json number,title,state,url`.
-- The values: run the snippet of `derive-grammar` with
-  `S2="${CLAUDE_PLUGIN_ROOT}/use-cases/derive-grammar/derive_grammar.py"` in
-  place of `$S`, and with `m.STATUS_REL` replaced by
-  `"specs-derived/semantics/clean-language-code-examples-status.jsonl"`.
+- The values: run the snippet of `derive-grammar`, which loads the module
+  script `$M`, with its status file
+  `"specs-derived/grammar/clean-language-code-examples-status.jsonl"`
+  replaced by `"specs-derived/semantics/clean-language-code-examples-status.jsonl"`.
 - After the fragment as it is, the body holds its expected output block as it
   is, when it has one (the `tree` command prints its text; write it inside a
   `clean-language-output` fence).
@@ -418,8 +427,9 @@ Append each event to `<scratchpad>/issues-opened.jsonl`, as there.
 
 The script cites no norm today: it holds nothing of Clean (DSM-17 (Each
 stale cited norm of the script gets its own issue in jpchauny/claude-plugins
-at once (CDN-5), and check still fails)). Run once per run, after the last
-check:
+at once (CDN-5), and check still fails)). Its `stale-citations` reads the
+script alone: the citations of the module script, those of the indenter, are
+reported by `derive-grammar`. Run once per run, after the last check:
 
 ```sh
 uv run --with "lark[interegular]" python3 -I -B "$S" stale-citations > <scratchpad>/stale-citations.jsonl
@@ -430,8 +440,9 @@ An empty file: nothing to do. Otherwise do step 5 of the SKILL.md of
 `jpchauny/claude-plugins` when missing); the title
 `clean-derived-norms derive-semantics: <ID> <changed | was retired | is gone>, its citation is stale (<ID>)`;
 the search for titles that begin with `clean-derived-norms derive-semantics: `;
-the path `apps/clean-language/modules/clean-derived-norms/use-cases/derive-semantics/derive_semantics.py`
-and the spec `.../use-cases/derive-semantics/specs/derive-semantics.md`; and
+the spec `.../use-cases/derive-semantics/specs/derive-semantics.md` (the path
+of each line, `use-cases/derive-semantics/derive_semantics.py`, comes from
+`stale-citations`); and
 the last line `Found while checking the Lean semantics of Clean
 (/clean-derived-norms:derive-semantics), foundation @ <sha>, norms @ <sha>.`
 

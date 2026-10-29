@@ -4,7 +4,7 @@
 
 **Audience:** The people who keep layer 2 of the Clean Language project; whoever builds or changes the use case `derive-grammar` of the plugin `clean-derived-norms`
 
-**Scope:** The use case `/clean-derived-norms:derive-grammar`, the generator of the type `grammar`, which derives, from the norms of layer 2, one Lark grammar of Clean ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how it splits a fragment into the files of its program and parses each one, how it cites the norms, how it finds what to derive again, how it verifies, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-11, is in [norms-management](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-6, is in [module.md](../../../specs/module.md#rules); neither is repeated here. The rules of the Clean examples are in [clean-examples](../../../../clean-examples/specs/module.md), and this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Out of scope: the semantics of Clean, and any other type of derived norms; how the norms get their IDs, which is in the specs of `norms-management`; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)). The citation is the one of a derived norm, as [LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules) says, in the form of the citation of a norm of [ACU-56](../../../../../../indra-software-factory/modules/acceptance-management/specs/module.md#hashes-and-citations). How an issue is opened is the skill `utilities:issue`; DGR-14 adds what the issue of a pending fragment holds, and that this use case opens it without the yes of the user, DGR-18 does the same for the issue of a stale citation of the script, in `jpchauny/claude-plugins`, and `SKILL.md` holds the templates.
+**Scope:** The use case `/clean-derived-norms:derive-grammar`, the generator of the type `grammar`, which derives, from the norms of layer 2, one Lark grammar of Clean ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how it splits a fragment into the files of its program and parses each one, how it cites the norms, how it finds what to derive again, how it verifies, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-11, is in [norms-management](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-7, is in [module.md](../../../specs/module.md#rules); neither is repeated here. The rules of the Clean examples are in [clean-examples](../../../../clean-examples/specs/module.md), and this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Out of scope: the semantics of Clean, and any other type of derived norms; how the norms get their IDs, which is in the specs of `norms-management`; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)). The citation is the one of a derived norm, as [LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules) says, in the form of the citation of a norm of [ACU-56](../../../../../../indra-software-factory/modules/acceptance-management/specs/module.md#hashes-and-citations). How an issue is opened is the skill `utilities:issue`; DGR-14 adds what the issue of a pending fragment holds, and that this use case opens it without the yes of the user, DGR-18 does the same for the issue of a stale citation of the script, in `jpchauny/claude-plugins`, and `SKILL.md` holds the templates.
 
 A use case of the module `clean-derived-norms`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
@@ -16,14 +16,15 @@ The use case has two parts. The script does what is deterministic: the work list
 |---|---|
 | Use case | The use case `derive-grammar` of the plugin `clean-derived-norms`, invoked as `/clean-derived-norms:derive-grammar`; the actor of every requirement that names no other. A run is one invocation of it, by `/norms-management:build` ([NRM-2](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)) or by a person. |
 | Repository | The repository of layer 2 of the project, where the use case runs, from its root ([CLN-1](../../../../../specs/app.md#rules)). |
-| Script | `use-cases/derive-grammar/derive_grammar.py` of the plugin, run from the root of the repository as `uv run --with "lark[interegular]" python3 -I <script> <command>`. Its commands are `worklist`, `seal --model <model ID>`, `check` and `stale-citations`. The root of the repository of layer 2 is the working directory; the script takes no `--root`. Its tests are `tests/test_derive_grammar.py` of the module. |
+| Script | `use-cases/derive-grammar/derive_grammar.py` of the plugin, run from the root of the repository as `uv run --with "lark[interegular]" python3 -I <script> <command>`. Its commands are `worklist`, `seal --model <model ID>`, `check` and `stale-citations`. The root of the repository of layer 2 is the working directory; the script takes no `--root`. It imports the module script ([CDN-7](../../../specs/module.md#rules)). Its tests are `tests/test_derive_grammar.py` of the module. |
+| Code of the script | The code of the script and of the module script ([module.md](../../../specs/module.md#terms)). A line of it is named by the path of its file in the plugin and its number in that file, such as `scripts/derived_norms.py line 753`. |
 | Deriver | The AI that runs the use case and writes the grammar. |
 | Model ID | The exact ID of the model that the deriver runs as, such as `claude-opus-5-5`, which the deriver knows from its own context. The meta line of the status file records it as `model` (DGR-4). Its form is letters, digits, `.`, `-` and `_`, at least one: `^[A-Za-z0-9._-]+$`. |
 | Plugin version | The `version` of the `.claude-plugin/plugin.json` of the plugin `clean-derived-norms` that holds the script, a string; the plugin always has one ([NRM-5](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)). |
 | Marketplace commit | The commit of the marketplace that the plugin was installed from, found in this order: the `gitCommitSha` of the entry of `~/.claude/plugins/installed_plugins.json` whose `installPath` is the plugin's root; otherwise the full sha of `HEAD` of the git checkout that holds the plugin's root; otherwise `none`. |
 | Norm | A node of `data/tree.jsonl` with its norm ID, such as `EXP-11`. |
 | Norm hash | The first 8 hex digits of the `tree_hash` of a norm in `data/tree.jsonl`, such as `e105eaa8` for `EXP-11`. |
-| Citation | One comment line `// <norm ID>@<norm hash>: <reason>`, as LAY-3 defines it with the comment mark of Lark, such as `// EXP-11@e105eaa8: ^ is right-associative`. A line is a citation when it matches `^// ([A-Z]{3,}(-[0-9]+)?)@([0-9a-f]{8}): (\S.*)$`. In a status reason and in the script, the same form without `// ` (the script uses `# `). |
+| Citation | One comment line `// <norm ID>@<norm hash>: <reason>`, as LAY-3 defines it with the comment mark of Lark, such as `// EXP-11@e105eaa8: ^ is right-associative`. A line is a citation when it matches `^// ([A-Z]{3,}(-[0-9]+)?)@([0-9a-f]{8}): (\S.*)$`. In a status reason and in the code of the script, the same form without `// ` (the code of the script uses `# `). |
 | Fragment | As [module.md](../../../specs/module.md#terms) defines it: a norm of `data/tree.jsonl` of kind `code_block`, active, whose code block is a Clean example. |
 | Opening line, info string, code | As [clean-examples](../../../../clean-examples/specs/module.md#terms) defines them. Line 1 of the code is the line after the opening line. |
 | Prose norm | A norm that is not a fragment, such as `EXP-11` or `FIL-70`. |
@@ -492,10 +493,10 @@ Feature: Derive the grammar of Clean from the norms
       And no fragment is "pending"
 
     Scenario: A stale citation of the script
-      Given line 753 of the script holds "# LEX-20@8c358626: each indentation level is exactly one tab character"
+      Given line 753 of the module script holds "# LEX-20@8c358626: each indentation level is exactly one tab character"
       And "data/tree.jsonl" gives "LEX-20" another norm hash, or "LEX-20" is retired or gone
       When the script runs "check"
-      Then it reports the problem "script-citation" "LEX-20", naming "line 753" and what is wrong, such as "LEX-20 has the norm hash 12345678"
+      Then it reports the problem "script-citation" "LEX-20", naming "scripts/derived_norms.py line 753" and what is wrong, such as "LEX-20 has the norm hash 12345678"
       And it exits with 1, until a new version of the plugin fixes the script
       And the run then opens the issue of "LEX-20" in "jpchauny/claude-plugins" (DGR-18)
 
@@ -749,11 +750,11 @@ Feature: Derive the grammar of Clean from the norms
   Rule: DGR-18 Each stale cited norm of the script gets its own issue in jpchauny/claude-plugins at once (CDN-5), and check still fails
 
     Scenario: The list of the stale citations
-      Given line 753 of the script holds "# LEX-20@8c358626: each indentation level is exactly one tab character"
+      Given line 753 of the module script holds "# LEX-20@8c358626: each indentation level is exactly one tab character"
       And "data/tree.jsonl" gives "LEX-20" the norm hash "12345678"
       When the script runs "stale-citations"
-      Then it prints one JSON line per stale cited norm, in the order of its first stale citation in the script, with "id", "state", "current_hash", "new_text" and "citations"
-      And "citations" holds, for each line of the script that cites that norm with a stale norm hash, "line" (its number), "text" (the line without its indentation), "cited_hash", "old_text" and "old_commit"
+      Then it prints one JSON line per stale cited norm, in the order of its first stale citation in the code of the script, the script first and then the module script, with "id", "state", "current_hash", "new_text" and "citations"
+      And "citations" holds, for each line of the code of the script that cites that norm with a stale norm hash, "path" (the path of its file in the plugin, such as "scripts/derived_norms.py"), "line" (its number in that file), "text" (the line without its indentation), "cited_hash", "old_text" and "old_commit"
       And "old_text" is the text of the norm in the newest version of "data/tree.jsonl" in the history of HEAD where the norm has the cited hash, and "old_commit" is the commit of that version; both are null when no version has it, or git cannot run
       And a citation whose norm is active with the cited norm hash gives nothing
       And a line that tries a citation and is not one gives nothing: "check" reports it (DGR-9)
@@ -761,7 +762,7 @@ Feature: Derive the grammar of Clean from the norms
 
     Scenario: The citations of the script
       When the script is written
-      Then its code cites "LEX-20@8c358626" (each indentation level is exactly one tab character), "LEX-21@7474dff8" (mixing tabs and spaces for indentation is not allowed) and "EXP-27@f74dba8b" (inside an open parenthesis a line continues), where the indenter uses them (DGR-11)
+      Then its code cites "LEX-20@8c358626" (each indentation level is exactly one tab character), "LEX-21@7474dff8" (mixing tabs and spaces for indentation is not allowed) and "EXP-27@f74dba8b" (inside an open parenthesis a line continues), where the indenter uses them (DGR-11), which is in the module script (CDN-7)
       And it cites no norm for the case of a fragment, which comes from the opening line (DGR-6)
 
     Scenario Outline: The state of a stale cited norm
@@ -785,7 +786,7 @@ Feature: Derive the grammar of Clean from the norms
       And it goes on with the end report (DGR-15)
 
     Scenario: One issue per stale cited norm
-      Given lines 2 and 9 of the script cite "LEX-21" with a stale norm hash, and line 5 cites "LEX-20" with one
+      Given lines 2 and 9 of the module script cite "LEX-21" with a stale norm hash, and line 5 cites "LEX-20" with one
       When the use case opens their issues
       Then it opens two issues: one for "LEX-21", which names lines 2 and 9, and one for "LEX-20"
       And never one issue shared by several norms
@@ -795,7 +796,7 @@ Feature: Derive the grammar of Clean from the norms
       When the use case searches for a duplicate, before it opens the issue
       Then it lists the open and closed issues of "jpchauny/claude-plugins" with the label "derive-grammar", without the search index of GitHub: gh issue list -R jpchauny/claude-plugins --state all --label derive-grammar -L 5000 --json number,title,state,url
       And a result counts only when its title begins with "clean-derived-norms derive-grammar: " and ends with "(LEX-20)"
-      And when one that counts is open, the use case opens no issue: it comments on that one at once, with one line per stale citation "Still stale at norms @ <sha>: line <line> cites LEX-20@<cited hash>; LEX-20 <now has the norm hash <current hash> | is retired | is gone>.", and waits for no yes
+      And when one that counts is open, the use case opens no issue: it comments on that one at once, with one line per stale citation "Still stale at norms @ <sha>: <path> line <line> cites LEX-20@<cited hash>; LEX-20 <now has the norm hash <current hash> | is retired | is gone>.", and waits for no yes
       And when the ones that count are all closed, it opens a new issue whose body holds the line "Related: #<m>, ...", which links every one of them, and it neither reopens nor comments on them
 
     Scenario: The issue of a stale cited norm
@@ -805,8 +806,8 @@ Feature: Derive the grammar of Clean from the norms
       And its title is "clean-derived-norms derive-grammar: LEX-20 <changed | was retired | is gone>, its citation is stale (LEX-20)", which ends with the ID of the norm in parentheses
       And its labels are exactly "finding" and "derive-grammar", each created first if the repository lacks it
       And it has no parent in the tree of issues
-      And its body holds, in this order: what happens, with the norm as "<norm ID> (<title>)", its state, the cited norm hash and the current one, the foundation commit and the lines of the script that cite it; those lines, each with its number, in a "python" block; for each cited norm hash, the old text in a "text" block, or the sentence that no version of "data/tree.jsonl" in the history of HEAD has it; the new text in a "text" block, or the sentence that the norm is retired or gone; "Decision needed", which asks whether the code still follows from the new text and recommends no option; the line "Related: #<m>, ..." when a closed duplicate counts; "Hand-off", in a "text" block of four backticks; and the last line "Found while checking the Lark grammar of Clean (/clean-derived-norms:derive-grammar), foundation @ <sha>, norms @ <sha>."
-      And the hand-off names the issue and the repository, gives the problem with "apps/clean-language/modules/clean-derived-norms/use-cases/derive-grammar/derive_grammar.py:<line>", leaves the decision open with the options numbered, holds the steps, the verification, the rules of the repository and when it is done, and says that the fix is a change of the plugin, released as a new version, not a commit in the repository of layer 2
+      And its body holds, in this order: what happens, with the norm as "<norm ID> (<title>)", its state, the cited norm hash and the current one, the foundation commit and the lines of the code of the script that cite it; those lines, each with its path and its number, in a "python" block; for each cited norm hash, the old text in a "text" block, or the sentence that no version of "data/tree.jsonl" in the history of HEAD has it; the new text in a "text" block, or the sentence that the norm is retired or gone; "Decision needed", which asks whether the code still follows from the new text and recommends no option; the line "Related: #<m>, ..." when a closed duplicate counts; "Hand-off", in a "text" block of four backticks; and the last line "Found while checking the Lark grammar of Clean (/clean-derived-norms:derive-grammar), foundation @ <sha>, norms @ <sha>."
+      And the hand-off names the issue and the repository, gives the problem with "apps/clean-language/modules/clean-derived-norms/<path>:<line>" of each of those lines, leaves the decision open with the options numbered, holds the steps, the verification, the rules of the repository and when it is done, and says that the fix is a change of the plugin, released as a new version, not a commit in the repository of layer 2
       And its verification is that the tests of the script pass and that, after the new version of the plugin runs, "check" prints no problem "script-citation" for "LEX-20"
       And the full template is in "SKILL.md", with where each value comes from: "stale-citations", "data/tree.jsonl" and git
       And once it is opened, the use case writes the number of the issue, the last part of its URL, for "#<n>" in the body, never in the line "Related:", and edits the issue with it

@@ -12,47 +12,34 @@ Spec: use-cases/derive-semantics/specs/derive-semantics.md (DSM) of the plugin.
 
 import argparse
 import hashlib
-import importlib.util
 import json
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
-import types
 from pathlib import Path
 
-# The script of the grammar, used as a library: the tree, the case text, the
-# citations, the plugin and the parser of DGR-11 and DGR-13 (DSM-7).
-GRAMMAR_SCRIPT = Path(__file__).resolve().parents[1] / "derive-grammar" / "derive_grammar.py"
+# The module script, scripts/derived_norms.py of the plugin, which this script
+# imports, and not the script of derive-grammar: the tree, the case text, the
+# citations, the plugin and the parser of DGR-11 and DGR-13 (CDN-7, DSM-7).
+MODULE_SCRIPT_FOLDER = Path(__file__).resolve().parents[2] / "scripts"
+sys.path.insert(0, str(MODULE_SCRIPT_FOLDER))
+sys.dont_write_bytecode = True
 
+from derived_norms import (  # noqa: E402
+    CODE, GRAMMAR_REL, INLINE_CITATION_RE, INSTALLED_PLUGINS, ISSUE_RE, NO_FORM_REASON, NORM_ID, PLUGIN_NAME,
+    PLUGIN_ROOT, InputError, body_bytes, build_parser, case_text, check_citation, check_generator, check_model,
+    check_script, check_unique_issues, fence_indent, fragment_lines, info_string, is_fragment, load_jsonl, load_tree,
+    marketplace_commit, opening_match, parse_grammar, parse_program, plugin_version, read_code_of_the_script,
+    read_status, sha256, stale, stale_script_citations, strip_columns,
+)
 
-def load_grammar_script():
-    """Load the script of the grammar as a module.
-
-    Spec: DSM-7 (Deliberate design: the parser of the grammar).
-    """
-    spec = importlib.util.spec_from_file_location("derive_grammar_for_semantics", GRAMMAR_SCRIPT)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-dg = load_grammar_script()
-InputError = dg.InputError
-
-TREE_REL = dg.TREE_REL
-GRAMMAR_REL = dg.GRAMMAR_REL
 FOLDER_REL = "specs-derived/semantics"
 STATUS_NAME = "clean-language-code-examples-status.jsonl"
 STATUS_REL = FOLDER_REL + "/" + STATUS_NAME
 LEAN_CODE = ["Clean.lean", "Clean/Ast.lean", "Clean/Syntax.lean", "Clean/Typing.lean", "Clean/Evaluation.lean"]
 
-PLUGIN_NAME = dg.PLUGIN_NAME
-PLUGIN_ROOT = Path(__file__).resolve().parents[2]
-INSTALLED_PLUGINS = dg.INSTALLED_PLUGINS
-
-NO_FORM_REASON = dg.NO_FORM_REASON
 NOT_PARSED_REASON = "the grammar does not parse it"
 FIXED_REASONS = (NO_FORM_REASON, NOT_PARSED_REASON)
 OUTPUT_INFO = "clean-language-output"
@@ -61,11 +48,11 @@ BUILD_SECONDS = 900
 RUN_SECONDS = 10
 
 VALID_FORM = re.compile(r"clean-language expect=valid")
-ERROR_FORM = re.compile(r"clean-language expect=error code=(" + dg.CODE + r")")
-SYNTAX_FORM = re.compile(r"clean-language expect=syntax-error code=" + dg.CODE + r" line=(0|[1-9][0-9]*)")
-CASE_RE = re.compile(r"run|error " + dg.CODE)
-CODE_RE = re.compile(dg.CODE)
-LEAN_CITATION_RE = re.compile(r"^-- (" + dg.NORM_ID + r")@([0-9a-f]{8}): (\S.*)$")
+ERROR_FORM = re.compile(r"clean-language expect=error code=(" + CODE + r")")
+SYNTAX_FORM = re.compile(r"clean-language expect=syntax-error code=" + CODE + r" line=(0|[1-9][0-9]*)")
+CASE_RE = re.compile(r"run|error " + CODE)
+CODE_RE = re.compile(CODE)
+LEAN_CITATION_RE = re.compile(r"^-- (" + NORM_ID + r")@([0-9a-f]{8}): (\S.*)$")
 # The names of the parse tree of a program of several files, which no grammar of Lark gives (DSM-7).
 PROGRAM_RULE = "%program"
 FILE_RULE = "%file"
@@ -179,7 +166,7 @@ def info(node):
 
     Spec: DSM-2.
     """
-    return dg.info_string(node.get("own_text", ""))
+    return info_string(node.get("own_text", ""))
 
 
 def is_semantic_fragment(node):
@@ -187,7 +174,7 @@ def is_semantic_fragment(node):
 
     Spec: DSM-2 (Terms: Semantic fragment).
     """
-    return dg.is_fragment(node) and not SYNTAX_FORM.fullmatch(info(node) or "")
+    return is_fragment(node) and not SYNTAX_FORM.fullmatch(info(node) or "")
 
 
 def case_kinds(node):
@@ -263,12 +250,12 @@ def expected_output_text(tree, block):
     Spec: DSM-2 (Terms: Expected output text), CEX-29.
     """
     lines = block["own_text"].split("\n")
-    fence = dg.opening_match(block["own_text"]).group(2)
-    indent = dg.fence_indent(tree, block)
+    fence = opening_match(block["own_text"]).group(2)
+    indent = fence_indent(tree, block)
     body = lines[1:]
     if body and re.match(r"^[ \t]*" + re.escape(fence[0]) + "{" + str(len(fence)) + r",}[ \t]*$", body[-1]):
         body = body[:-1]
-    return "".join(dg.strip_columns(line, indent) + "\n" for line in body)
+    return "".join(strip_columns(line, indent) + "\n" for line in body)
 
 
 # ---------------------------------------------------------------- the parse tree (DSM-7)
@@ -277,9 +264,9 @@ def expected_output_text(tree, block):
 def load_grammar(root):
     """The parser of the grammar, as DGR-11 and DGR-13 build it, keeping every token in the tree.
 
-    The parser is built by the script of the grammar; only keep_all_tokens is
-    added to its options. A missing grammar, or one that does not build, is an
-    InputError.
+    The parser is built by the module script, as for the check of the
+    grammar; only keep_all_tokens is added to its options. A missing grammar,
+    or one that does not build, is an InputError.
 
     Spec: DSM-1, DSM-7.
     """
@@ -287,32 +274,14 @@ def load_grammar(root):
     if not path.is_file():
         raise InputError(f"{path} does not exist: derive-grammar runs first")
     text = path.read_text(encoding="utf-8")
-    statements, _ = dg.parse_grammar(text)
-    lark, indenter_class = dg.import_lark()
-
-    class KeepAllTokens(lark.Lark):
-        """Lark with the options of the script of the grammar, and keep_all_tokens.
-
-        Spec: DSM-7.
-        """
-
-        def __init__(self, grammar, **options):
-            """Add keep_all_tokens to the options.
-
-            Spec: DSM-7.
-            """
-            options["keep_all_tokens"] = True
-            super().__init__(grammar, **options)
-
-    original = dg.import_lark
-    dg.import_lark = lambda: (types.SimpleNamespace(Lark=KeepAllTokens), indenter_class)
+    statements, _ = parse_grammar(text)
     try:
-        return dg.build_parser(text, statements)
+        return build_parser(text, statements, keep_all_tokens=True)
+    except InputError:
+        raise
     except Exception as error:  # noqa: BLE001 - every build error stops the script
         first = (str(error).strip().split("\n") or [""])[0]
         raise InputError(f"{path}: the grammar does not build: {type(error).__name__}: {first}")
-    finally:
-        dg.import_lark = original
 
 
 def parse(grammar, text):
@@ -326,7 +295,7 @@ def parse(grammar, text):
     Spec: DSM-7.
     """
     parser, indenter = grammar
-    files, trees, failure = dg.parse_program(parser, indenter, text)
+    files, trees, failure = parse_program(parser, indenter, text)
     if failure is not None:
         return None, failure[2]
     if not files[0].file_line:
@@ -426,7 +395,7 @@ def facts(tree, grammar, node):
            "expected_output_text": expected_output_text(tree, block) if block else None,
            "parse_tree_hash": None, "parse_error": None, "serialized": None, "generic": None}
     if cases:
-        parsed, error = parse(grammar, dg.case_text(tree, node))
+        parsed, error = parse(grammar, case_text(tree, node))
         if error is not None:
             out["parse_error"] = error
         else:
@@ -683,7 +652,7 @@ def check_declarations(tree, declarations, status_by_id):
             if norm_id in cited:
                 problems.append(("citation", d.key, f"line {number}: {norm_id} is cited twice; one citation line per norm"))
             cited.add(norm_id)
-            message = dg.check_citation(tree, norm_id, norm_hash)
+            message = check_citation(tree, norm_id, norm_hash)
             node = tree.nodes.get(norm_id)
             if message is None and node is not None and is_semantic_fragment(node):
                 line = status_by_id.get(norm_id)
@@ -691,7 +660,7 @@ def check_declarations(tree, declarations, status_by_id):
                     message = f"{norm_id} is {line.get('state') if line else 'without a status line'}"
             if message:
                 problems.append(("citation", d.key, f"line {number}: {message}"))
-            if node is not None and not dg.is_fragment(node) and not is_output_block(node):
+            if node is not None and not is_fragment(node) and not is_output_block(node):
                 prose = True
         if d.citations and not prose:
             problems.append(("citation", d.key, "cites no prose norm"))
@@ -727,7 +696,7 @@ def previous_status(root):
     path = root / STATUS_REL
     if not path.is_file():
         return None
-    return [r for r in dg.load_jsonl(path, "status") if r.get("type") == "fragment"]
+    return [r for r in load_jsonl(path, "status") if r.get("type") == "fragment"]
 
 
 def check_status(tree, status_path, rows, current):
@@ -773,16 +742,16 @@ def check_status(tree, status_path, rows, current):
             problems.append(("status", norm_id, f"a {state} fragment has no reason"))
         if state != "pending" and issue is not None:
             problems.append(("status", norm_id, "an issue on a fragment that is not pending"))
-        if state == "pending" and issue is not None and not (isinstance(issue, str) and dg.ISSUE_RE.fullmatch(issue)):
+        if state == "pending" and issue is not None and not (isinstance(issue, str) and ISSUE_RE.fullmatch(issue)):
             problems.append(("status", norm_id, "the issue is not an issue URL of the foundation"))
         if reason in FIXED_REASONS and issue is not None:
             problems.append(("issue", norm_id, f"pending with the reason \"{reason}\", which opens no issue of its own (DSM-5)"))
         if isinstance(reason, str):
-            for cited, cited_hash in dg.INLINE_CITATION_RE.findall(reason):
-                message = dg.check_citation(tree, cited, cited_hash)
+            for cited, cited_hash in INLINE_CITATION_RE.findall(reason):
+                message = check_citation(tree, cited, cited_hash)
                 if message:
                     problems.append(("reason-citation", norm_id, message))
-    problems += dg.check_unique_issues(rows)
+    problems += check_unique_issues(rows)
     for norm_id, count in counts.items():
         if norm_id not in current:
             problems.append(("status", norm_id, "a status line of a norm that is not a semantic fragment"))
@@ -808,7 +777,7 @@ def check_status(tree, status_path, rows, current):
             problems.append(("parse", norm_id, f"{NOT_PARSED_REASON}: the fragment is pending with exactly that reason; {fact['parse_error']}"))
         if line["state"] == "pending":
             problems.append(("pending", norm_id, f"pending: {reason}"))
-            if reason not in FIXED_REASONS and not dg.INLINE_CITATION_RE.search(reason):
+            if reason not in FIXED_REASONS and not INLINE_CITATION_RE.search(reason):
                 problems.append(("pending", norm_id, "the reason cites no norm"))
     return problems, by_id
 
@@ -831,13 +800,13 @@ def check_meta(tree, folder, status_path, rows, version):
         problems.append(("meta", f"{where}:{number}", f"the meta line does not have exactly the fields {', '.join(META_KEYS)}, in that order"))
     if meta.get("specs_commit") != tree.specs_commit:
         problems.append(("meta", "specs_commit", f"{meta.get('specs_commit')}; data/tree.jsonl has {tree.specs_commit}"))
-    problems += dg.check_generator(meta, version)
-    problems += dg.check_model(meta)
+    problems += check_generator(meta, version)
+    problems += check_model(meta)
     for key, rel in HASHED:
         path = folder / rel
-        if not path.is_file() or meta.get(key) != dg.sha256(path.read_bytes()):
+        if not path.is_file() or meta.get(key) != sha256(path.read_bytes()):
             problems.append(("meta", key, f"{rel} does not match the hash of its meta line: changed after the last seal"))
-    if meta.get("status_sha256") != dg.sha256(dg.body_bytes(status_path.read_text(encoding="utf-8"))):
+    if meta.get("status_sha256") != sha256(body_bytes(status_path.read_text(encoding="utf-8"))):
         problems.append(("meta", "status_sha256", "the status file does not match the hash of its meta line: changed after the last seal"))
     return problems
 
@@ -944,7 +913,7 @@ def worklist(root):
 
     Spec: DSM-12.
     """
-    tree = dg.load_tree(root)
+    tree = load_tree(root)
     grammar = load_grammar(root)
     lines = previous_status(root)
     absent = lines is None
@@ -967,7 +936,7 @@ def worklist(root):
         else:
             item["old_hash"] = old.get("hash")
             reason = old.get("reason") if isinstance(old.get("reason"), str) else ""
-            moved = any(dg.stale(tree, i, h) for i, h in dg.INLINE_CITATION_RE.findall(reason))
+            moved = any(stale(tree, i, h) for i, h in INLINE_CITATION_RE.findall(reason))
             if moved or old.get("hash") != item["new_hash"] or any(old.get(f) != fact[f] for f in ("cases", "expected_output", "parse_tree_hash")):
                 item["kind"] = "changed"
         if item["kind"]:
@@ -983,7 +952,7 @@ def worklist(root):
         declarations, _, _ = read_lean(root / FOLDER_REL)
         for d in declarations:
             for _, norm_id, norm_hash in d.citations:
-                change = dg.stale(tree, norm_id, norm_hash)
+                change = stale(tree, norm_id, norm_hash)
                 if change:
                     items.append({"kind": "norm", "declaration": d.key, "old_hash": norm_hash, "new_hash": change[0],
                                   "citation": f"{norm_id}@{norm_hash}"})
@@ -995,7 +964,7 @@ def tree_report(root, ids):
 
     Spec: DSM-7.
     """
-    tree = dg.load_tree(root)
+    tree = load_tree(root)
     grammar = load_grammar(root)
     for norm_id in ids:
         node = tree.nodes.get(norm_id)
@@ -1007,8 +976,8 @@ def tree_report(root, ids):
         fact = facts(tree, grammar, node)
         out.append(f"== {norm_id}@{tree.norm_hash(norm_id)} cases={json.dumps(fact['cases'])} "
                    f"expected_output={json.dumps(fact['expected_output'])} parse_tree_hash={json.dumps(fact['parse_tree_hash'])} {node.get('file')}")
-        out.append(dg.fragment_lines(tree, node)[0])
-        out.append(dg.case_text(tree, node).rstrip("\n"))
+        out.append(fragment_lines(tree, node)[0])
+        out.append(case_text(tree, node).rstrip("\n"))
         if fact["expected_output_text"] is not None:
             out.append("-- expected output --")
             out.append(fact["expected_output_text"].rstrip("\n"))
@@ -1028,15 +997,15 @@ def seal(root, model, plugin_root=None, installed=None):
 
     Spec: DSM-3, DSM-4, DSM-5, DSM-16.
     """
-    tree = dg.load_tree(root)
+    tree = load_tree(root)
     folder, status_path = root / FOLDER_REL, root / STATUS_REL
     for rel in LEAN_CODE:
         if not (folder / rel).is_file():
             raise InputError(f"{folder / rel} does not exist")
-    version = dg.plugin_version(plugin_root if plugin_root is not None else PLUGIN_ROOT)
+    version = plugin_version(plugin_root if plugin_root is not None else PLUGIN_ROOT)
     fragments = []
     if status_path.is_file():
-        for number, line, value, error in dg.read_status(status_path):
+        for number, line, value, error in read_status(status_path):
             if value is None:
                 raise InputError(f"status {status_path}:{number}: {error}")
             if value.get("type") != "meta":
@@ -1044,7 +1013,7 @@ def seal(root, model, plugin_root=None, installed=None):
     end = len(tree.order)
     fragments.sort(key=lambda f: tree.order.get(f[1].get("id"), end))
     body = "".join(line + "\n" for line, _ in fragments)
-    commit = dg.marketplace_commit(plugin_root if plugin_root is not None else PLUGIN_ROOT,
+    commit = marketplace_commit(plugin_root if plugin_root is not None else PLUGIN_ROOT,
                                    installed if installed is not None else INSTALLED_PLUGINS)
     for rel, text in FIXED.items():
         (folder / rel).write_text(text, encoding="utf-8")
@@ -1052,27 +1021,30 @@ def seal(root, model, plugin_root=None, installed=None):
             "generator": {"plugin": PLUGIN_NAME, "version": version, "marketplace_commit": commit},
             "model": model}
     for key, rel in HASHED:
-        meta[key] = dg.sha256((folder / rel).read_bytes())
-    meta["status_sha256"] = dg.sha256(body.encode("utf-8"))
+        meta[key] = sha256((folder / rel).read_bytes())
+    meta["status_sha256"] = sha256(body.encode("utf-8"))
     head = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
     status_path.write_text(head + "\n" + body, encoding="utf-8")
     return head
 
 
-def check(root, script_path, plugin_root=None):
+def check(root, code_of_the_script, plugin_root=None):
     """Every check of DSM-13; returns the problems and the counts.
+
+    code_of_the_script: [(path of the file in the plugin, text)], as
+    read_code_of_the_script gives it: the script alone (DSM-17).
 
     Spec: DSM-9, DSM-11, DSM-13.
     """
-    tree = dg.load_tree(root)
+    tree = load_tree(root)
     folder, status_path = root / FOLDER_REL, root / STATUS_REL
     for path in [status_path] + [folder / rel for rel in LEAN_CODE]:
         if not path.is_file():
             raise InputError(f"{path} does not exist")
     grammar = load_grammar(root)
-    version = dg.plugin_version(plugin_root if plugin_root is not None else PLUGIN_ROOT)
-    rows = dg.read_status(status_path)
-    script_problems = dg.check_script(tree, script_path.read_text(encoding="utf-8"))
+    version = plugin_version(plugin_root if plugin_root is not None else PLUGIN_ROOT)
+    rows = read_status(status_path)
+    script_problems = check_script(tree, code_of_the_script)
     counts = {state: 0 for state in STATES}
     passed = {"run": [0, 0], "error": [0, 0]}
     fragments = semantic_fragments(tree)
@@ -1135,7 +1107,7 @@ def main(argv=None):
     if args.command == "tree" and not args.ids:
         print("error: tree needs one norm ID or more", file=sys.stderr)
         return 2
-    script = Path(__file__).resolve()
+    code_of_the_script = read_code_of_the_script(Path(__file__))
     try:
         if args.command == "worklist":
             for item in worklist(root):
@@ -1148,10 +1120,10 @@ def main(argv=None):
             print(seal(root, args.model))
             return 0
         if args.command == "stale-citations":
-            for item in dg.stale_script_citations(root, dg.load_tree(root), script.read_text(encoding="utf-8")):
+            for item in stale_script_citations(root, load_tree(root), code_of_the_script):
                 print(json.dumps(item, ensure_ascii=False))
             return 0
-        problems, summary = check(root, script)
+        problems, summary = check(root, code_of_the_script)
     except InputError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
