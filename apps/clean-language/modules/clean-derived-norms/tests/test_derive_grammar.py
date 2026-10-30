@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -187,6 +188,19 @@ def git_init(root):
     return git(root, "rev-parse", "HEAD")
 
 
+def branch(root):
+    """The branch that HEAD names in a temporary repository of a test."""
+    return git(root, "symbolic-ref", "--short", "HEAD")
+
+
+def commit_the_list(root):
+    """Commit the list of derived norms, as the step of layer 2 does at the end of a run (NRM-9): the list before the next run."""
+    if not (root / ".git").exists():
+        git_init(root)
+    git(root, "add", "--", dg.PATH_OF_LIST_OF_DERIVED_NORMS)
+    git(root, "commit", "-q", "-m", "layer 2")
+
+
 @pytest.fixture(autouse=True)
 def plugin(tmp_path, monkeypatch):
     """The plugin that runs the script: a plugin.json of version 0.1.0, and no record of installed plugins.
@@ -204,8 +218,10 @@ def plugin(tmp_path, monkeypatch):
 
 @pytest.fixture
 def repo(tmp_path):
+    """A repository of layer 2 with no commit yet, so with no list before the run (CDN-9)."""
     root = tmp_path / "repo"
     root.mkdir()
+    git(root, "init", "-q")
     nodes = base_nodes()
     write_tree(root, nodes)
     write_outputs(root, good_grammar(nodes), good_status(nodes))
@@ -325,12 +341,14 @@ def test_dgr4_seal_writes_the_meta_line_first(repo):
     root, _ = repo
     lines = (root / dg.STATUS_REL).read_text().split("\n")
     meta = json.loads(lines[0])
-    assert list(meta) == ["type", "specs_commit", "generator", "model", "grammar_sha256", "status_sha256"]
+    assert list(meta) == ["type", "specs_commit", "generator", "model", "grammar_sha256", "derived_norms_sha256",
+                          "status_sha256"]
     assert list(meta["generator"]) == ["plugin", "version", "marketplace_commit"]
     assert meta["type"] == "meta" and meta["specs_commit"] == SPECS
     assert meta["generator"] == {"plugin": "clean-derived-norms", "version": VERSION, "marketplace_commit": "none"}
     assert meta["model"] == MODEL
     assert meta["grammar_sha256"] == hashlib.sha256((root / derived_norms.GRAMMAR_REL).read_bytes()).hexdigest()
+    assert meta["derived_norms_sha256"] == hashlib.sha256((root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
     assert meta["status_sha256"] == hashlib.sha256("\n".join(lines[1:]).encode()).hexdigest()
     assert lines[0] == json.dumps(meta, separators=(",", ":"))
 
@@ -952,7 +970,7 @@ def test_dgr12_a_changed_case(repo):
     root, nodes = repo
     lines = good_status(nodes)
     lines[1]["cases"] = ["accept"]
-    write_outputs(root, good_grammar(nodes), lines)
+    reseal_with(root, nodes, lines=lines)
     assert [(i["kind"], i["id"], i["cases"]) for i in dg.worklist(root)] == [("changed", "TST-2", ["reject"])]
 
 
@@ -996,7 +1014,7 @@ def test_dgr12_pending_with_nothing_changed_and_with_a_cited_norm_changed(repo):
     root, nodes = repo
     lines = good_status(nodes)
     lines[0].update(state="pending", reason="no norm says it: " + cite(nodes, "PRO-1", "x")[3:].split(":")[0])
-    write_outputs(root, good_grammar(nodes), lines)
+    reseal_with(root, nodes, lines=lines)
     assert dg.worklist(root) == []
     next(n for n in nodes if n["id"] == "PRO-1")["tree_hash"] = "22222222" + "0" * 56
     write_tree(root, nodes)
@@ -1008,7 +1026,7 @@ def test_dgr12_pending_whose_cited_norm_is_retired_or_gone(repo, how):
     root, nodes = repo
     lines = good_status(nodes)
     lines[0].update(state="pending", reason="open: " + cite(nodes, "PRO-1", "x")[3:].split(":")[0])
-    write_outputs(root, good_grammar(nodes), lines)
+    reseal_with(root, nodes, lines=lines)
     pro1 = next(n for n in nodes if n["id"] == "PRO-1")
     if how == "retired":
         pro1["status"] = "retired"
@@ -1083,6 +1101,84 @@ def test_dgr12_exit_status_2(tmp_path, repo, monkeypatch, bad):
     path.write_text(good)
     (root / derived_norms.TREE_REL).write_text((root / derived_norms.TREE_REL).read_text() + bad + "\n")
     assert main_in(root, monkeypatch, "worklist") == 2
+
+
+def set_version_in_status(root, status_rel, version):
+    """Write another version of the generator in the meta line of a status file, or none when version is None."""
+    path = root / status_rel
+    head, _, body = path.read_text().partition("\n")
+    meta = json.loads(head)
+    if version is None:
+        meta["generator"].pop("version")
+    else:
+        meta["generator"]["version"] = version
+    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+
+
+def plugin_with_version(tmp_path, version):
+    """The root of a plugin whose plugin.json has the given version, or no version when it is None."""
+    root = tmp_path / "another-plugin"
+    (root / ".claude-plugin").mkdir(parents=True, exist_ok=True)
+    value = {"name": derived_norms.PLUGIN_NAME} | ({"version": version} if version is not None else {})
+    (root / ".claude-plugin" / "plugin.json").write_text(json.dumps(value))
+    return root
+
+
+def statement_keys(root):
+    statements, _ = derived_norms.parse_grammar((root / derived_norms.GRAMMAR_REL).read_text())
+    return [s.key for s in statements if s.kind != "unknown"]
+
+
+@pytest.mark.parametrize("old_version", ["0.3.1", None])
+def test_dgr12_a_new_version_of_the_plugin_derives_every_fragment_and_statement_again(repo, old_version):
+    root, _ = repo
+    set_version_in_status(root, dg.STATUS_REL, old_version)
+    items = dg.worklist(root)
+    current = VERSION
+    assert [(i["kind"], i["id"]) for i in items if "id" in i] == [("changed", i) for i in FRAGMENTS]
+    version = [i for i in items if i["kind"] == "version"]
+    assert [i["statement"] for i in version] == statement_keys(root) and version
+    assert version[0] == {"kind": "version", "statement": statement_keys(root)[0], "old_version": old_version, "new_version": current}
+    assert list(version[0]) == ["kind", "statement", "old_version", "new_version"]
+    assert [i["kind"] for i in items] == ["changed"] * len(FRAGMENTS) + ["version"] * len(version)
+
+
+def test_dgr12_the_version_is_that_of_the_plugin_that_runs_worklist(tmp_path, repo):
+    root, _ = repo
+    items = dg.worklist(root, plugin_root=plugin_with_version(tmp_path, "9.9.9"))
+    assert {(i["old_version"], i["new_version"]) for i in items if i["kind"] == "version"} == {
+        (VERSION, "9.9.9")}
+    set_version_in_status(root, dg.STATUS_REL, "9.9.9")
+    assert dg.worklist(root, plugin_root=plugin_with_version(tmp_path, "9.9.9")) == []
+
+
+def test_dgr12_a_new_version_keeps_new_and_gone_fragments_as_they_are(repo):
+    root, nodes = repo
+    nodes = [n for n in nodes if n["id"] != "TST-4"]
+    nodes.append(node("TST-9", "code_block", fence(VALID, "start:", "\tprint(9)"), start=9000))
+    write_tree(root, nodes)
+    set_version_in_status(root, dg.STATUS_REL, "0.3.1")
+    kinds = [(i["kind"], i["id"]) for i in dg.worklist(root) if "id" in i]
+    assert kinds == [("changed", i) for i in FRAGMENTS if i != "TST-4"] + [("new", "TST-9"), ("gone", "TST-4")]
+
+
+def test_dgr12_a_statement_that_a_new_version_leaves_as_it_is_keeps_its_derived_norm_fingerprint(repo):
+    root, _ = repo
+    list_before = (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_text()
+    set_version_in_status(root, dg.STATUS_REL, "0.3.1")
+    assert dg.worklist(root)
+    dg.seal(root, MODEL)
+    assert (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_text() == list_before
+    assert json.loads((root / dg.STATUS_REL).read_text().partition("\n")[0])["generator"]["version"] == \
+        VERSION
+    assert dg.worklist(root) == []
+
+
+def test_dgr12_worklist_exits_2_when_the_plugin_has_no_version(tmp_path, repo, monkeypatch, capsys):
+    root, _ = repo
+    monkeypatch.setattr(dg, "PLUGIN_ROOT", plugin_with_version(tmp_path, None))
+    assert main_in(root, monkeypatch, "worklist") == 2
+    assert "no version" in capsys.readouterr().err
 
 
 # ------------------------------------------------------------------ DGR-13
@@ -1269,6 +1365,18 @@ def test_dgr13_missing_inputs_exit_2(repo, monkeypatch, missing):
     assert main_in(root, monkeypatch, "check") == 2
 
 
+@pytest.mark.parametrize("command", [["seal", "--model", MODEL], ["check"]])
+def test_dgr4_dgr13_a_grammar_that_is_not_utf8_exits_2_and_writes_nothing(repo, monkeypatch, capsys, command):
+    root, _ = repo
+    grammar = root / derived_norms.GRAMMAR_REL
+    grammar.write_bytes(grammar.read_bytes() + b"// \xff\n")
+    status = root / dg.STATUS_REL
+    before = status.read_bytes()
+    assert main_in(root, monkeypatch, *command) == 2
+    assert "is not UTF-8" in capsys.readouterr().err
+    assert status.read_bytes() == before
+
+
 def test_dgr13_lark_that_cannot_be_loaded_exits_2(repo, monkeypatch):
     root, _ = repo
 
@@ -1395,6 +1503,8 @@ def test_dgr13_a_stale_script_citation_still_fails_check(repo):
 
 
 def no_fragment_repo(root, grammar=""):
+    root.mkdir(parents=True, exist_ok=True)
+    git(root, "init", "-q")
     nodes = [n for n in base_nodes() if n["kind"] != "code_block"]
     write_tree(root, nodes)
     write_outputs(root, grammar, [])
@@ -1816,3 +1926,359 @@ def test_dgr19_a_program_of_several_files_is_one_case(repo):
     add_fragment(root, nodes, two_file_fragment(VALID, "\tprint(1)", "\tprint(2)"))
     line = next(json.loads(l) for l in (root / dg.STATUS_REL).read_text().splitlines() if '"TST-7"' in l)
     assert list(line) == dg.FRAGMENT_KEYS and line["cases"] == ["accept"]
+
+
+# ------------------------------------------------------------------ DGR-20
+
+
+def list_rows(root):
+    return [json.loads(line) for line in (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_text().splitlines()]
+
+
+def derived_norm_id_of(root, name):
+    return next(r["derived_norm_id"] for r in list_rows(root)[1:] if r["name"] == name)
+
+
+def derived_norm_fingerprint_of(root, name):
+    return next(r["derived_norm_fingerprint"] for r in list_rows(root)[1:] if r["name"] == name)
+
+
+def test_dgr3_the_list_of_derived_norms_is_a_file_of_the_folder(repo):
+    root, _ = repo
+    assert sorted(p.name for p in (root / "specs-derived" / "grammar").iterdir()) == [
+        "clean-language-code-examples-status.jsonl", "clean.lark", "derived-norms.jsonl"]
+    problems, _ = run_check(root)
+    assert not [p for p in problems if p[0] == "layout"]
+
+
+def test_dgr20_each_statement_is_one_derived_norm(repo):
+    root, nodes = repo
+    grammar = good_grammar(nodes)
+    lines = grammar.split("\n")
+    found = dg.grammar_derived_norms(grammar.encode())
+    keys = [s.key for s in derived_norms.parse_grammar(grammar)[0]]
+    assert [d.name for d in found] == keys
+    assert "%ignore COMMENT" in keys and "%declare _INDENT _DEDENT" in keys
+    section = next(d for d in found if d.name == "section")
+    assert (section.first_line, section.last_line) == (4, 6)
+    assert lines[3].startswith("// TST-1@") and lines[5].startswith("section:")
+    assert section.path == "specs-derived/grammar/clean.lark"
+    assert [i for i, _ in section.cited_norms] == ["TST-1", "TST-4"]
+
+
+def test_dgr20_continuation_lines_belong_to_the_statement_and_a_line_that_is_no_statement_is_none(repo):
+    _, nodes = repo
+    grammar = cite(nodes, "TST-1") + "\nstart: a\n    | b\n\n\nthis is no statement\n"
+    found = dg.grammar_derived_norms(grammar.encode())
+    assert [(d.name, d.first_line, d.last_line) for d in found] == [("start", 1, 3)]
+
+
+def test_dgr20_the_list_after_a_run_is_the_binding_example(tmp_path):
+    filler = []
+    for k in range(13):
+        filler += [f"// EXP-8@a0b54578: filler {k}", f"T{k}: \"{k}\"", ""]
+    grammar = "\n".join(filler + POWER_LINES) + "\n"
+    found = dg.grammar_derived_norms(grammar.encode())
+    power = next(d for d in found if d.name == "power")
+    assert (power.first_line, power.last_line, power.derived_norm_fingerprint) == (40, 42, "0ced57c3")
+    _, entries = derived_norms.give_derived_norm_ids("grammar", (41, [{"derived_norm_id": "grammar:12", "name": "power"}]), found)
+    line = next(json.dumps(e, ensure_ascii=False) for e in entries if e["name"] == "power")
+    assert line == ('{"kind": "derived_norm", "derived_norm_id": "grammar:12", "derived_norm_fingerprint": "0ced57c3", '
+                    '"name": "power", "path": "specs-derived/grammar/clean.lark", "first_line": 40, "last_line": 42, '
+                    '"cited_norms": [{"norm_id": "EXP-11", "norm_hash": "e105eaa8"}, {"norm_id": "EXP-8", "norm_hash": "a0b54578"}]}')
+
+
+POWER_LINES = ["// EXP-11@e105eaa8: ^ is right-associative", "// EXP-8@a0b54578: the operators and their order",
+               'power: unary ("^" power)?']
+
+
+def test_dgr20_seal_writes_the_list_and_check_passes(repo, monkeypatch):
+    root, nodes = repo
+    rows = list_rows(root)
+    assert rows[0] == {"kind": "meta", "type": "grammar", "last_derived_norm_number": len(rows) - 1}
+    keys = [s.key for s in derived_norms.parse_grammar(good_grammar(nodes))[0]]
+    assert [r["name"] for r in rows[1:]] == keys
+    assert [r["derived_norm_id"] for r in rows[1:]] == [f"grammar:{n}" for n in range(1, len(keys) + 1)]
+    assert [p for p in run_check(root)[0] if p[0] == "derived-norms"] == []
+
+
+def test_dgr20_the_same_derived_norm_keeps_its_derived_norm_id(repo):
+    root, nodes = repo
+    commit_the_list(root)
+    before = {r["name"]: r for r in list_rows(root)[1:]}
+    grammar = good_grammar(nodes).replace(cite(nodes, "PRO-3", "the reserved words"), cite(nodes, "PRO-3", "other words"))
+    grammar = grammar.replace("NUMBER: /[0-9]+/", "NUMBER: /[0-9][0-9]*/")
+    moved = cite(nodes, "TST-1", "a number") + "\nNUMBER: /[0-9][0-9]*/\n"
+    grammar = moved + grammar.replace(moved, "")
+    reseal_with(root, nodes, grammar)
+    after = {r["name"]: r for r in list_rows(root)[1:]}
+    assert after["RESERVED"]["derived_norm_id"] == before["RESERVED"]["derived_norm_id"]
+    assert after["RESERVED"]["derived_norm_fingerprint"] == before["RESERVED"]["derived_norm_fingerprint"]
+    assert after["NUMBER"]["derived_norm_id"] == before["NUMBER"]["derived_norm_id"]
+    assert after["NUMBER"]["first_line"] == 1
+    assert after["NUMBER"]["derived_norm_fingerprint"] != before["NUMBER"]["derived_norm_fingerprint"]
+
+
+def test_dgr12_a_statement_whose_citations_alone_changed_gets_another_derived_norm_fingerprint(repo):
+    root, nodes = repo
+    derived_norm_id_before, derived_norm_fingerprint_before = derived_norm_id_of(root, "RESERVED"), derived_norm_fingerprint_of(root, "RESERVED")
+    next(n for n in nodes if n["id"] == "PRO-3")["tree_hash"] = "44444444" + "0" * 56
+    write_tree(root, nodes)
+    reseal_with(root, nodes)
+    assert derived_norm_id_of(root, "RESERVED") == derived_norm_id_before
+    assert derived_norm_fingerprint_of(root, "RESERVED") != derived_norm_fingerprint_before
+
+
+def test_dgr20_a_renamed_statement_or_a_replaced_directive_is_a_new_derived_norm(repo):
+    root, nodes = repo
+    commit_the_list(root)
+    last = list_rows(root)[0]["last_derived_norm_number"]
+    old_ws = derived_norm_id_of(root, "%ignore WS")
+    grammar = good_grammar(nodes).replace("%ignore WS", "%ignore  WS")
+    reseal_with(root, nodes, grammar)
+    assert derived_norm_id_of(root, "%ignore  WS") == f"grammar:{last + 1}"
+    assert old_ws not in [r["derived_norm_id"] for r in list_rows(root)[1:]]
+    assert list_rows(root)[0]["last_derived_norm_number"] == last + 1
+
+
+def test_dgr12_an_empty_work_list_leaves_the_list_as_it_was(repo):
+    root, _ = repo
+    before = (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_text()
+    assert dg.worklist(root) == []
+    dg.seal(root, MODEL)
+    assert (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_text() == before
+
+
+def rehash_the_list(root):
+    set_meta(root, "derived_norms_sha256", hashlib.sha256((root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest())
+
+
+def change_list_row(root, name, **fields):
+    rows = list_rows(root)
+    for row in rows[1:]:
+        if row["name"] == name:
+            row.update(fields)
+    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
+    rehash_the_list(root)
+
+
+def test_dgr20_a_list_that_does_not_check(repo, monkeypatch):
+    root, _ = repo
+    reserved = derived_norm_id_of(root, "RESERVED")
+    change_list_row(root, "RESERVED", derived_norm_fingerprint="00000000")
+    problems, _ = run_check(root)
+    assert ("derived-norms", reserved) in names(problems)
+    assert main_in(root, monkeypatch, "check") == 1
+    rows = list_rows(root)
+    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(json.dumps(r) + "\n" for r in rows if r.get("name") != "RESERVED"))
+    rehash_the_list(root)
+    problems, _ = run_check(root)
+    assert ("derived-norms", "RESERVED") in names(problems)
+
+
+def test_dgr20_the_problems_of_the_list_are_printed(repo, monkeypatch, capsys):
+    root, _ = repo
+    reserved = derived_norm_id_of(root, "RESERVED")
+    change_list_row(root, "RESERVED", derived_norm_fingerprint="00000000")
+    main_in(root, monkeypatch, "check")
+    assert any(l.startswith(f"derived-norms: {reserved}: the derived norm fingerprint 00000000")
+               for l in capsys.readouterr().out.splitlines())
+
+
+def test_dgr17_a_change_by_hand_of_the_list_fails(repo, monkeypatch):
+    root, _ = repo
+    path = root / dg.PATH_OF_LIST_OF_DERIVED_NORMS
+    path.write_text(path.read_text().replace('"kind": "meta"', '"kind":  "meta"'))
+    problems, _ = run_check(root)
+    assert ("meta", "derived_norms_sha256") in names(problems)
+    assert main_in(root, monkeypatch, "check") == 1
+
+
+def test_dgr13_a_missing_list_exits_2(repo, monkeypatch):
+    root, _ = repo
+    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).unlink()
+    assert main_in(root, monkeypatch, "check") == 2
+
+
+@pytest.mark.parametrize("data,line", [
+    (b'{"kind": "meta", "type": "grammar"}\n', 1),
+    (b'{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n\xff\n', 2),
+])
+def test_dgr4_seal_with_a_list_before_the_run_that_cannot_be_read_exits_2_and_writes_nothing(repo, monkeypatch, capsys, data, line):
+    root, _ = repo
+    path = root / dg.PATH_OF_LIST_OF_DERIVED_NORMS
+    path.write_bytes(data)
+    commit_the_list(root)
+    status = (root / dg.STATUS_REL).read_text()
+    assert main_in(root, monkeypatch, "seal", "--model", MODEL) == 2
+    assert f"{branch(root)}:{dg.PATH_OF_LIST_OF_DERIVED_NORMS}:{line}:" in capsys.readouterr().err
+    assert path.read_bytes() == data
+    assert (root / dg.STATUS_REL).read_text() == status
+
+
+def test_cdn8_seal_does_not_read_the_list_in_the_working_tree(repo, monkeypatch):
+    root, _ = repo
+    good = (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()
+    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_bytes(b"\xff{bad\n")
+    assert main_in(root, monkeypatch, "seal", "--model", MODEL) == 0
+    assert (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes() == good
+
+
+def test_dgr20_seal_with_a_list_before_the_run_that_is_not_utf8_exits_2(tmp_path, monkeypatch, capsys):
+    root = tmp_path / "repo"
+    git_init(root)
+    nodes = base_nodes()
+    write_tree(root, nodes)
+    write_outputs(root, good_grammar(nodes), good_status(nodes))
+    dg.seal(root, MODEL)
+    path = root / dg.PATH_OF_LIST_OF_DERIVED_NORMS
+    good = path.read_bytes()
+    path.write_bytes(good + b"\xff\n")
+    commit_the_list(root)
+    path.write_bytes(good)
+    assert main_in(root, monkeypatch, "seal", "--model", MODEL) == 2
+    assert f"{branch(root)}:{dg.PATH_OF_LIST_OF_DERIVED_NORMS}:{len(good.splitlines()) + 1}: not UTF-8" in capsys.readouterr().err
+    assert path.read_bytes() == good
+
+
+def test_dgr20_check_with_a_list_before_the_run_that_is_not_utf8_reports_it(repo, monkeypatch, capsys):
+    root, _ = repo
+    path = root / dg.PATH_OF_LIST_OF_DERIVED_NORMS
+    good = path.read_bytes()
+    path.write_bytes(good + b"\xff\n")
+    commit_the_list(root)
+    path.write_bytes(good)
+    assert [p[:2] for p in run_check(root)[0] if p[0] == "derived-norms"] == [("derived-norms", "derived-norms.jsonl")]
+    assert main_in(root, monkeypatch, "check") == 1
+    assert "derived-norms: derived-norms.jsonl: the list before the run cannot be read:" in capsys.readouterr().out
+
+
+def test_cdn9_seal_outside_a_git_work_tree_exits_2_and_writes_nothing(repo, monkeypatch, capsys):
+    root, _ = repo
+    shutil.rmtree(root / ".git")
+    status = (root / dg.STATUS_REL).read_bytes()
+    listed = (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()
+    assert main_in(root, monkeypatch, "seal", "--model", MODEL) == 2
+    assert "is not in a git work tree" in capsys.readouterr().err
+    assert (root / dg.STATUS_REL).read_bytes() == status
+    assert (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes() == listed
+    assert ("derived-norms", "derived-norms.jsonl") in names(run_check(root)[0])
+
+
+def test_dgr20_a_name_that_is_a_json_array_is_reported_and_check_exits_1(repo, monkeypatch, capsys):
+    root, _ = repo
+    reserved = derived_norm_id_of(root, "RESERVED")
+    rows = list_rows(root)
+    next(r for r in rows[1:] if r["name"] == "RESERVED")["name"] = ["RESERVED"]
+    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
+    rehash_the_list(root)
+    problems, _ = run_check(root)
+    assert ("derived-norms", reserved) in names(problems)
+    assert ("derived-norms", "RESERVED") in names(problems)
+    assert main_in(root, monkeypatch, "check") == 1
+    assert f'derived-norms: {reserved}: the name ["RESERVED"] is not a string' in capsys.readouterr().out
+
+
+def test_dgr13_no_fragment_yet_the_list_holds_its_meta_line_only(tmp_path):
+    root = tmp_path / "repo"
+    no_fragment_repo(root)
+    assert list_rows(root) == [{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}]
+
+
+def test_dgr13_no_fragment_yet_still_checks_the_list(tmp_path):
+    root = tmp_path / "repo"
+    no_fragment_repo(root)
+    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_text('{"kind": "meta", "type": "semantics", "last_derived_norm_number": 0}\n')
+    rehash_the_list(root)
+    problems, _ = run_check(root)
+    assert names(problems) == [("derived-norms", "derived-norms.jsonl:1")]
+
+
+def test_dgr15_the_script_has_no_command_that_compares_two_lists_of_derived_norms(repo, monkeypatch, capsys):
+    root, _ = repo
+    with pytest.raises(SystemExit) as error:
+        main_in(root, monkeypatch, "derived-norm-changes")
+    assert error.value.code == 2
+    assert "invalid choice: 'derived-norm-changes'" in capsys.readouterr().err
+
+
+def test_dgr20_seal_gives_back_the_derived_norm_id_of_the_list_before_the_run(tmp_path):
+    root = tmp_path / "repo"
+    git_init(root)
+    nodes = base_nodes()
+    write_tree(root, nodes)
+    write_outputs(root, good_grammar(nodes), good_status(nodes))
+    dg.seal(root, MODEL)
+    reserved = derived_norm_id_of(root, "RESERVED")
+    git(root, "add", "--", dg.PATH_OF_LIST_OF_DERIVED_NORMS)
+    git(root, "commit", "-q", "-m", "layer 2")
+    without = good_grammar(nodes).replace(cite(nodes, "PRO-3", "the reserved words") + "\n" + 'RESERVED: "start" | "functions"\n', "")
+    reseal_with(root, nodes, without)
+    assert "RESERVED" not in [r["name"] for r in list_rows(root)[1:]]
+    reseal_with(root, nodes)
+    assert derived_norm_id_of(root, "RESERVED") == reserved
+    assert [p for p in run_check(root)[0] if p[0] == "derived-norms"] == []
+
+
+# ------------------------------------------------------------------ CDN-10, the name of a derived norm
+
+
+def test_cdn10_a_directive_with_a_tab_is_named_with_a_space_and_its_list_checks(repo):
+    root, nodes = repo
+    grammar = good_grammar(nodes).replace("%ignore COMMENT", "%ignore\tCOMMENT")
+    reseal_with(root, nodes, grammar)
+    found = dg.grammar_derived_norms(grammar.encode())
+    assert "%ignore\tCOMMENT" in statement_keys(root)
+    assert "%ignore COMMENT" in [d.name for d in found] and not [d for d in found if "\t" in d.name]
+    assert "%ignore COMMENT" in [r["name"] for r in list_rows(root)[1:]]
+    assert [p for p in run_check(root)[0] if p[0] == "derived-norms"] == []
+
+
+def test_cdn10_two_keys_with_one_name_the_first_keeps_the_derived_norm_id(tmp_path):
+    root = tmp_path / "repo"
+    git_init(root)
+    nodes = base_nodes()
+    write_tree(root, nodes)
+    reseal_with(root, nodes)
+    comment = derived_norm_id_of(root, "%ignore COMMENT")
+    commit_the_list(root)
+    grammar = good_grammar(nodes).replace("%ignore COMMENT", "%ignore\tCOMMENT\n\n" + cite(nodes, "TST-2", "again") + "\n%ignore COMMENT")
+    reseal_with(root, nodes, grammar)
+    rows = [r for r in list_rows(root)[1:] if r["name"] == "%ignore COMMENT"]
+    assert len(rows) == 2
+    by_line = sorted(rows, key=lambda r: r["first_line"])
+    assert by_line[0]["derived_norm_id"] == comment
+    assert by_line[1]["derived_norm_id"] != comment
+    assert [p for p in run_check(root)[0] if p[0] == "derived-norms"] == []
+    derived_norm_ids_of_the_first_run = [r["derived_norm_id"] for r in by_line]
+    list_of_the_first_run = list_rows(root)
+    commit_the_list(root)
+    for _ in range(2):
+        reseal_with(root, nodes, grammar)
+        git(root, "add", "--", dg.PATH_OF_LIST_OF_DERIVED_NORMS)
+        git(root, "commit", "-q", "--allow-empty", "-m", "layer 2")
+        assert list_rows(root) == list_of_the_first_run
+        assert [r["derived_norm_id"] for r in sorted((r for r in list_rows(root)[1:] if r["name"] == "%ignore COMMENT"),
+                                                     key=lambda r: r["first_line"])] == derived_norm_ids_of_the_first_run
+        assert [p for p in run_check(root)[0] if p[0] == "derived-norms"] == []
+
+
+def test_cdn8_the_check_reports_a_derived_norm_of_one_name_that_does_not_keep_its_paired_derived_norm_id(tmp_path):
+    root = tmp_path / "repo"
+    git_init(root)
+    nodes = base_nodes()
+    write_tree(root, nodes)
+    grammar = good_grammar(nodes).replace("%ignore COMMENT", "%ignore\tCOMMENT\n\n" + cite(nodes, "TST-2", "again") + "\n%ignore COMMENT")
+    reseal_with(root, nodes, grammar)
+    commit_the_list(root)
+    rows = list_rows(root)
+    meta, entries = rows[0], rows[1:]
+    second = max((r for r in entries if r["name"] == "%ignore COMMENT"), key=lambda r: r["first_line"])
+    last_derived_norm_number = meta["last_derived_norm_number"] + 1
+    entries = [dict(r, derived_norm_id=f"grammar:{last_derived_norm_number}") if r is second else r for r in entries]
+    entries.sort(key=lambda r: int(r["derived_norm_id"].split(":")[1]))
+    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(
+        json.dumps(r, ensure_ascii=False) + "\n" for r in [dict(meta, last_derived_norm_number=last_derived_norm_number)] + entries))
+    problems = [p for p in run_check(root)[0] if p[0] == "derived-norms"]
+    assert any(p[1] == "%ignore COMMENT" and "the k-th derived norm of a name keeps the k-th derived norm ID of that name" in p[2]
+               for p in problems), problems

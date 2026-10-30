@@ -1,6 +1,6 @@
 {
   "name": "drift-management",
-  "description": "Module drift-management: a drift found while defining acceptance (layer 3) or implementing (layer 4), sent back to layer 1",
+  "description": "Module drift-management: a drift found while defining acceptance (layer 3) or implementing (layer 4), sent back to where it is fixed: layer 1, or the plugin of the derived-norms generator that made a defect of a derived-norms generator",
   "author": {
     "name": "Jean Pierre Chauny"
   }

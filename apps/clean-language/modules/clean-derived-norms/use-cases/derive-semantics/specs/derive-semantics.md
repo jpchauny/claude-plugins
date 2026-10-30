@@ -4,11 +4,11 @@
 
 **Audience:** The people who keep layer 2 of the Clean Language project; whoever builds or changes the use case `derive-semantics` of the plugin `clean-derived-norms`; the agents of layers 3 and 4, who read the semantics it derives
 
-**Scope:** The use case `/clean-derived-norms:derive-semantics`, the generator of the type `semantics`, which derives, from the norms of layer 2, one formal semantics of Clean in Lean 4: its abstract syntax, its typing and its evaluation ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how the Lean code meets the parse tree of a fragment and of each file of its program, how it cites the norms, how it finds what to derive again, how it checks the semantics against the fragments and their expected output, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-11, is in [norms-management](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-7, is in [module.md](../../../specs/module.md#rules); neither is repeated here. Where this use case does what the use case `derive-grammar` does, its rule cites the rule of [derive-grammar.md](../../derive-grammar/specs/derive-grammar.md) (DGR) and states only what differs. The rules of the Clean examples, the expected output block among them, are in [clean-examples](../../../../clean-examples/specs/module.md); this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Systems it works with: the grammar of `derive-grammar`, which parses each fragment; Lean 4 and its build tool Lake, which build and run the semantics; GitHub, through `gh`, for the issues. Out of scope: the grammar, which `derive-grammar` derives; the syntax errors of Clean (`expect=syntax-error`), which the grammar checks; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)); adding the type `semantics` to `derived_norms` of the project's `project.json`, a change of layer 1. The use case must never decide what the norms do not decide.
+**Scope:** The use case `/clean-derived-norms:derive-semantics`, the generator of the type `semantics`, which derives, from the norms of layer 2, one formal semantics of Clean in Lean 4: its abstract syntax, its typing and its evaluation ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how the Lean code meets the parse tree of a fragment and of each file of its program, how it cites the norms, how it lists its derived norms, how it finds what to derive again, how it checks the semantics against the fragments and their expected output, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-15, is in norms-management, [NRM-1 to NRM-11](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms) and [NRM-12 to NRM-15](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#the-list-of-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-10, is in [module.md](../../../specs/module.md#rules); neither is repeated here. Where this use case does what the use case `derive-grammar` does, its rule cites the rule of [derive-grammar.md](../../derive-grammar/specs/derive-grammar.md) (DGR) and states only what differs. The rules of the Clean examples, the expected output block among them, are in [clean-examples](../../../../clean-examples/specs/module.md); this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Systems it works with: the grammar of `derive-grammar`, which parses each fragment; Lean 4 and its build tool Lake, which build and run the semantics; GitHub, through `gh`, for the issues. Out of scope: the grammar, which `derive-grammar` derives; the syntax errors of Clean (`expect=syntax-error`), which the grammar checks; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)); adding the type `semantics` to `derived_norms` of the project's `project.json`, a change of layer 1. The use case must never decide what the norms do not decide.
 
 A use case of the module `clean-derived-norms`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
-The use case has two parts. The script does what is deterministic: the work list, the case of each fragment, its parse tree, the fixed files of the Lake project, the meta line, and the checks, which build the semantics and run every fragment. The deriver, following `SKILL.md`, does the derivation: it writes the Lean code and the status lines. The script never writes a declaration of the Lean code, never decides a state, and holds nothing specific to Clean.
+The use case has two parts. The script does what is deterministic: the work list, the case of each fragment, its parse tree, the fixed files of the Lake project, the list of derived norms, the meta line, and the checks, which build the semantics and run every fragment. The deriver, following `SKILL.md`, does the derivation: it writes the Lean code and the status lines. The script never writes a declaration of the Lean code, never decides a state, and holds nothing specific to Clean.
 
 ## Terms
 
@@ -24,6 +24,8 @@ The use case has two parts. The script does what is deterministic: the work list
 | Fixed file | One of the files `lakefile.toml`, `lean-toolchain`, `Fragment.lean` and `Main.lean` of the semantics folder, whose text the script holds and writes (DSM-3). |
 | Lean code | The files `Clean.lean`, `Clean/Ast.lean`, `Clean/Syntax.lean`, `Clean/Typing.lean` and `Clean/Evaluation.lean` of the semantics folder, which the deriver writes. |
 | Status file | The file `specs-derived/semantics/clean-language-code-examples-status.jsonl`, the status file of the type `semantics` (NRM-5). |
+| List of derived norms | The file `specs-derived/semantics/derived-norms.jsonl`, the list of derived norms of the type `semantics` (NRM-12), which `seal` writes (DSM-18). |
+| Derived norm, derived norm ID, derived norm fingerprint, lines of a derived norm, citation line, content of a derived norm, list before the run | As the terms of [module.md](../../../specs/module.md#terms) say, which take them from layers.md and norms-management; the module script reads the list before the run as [CDN-9](../../../specs/module.md#rules) says. A derived norm of the semantics is one declaration of the Lean code (DSM-18). |
 | Lean line comment | In the Lean code, outside a string literal and a character literal: `--` up to the end of its line. |
 | Lean block comment | In the Lean code, outside a string literal and a character literal: `/-` up to its matching `-/`, nested ones included; `/--` and `/-!` start one too. |
 | Citation | One line `-- <norm ID>@<norm hash>: <reason>` at column 1 of the Lean code, as LAY-3 defines a citation, with the comment mark of Lean, such as `-- TYP-12@4be10a7e: a number never stands for a duration`. A line is a citation when it matches `^-- ([A-Z]{3,}(-[0-9]+)?)@([0-9a-f]{8}): (\S.*)$`. In a status reason, the same form without `-- `; in the script, with `# ` in place of `-- `, as [DGR-9](../../derive-grammar/specs/derive-grammar.md#derive-the-grammar) says. |
@@ -68,9 +70,9 @@ Feature: Derive the semantics of Clean from the norms
       When the use case runs
       Then it reads "data/tree.jsonl" as it is in the working tree, and may read "specs-repo-annotated/"
       And it reads the grammar, the output of the type "grammar", which "derived_norms" lists before "semantics" (NRM-1, NRM-3)
-      And it reads what DGR-1 lists for "derive-grammar", with the semantics folder in place of the grammar's files, and the issues of "Ivan-Pasco/clean-language-foundation" and of "jpchauny/claude-plugins"
+      And it reads what DGR-1 lists for "derive-grammar", with the semantics folder in place of the grammar's files and the list of derived norms of the type "semantics" in place of the one of "grammar", and the issues of "Ivan-Pasco/clean-language-foundation" and of "jpchauny/claude-plugins"
       And it never reads a file of the foundation, nor "project.json"
-      And in the repository it writes only the semantics folder
+      And in the repository it writes only the semantics folder, the list of derived norms among it
       And outside the repository it writes only its work files in the scratchpad, and, during "check", a copy of the semantics folder in a new temporary folder of the system, which "check" removes before it ends
       And, during the run, it writes in "Ivan-Pasco/clean-language-foundation" and in "jpchauny/claude-plugins" only what DGR-1 lists there, for the issues of DSM-14 and DSM-17
       And it never writes "data/", "specs-repo-annotated/" or "specs-derived/grammar/", and commits and pushes nothing
@@ -125,7 +127,7 @@ Feature: Derive the semantics of Clean from the norms
       Then it reads it as the text of a norm only, and checks no fragment against it
       And it reports nothing about its place: CEX-27 and CEX-28 are rules of the examples, checked in layers 0 and 1 (CDN-4)
 
-  Rule: DSM-3 The output is one Lake project and one status file in the semantics folder
+  Rule: DSM-3 The output is one Lake project, one list of derived norms and one status file in the semantics folder
     Rationale: a fixed set of files, each with one role, lets the meta line hash each file (NRM-5) and lets an agent of layer 4 find the typing or the evaluation at once; the fixed files are where the script and the Lean code meet, and one text of them, in the script, keeps both sides in step. Deliberate design: the version of Lean is pinned, so that the same Lean code builds and runs the same way in every run; another version of Lean is a new version of the plugin.
 
     Scenario: The layout
@@ -141,6 +143,7 @@ Feature: Derive the semantics of Clean from the norms
         | Clean/Syntax.lean                            | the deriver | the conversion of a parse tree into the abstract syntax |
         | Clean/Typing.lean                            | the deriver | the typing: the error code that the program gives at build time, if any |
         | Clean/Evaluation.lean                        | the deriver | the evaluation: the error code that the program gives at run time, if any, and its standard output |
+        | derived-norms.jsonl                          | "seal"      | the list of derived norms (DSM-18) |
         | clean-language-code-examples-status.jsonl    | the deriver and "seal" | the status file |
       And "Clean.lean" imports the four files of "Clean/", so that one build builds them all
 
@@ -155,14 +158,14 @@ Feature: Derive the semantics of Clean from the norms
 
     Scenario: The meta line
       When the script runs "seal --model claude-opus-5-5"
-      Then the first line of the status file is one line of compact JSON with exactly these fields, in this order: "type" ("meta"), "specs_commit", "generator", "model", "lakefile_sha256", "lean_toolchain_sha256", "fragment_sha256", "main_sha256", "clean_sha256", "ast_sha256", "syntax_sha256", "typing_sha256", "evaluation_sha256", "status_sha256"
+      Then the first line of the status file is one line of compact JSON with exactly these fields, in this order: "type" ("meta"), "specs_commit", "generator", "model", "lakefile_sha256", "lean_toolchain_sha256", "fragment_sha256", "main_sha256", "clean_sha256", "ast_sha256", "syntax_sha256", "typing_sha256", "evaluation_sha256", "derived_norms_sha256", "status_sha256"
       And "specs_commit", "generator" and "model" are as DGR-4 says, with the plugin "clean-derived-norms"
-      And each "<name>_sha256" is the SHA-256 of one file, in this order: "lakefile.toml", "lean-toolchain", "Fragment.lean", "Main.lean", "Clean.lean", "Clean/Ast.lean", "Clean/Syntax.lean", "Clean/Typing.lean", "Clean/Evaluation.lean", and the status file without its first line
+      And each "<name>_sha256" is the SHA-256 of one file, in this order: "lakefile.toml", "lean-toolchain", "Fragment.lean", "Main.lean", "Clean.lean", "Clean/Ast.lean", "Clean/Syntax.lean", "Clean/Typing.lean", "Clean/Evaluation.lean", the list of derived norms that the same "seal" writes (DSM-18), and the status file without its first line
       And the script computes each value itself, except "model", which it takes from "--model"
 
     Scenario: seal without a model, with a missing or malformed input, or with an unknown marketplace commit
       When the script runs "seal" as the scenarios of DGR-4 say
-      Then it behaves as they say, with the five files of the Lean code in place of the grammar: when one of them does not exist, "seal" prints the error and exits with 2, and writes nothing
+      Then it behaves as they say, with the five files of the Lean code in place of the grammar: when one of them does not exist or is not UTF-8, or the list before the run cannot be read as DGR-20 "A list that cannot be read" says, "seal" prints the error and exits with 2, and writes nothing
 
   Rule: DSM-5 After the meta line, the status file has one line for each semantic fragment, and no other
     Rationale: one line per semantic fragment is the index of what the semantics covers and of what waits for layer 1, and its expected output and parse tree hash tell the work list that a fragment must be checked again. The grammar runs first and opens the issue of each fragment that it cannot take; a second issue for the same fragment and the same fix would split one decision of layer 1 in two.
@@ -451,7 +454,7 @@ Feature: Derive the semantics of Clean from the norms
         | error SEM001  | no expected output                        | none     | (empty)       | fails: no code |
 
   Rule: DSM-12 Only what a change calls for is derived again (NRM-7)
-    Rationale: deriving again only what a change calls for keeps every part that no change reached as it was, and the run short (NRM-7).
+    Rationale: deriving again only what a change calls for keeps every part that no change reached as it was, and the run short (NRM-7); a new version of the plugin is the exception, since any declaration may be one that it fixes and no change of the norms would reach it, and a declaration that it leaves as it is keeps its derived norm fingerprint, so only what it corrects makes acceptance units and code stale (NRM-7, LAY-12).
 
     Scenario Outline: The work list
       Given the status file and the Lean code of the previous run
@@ -471,19 +474,23 @@ Feature: Derive the semantics of Clean from the norms
         | "EXP-29", a fragment with "expect=syntax-error", has a status line                                    | "EXP-29" as "gone" |
         | "FUN-16" has a status line and is no longer a fragment                                                | "FUN-16" as "gone" |
         | "Clean/Typing.lean:Clean.typeOf" cites "TYP-12@4be10a7e", and "TYP-12" now has another norm hash, or is retired or gone | that declaration as "norm", with the citation |
+        | the meta line of the status file names, in "generator", another "version" than the plugin version of the plugin that runs "worklist", or none (a new version, NRM-7) | every semantic fragment that has a status line as "changed", and every declaration of the Lean code as "version" |
 
     Scenario: The output of the work list
       When the script runs "worklist"
-      Then it prints one JSON line per item, the fragments in the order of "data/tree.jsonl", then the "gone" ones, then the "norm" ones in the order of the Lean code
+      Then it prints one JSON line per item, the fragments in the order of "data/tree.jsonl", then the "gone" ones, then the "norm" ones in the order of the Lean code, then the "version" ones in the order of the Lean code
       And a fragment item has exactly "kind" ("new", "changed" or "gone"), "id", "old_hash", "new_hash", "cases", "expected_output", "parse_tree_hash", "parse_error" and "file"; a "gone" one has the "cases", "expected_output" and "parse_tree_hash" of its old status line, "new_hash" and "parse_error" null, and the "file" of its node, or null when the node no longer exists
       And a "norm" item has exactly "kind", "declaration" (its key), "old_hash", "new_hash" (null when the norm is retired or gone) and "citation"
+      And a "version" item has exactly "kind", "declaration" (its key), "old_version" (the "version" of "generator" in the meta line of the status file, null when there is none) and "new_version" (the plugin version of the plugin that runs "worklist")
       And it exits with 0, whether the list is empty or not
-      And it exits with 2 when "data/tree.jsonl" or the grammar does not exist, a line of the status file or of "data/tree.jsonl" is not JSON, the grammar does not build, or Lark cannot be loaded
+      And it exits with 2 when "data/tree.jsonl" or the grammar does not exist, a line of the status file or of "data/tree.jsonl" is not JSON, the grammar does not build, Lark cannot be loaded, or the plugin has no "version" in its "plugin.json"
 
     Scenario: Working through the items
       When the deriver works through the work list
       Then it does what DGR-12 says for the grammar, with declarations in place of statements: a "changed" fragment is checked again against the Lean code, a "gone" one loses its citations and its status line, and a declaration of a "norm" item is evaluated again against the current text of every norm it cites
+      And a declaration of a "version" item is evaluated again against the current text of every norm it cites, as for a "norm" item, and a "changed" fragment is checked again, as DGR-12 "A new version of the plugin derives the whole grammar again" says for the grammar: a declaration that still follows keeps its content and its derived norm fingerprint, and one that the new version corrects gets another derived norm fingerprint, or its derived norm is gone
       And every declaration and status line that no item reaches keeps the same content
+      And "seal" writes the list of derived norms again at every run, from the whole Lean code, as DGR-12 "The list of derived norms is written again at every run" says, with declarations in place of statements (DSM-18)
 
   Rule: DSM-13 The script checks the semantics against every fragment, and pending counts as a failure (NRM-6)
     Rationale: a semantics is worth what it runs; a check that builds it and runs every fragment shows at once each case that it does not give.
@@ -493,6 +500,7 @@ Feature: Derive the semantics of Clean from the norms
       Then the semantics folder holds exactly the files of DSM-3, each fixed file holds the text that the script holds, and "Clean.lean" imports the four files of "Clean/"
       And the Lean code meets DSM-8, DSM-9 and DSM-10 "No shortcut"
       And the meta line is first and meets DSM-4: its specs commit is the one of "data/tree.jsonl", its generator names the plugin "clean-derived-norms" and the plugin version of the plugin that runs "check", its model is of the form of a model ID, and its hashes are those of the files (DSM-16)
+      And the list of derived norms meets DSM-18
       And every status line meets DSM-5, and every semantic fragment has exactly one status line, with its current norm hash, cases, expected output and parse tree hash
       And every fragment with no form of CEX-4 and every fragment that the grammar does not parse is "pending", with its fixed reason of DSM-5 and a null issue
       And every other pending reason cites at least one norm
@@ -509,7 +517,7 @@ Feature: Derive the semantics of Clean from the norms
       Given a check fails
       When the script runs "check"
       Then it prints one line per problem, "<check>: <norm ID, key or path>: <what is wrong>", before the last line
-      And the checks are named "layout", "fixed", "comment", "citation", "declaration", "shortcut", "status", "meta", "reason-citation", "opening line", "parse", "pending", "issue", "build", "run" and "script-citation"
+      And the checks are named "layout", "fixed", "comment", "citation", "declaration", "shortcut", "status", "meta", "reason-citation", "opening line", "parse", "pending", "issue", "build", "run", "script-citation" and "derived-norms"
 
     Scenario Outline: Exit statuses
       Given <fact>
@@ -528,13 +536,14 @@ Feature: Derive the semantics of Clean from the norms
         | the Lean code holds "sorry"                                                                | 1      |
         | "Fragment.lean" was changed after the last "seal"                                          | 1      |
         | a citation of the script names a norm with another norm hash, a retired norm or a norm that is gone | 1 |
-        | "data/tree.jsonl", the grammar, the status file or a file of the Lean code does not exist  | 2      |
+        | the list of derived norms does not hold what DSM-18 says                                   | 1      |
+        | "data/tree.jsonl", the grammar, the status file, the list of derived norms or a file of the Lean code does not exist, or a file of the Lean code is not UTF-8 | 2      |
         | the grammar does not build, Lark cannot be loaded, or "lake" cannot be run                 | 2      |
 
     Scenario: No semantic fragment yet
       Given "data/tree.jsonl" holds no semantic fragment
       When the script runs "check"
-      Then it does what DGR-13 "No fragment yet" says: it checks only the meta line, the fixed files and the citations of the script, builds nothing, and exits with 0 when they pass
+      Then it does what DGR-13 "No fragment yet" says: it checks only the meta line, the fixed files, the list of derived norms (DSM-18) and the citations of the script, builds nothing, and exits with 0 when they pass
 
   Rule: DSM-14 Each pending fragment that is a gap, or an example that is not a whole program, gets its own issue in layer 1 at once (NRM-8), and the derivation goes on
     Rationale: a gap and an example that is not a whole program are fixed in layer 1 (LAY-5); one issue per fragment, opened at once, is how layer 1 learns of it, as for the grammar.
@@ -561,18 +570,19 @@ Feature: Derive the semantics of Clean from the norms
       And the full template is in "SKILL.md"
 
   Rule: DSM-15 The use case ends by showing what it did, the issues it opened, and the result of the check
-    Rationale: the report is what the person, and the build (NRM-11), see of the run.
+    Rationale: as for DGR-15.
 
     Scenario: The end of a run
       When the use case has run
       Then it shows what DGR-15 lists, with the declarations added, changed or removed, by key, in place of the statements
+      And, as DGR-15 says, it does not list the derived norms new, changed and gone, which the step of layer 2 compares as NRM-11 says
       And then the output of the check, and its exit status
 
-  Rule: DSM-16 The output changes only through a run of the use case
+  Rule: DSM-16 The output, the list of derived norms among it, changes only through a run of the use case
     Rationale: layer 2 is never edited by hand (LAY-3); the hashes of the meta line show a change that no run made.
 
     Scenario: A change by hand
-      Given a person or another session changed a file of the semantics folder after the last "seal"
+      Given a person or another session changed a file of the semantics folder, such as the list of derived norms, after the last "seal"
       When the script runs "check"
       Then it reports that the file does not match the hash of its meta line, and exits with 1, as DGR-17 says
 
@@ -588,4 +598,41 @@ Feature: Derive the semantics of Clean from the norms
       When the script is written
       Then its code cites no norm: it holds nothing specific to Clean (DSM-7)
       And the parse cites, in the module script, the norms of the indenter (DGR-18), whose stale citations "derive-grammar" reports
+
+  Rule: DSM-18 Each declaration of the Lean code is one derived norm, which the list of derived norms names by its derived norm ID and its derived norm fingerprint (NRM-12 to NRM-15, CDN-8)
+    Rationale: an agent of layer 4 cites the typing or the evaluation of one construct by the derived norm ID of its declaration, and sees by its derived norm fingerprint that it changed; a declaration is the smallest part of the Lean code that cites its own norms (DSM-8), so it is the derived norm; its name, which CDN-10 makes from its key, is what keeps it the same from one run to the next, as CDN-8 says for every use case of the module.
+
+    Scenario: What one derived norm of the semantics is (NRM-15)
+      Given the Lean code
+      Then each declaration of the Lean code is one derived norm, and nothing else of the semantics folder is one: the fixed files, which the script writes, hold none
+      And its lines go from the first of the citations just above it, with no blank line between (DSM-8), or from its first line when it has none, to its last line that is not blank, as the term "Declaration" bounds it: the lines of a string literal or of a comment inside it count
+      And its name in the list of derived norms is the key of the declaration as CDN-10 makes a name of it: the key itself, such as "Clean/Typing.lean:Clean.typeOf", when it holds no tab nor other character that CDN-10 replaces
+      And a declaration with no name whose first line is "instance<tab>: ToString Value", in "Clean/Evaluation.lean", has the key "Clean/Evaluation.lean:instance<tab>: ToString Value" and the name "Clean/Evaluation.lean:instance : ToString Value", which "check" does not report
+      And its citation lines are the citations of DSM-8, of the form "-- <norm ID>@<norm hash>: <reason>" at column 1: in its lines, each line that matches "^-- ([A-Z]{3,}(-[0-9]+)?)@([0-9a-f]{8}): (\S.*)$" once the blanks at its end are removed
+      And its "path" is the path of its file from the root of the repository, such as "specs-derived/semantics/Clean/Typing.lean"
+      And what keeps it the same derived norm from one run to the next is its name, as CDN-8 says
+      And its derived norm ID is "semantics:<n>"
+
+    Scenario Outline: The same derived norm (NRM-13)
+      Given the list before the run names the declaration "Clean/Typing.lean:Clean.typeOf" with the derived norm ID "semantics:7"
+      And the run <change>
+      When the script runs "seal --model <model ID>"
+      Then <result>
+
+      Examples:
+        | change                                                                            | result |
+        | rewrites the body of "typeOf", or changes the norm hash in one of its citations   | it keeps "semantics:7", with another derived norm fingerprint |
+        | moves "typeOf" to another place of "Clean/Typing.lean", in the same namespace     | it keeps "semantics:7" |
+        | moves "typeOf" to "Clean/Evaluation.lean", or renames it                          | its key, and so its name, changes: it is a new derived norm, with a new derived norm ID, and "semantics:7" is gone |
+
+    Scenario: As for the grammar
+      When the script runs "seal --model <model ID>" or "check"
+      Then it gives the derived norm IDs, writes the list of derived norms, and checks it, also against the list before the run, as DGR-20 says, with these differences only (complete list):
+        | in DGR-20                                       | here |
+        | a statement of the grammar, and its key         | a declaration of the Lean code, and its key |
+        | the type "grammar", "grammar:<n>"               | the type "semantics", "semantics:<n>" |
+        | "specs-derived/grammar/derived-norms.jsonl"     | "specs-derived/semantics/derived-norms.jsonl" |
+        | the citations of DGR-8, "// "                   | the citations of DSM-8, "-- " |
+        | the path "specs-derived/grammar/clean.lark"     | the path of each file of the Lean code |
+        | the end report of DGR-15                        | the end report of DSM-15 |
 ```

@@ -148,7 +148,9 @@ Each acceptance test you write or change (complete list):
   use may stand there too, such as `tests/AU-11/mul.src`, each UTF-8 text: an
   input that is not, such as an image, the acceptance test writes into its
   temporary folder, such as from its bytes in base64 (WAT-7, WAT-9);
-- cites no norm: never write `<norm ID>@<hash>` (ACU-11); writes no citation
+- cites no norm and no derived norm: never write `<norm ID>@<hash>` or
+  `<derived norm ID>@<hash>`, such as `grammar:7@3a4b5c6d` (ACU-11, LAY-8);
+  writes no citation
   of the acceptance unit, the acceptance area or a scenario outside its
   opening;
 - names no code repository, and imports, reads or runs no file of one

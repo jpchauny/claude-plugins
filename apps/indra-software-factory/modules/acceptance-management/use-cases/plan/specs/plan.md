@@ -27,7 +27,7 @@ A use case of the module `acceptance-management`, specified in [module.md](../..
 | Required change of the plan | A change of the plan whose line PLN-10 marks `(required)`. |
 | Proposal of the plan | What the skill shows to the requester for a draft: the rendering of the draft (PLN-9) and the numbered list of its changes of the plan (PLN-10). |
 
-The terms norm, norm ID, norm hash, derived norm, specs repository, norms repository, acceptance repository and code repository are those of [layers.md](../../../../development-methodology/specs/layers.md#terms). The terms requester, acceptance area, acceptance unit, increment, plan of implementation, unit ID, area ID, scenario ID, title, unit hash, norm citation, scenario, external interface, acceptance test, evidence, record, done profile, stale, implementation planner, acceptance architect and implementing agent are those of [module.md](../../../specs/module.md#terms). The terms run, step and hand-off are those of [flow.md](../../../../development-methodology/specs/flow.md#terms). The term acceptance unit behind layer 2 is that of [code-implementation](../../../../code-implementation/specs/module.md#terms); in this use case, the commit of the norms repository that it is measured against is the norms commit. The unit hash is computed as [ACU-51 and ACU-52](../../../specs/module.md#hashes-and-citations) say. A commit of layer 3 follows [LAY-9](../../../../development-methodology/specs/layers.md#rules). No session of layer 3 reads layer 4, so none knows whether an increment is done ([LAY-10](../../../../development-methodology/specs/layers.md#rules)). The binding words are those of [writing-specs.md](../../../../../../../specs/writing-specs.md#how-to-read-the-rules); the text after `Rationale:` explains and does not bind.
+The terms norm, norm ID, norm hash, derived norm, derived norm ID, derived norm fingerprint, specs repository, norms repository, acceptance repository and code repository are those of [layers.md](../../../../development-methodology/specs/layers.md#terms); the terms list of derived norms, lines of a derived norm and types of derived norms of a commit are those of [norms-management](../../../../norms-management/specs/module.md#terms). The terms requester, acceptance area, acceptance unit, increment, plan of implementation, unit ID, area ID, scenario ID, title, unit hash, norm citation, derived norm citation, derived norms of a commit, scope of an acceptance unit, scenario, external interface, acceptance test, evidence, record, done profile, stale, implementation planner, acceptance architect and implementing agent are those of [module.md](../../../specs/module.md#terms). The terms run, step and hand-off are those of [flow.md](../../../../development-methodology/specs/flow.md#terms). The term acceptance unit behind layer 2 is that of [module.md](../../../specs/module.md#terms); in this use case, the commit of the norms repository that it is measured against is the norms commit. The unit hash is computed as [ACU-51 and ACU-52](../../../specs/module.md#hashes-and-citations) say. A commit of layer 3 follows [LAY-9](../../../../development-methodology/specs/layers.md#rules). No session of layer 3 reads layer 4, so none knows whether an increment is done ([LAY-10](../../../../development-methodology/specs/layers.md#rules)). The binding words are those of [writing-specs.md](../../../../../../../specs/writing-specs.md#how-to-read-the-rules); the text after `Rationale:` explains and does not bind.
 
 ## Plan the implementation
 
@@ -82,6 +82,7 @@ Feature: Plan the implementation
         | "plan.json" at "HEAD" is not a regular file (a symbolic link, a folder or a submodule), or "plan.json" in the working tree is there and is not a regular file (a symbolic link, a folder, a FIFO, a socket or a device) | plan.json is not a regular file |
         | "plan.json" differs from "HEAD" in the working tree or in the index | uncommitted change in plan.json; commit it, or discard it with: git restore --staged --worktree plan.json |
         | "plan.json" is in the working tree and untracked | untracked file plan.json; commit it, or remove it with: rm plan.json |
+        | the types of derived norms of the norms commit, or the list of derived norms of one of them at the norms commit, fail a check of ACU-58 of define.md, read as its scenarios "The types of derived norms read" and "The list of derived norms read" say | the message of that check of ACU-58, such as acme/billing-norms: specs-derived/grammar/derived-norms.jsonl does not meet NRM-12 |
 
     Scenario: Other uncommitted changes
       Given the acceptance repository has an uncommitted change in "units/AU-3.md", "acceptance.json", "tests/AU-3/test_export.py" or "records/AU-3.jsonl"
@@ -89,8 +90,8 @@ Feature: Plan the implementation
       Then no check fails because of it
       And the skill reads "units/AU-3.md" as "HEAD" holds it, and never stages, commits or changes that file
 
-  Rule: PLN-3 The skill reads the acceptance repository at its "HEAD" and at the plan commit, and the norms repository only at the norms commit, only "data/tree.jsonl" and "specs-repo-annotated/project.json"
-    Rationale: the plan of implementation is about the acceptance units as they are committed, which is what layer 4 reads (ACU-41); of layer 2 it needs only the components and which acceptance units are behind layer 2, which IMP-19 makes layer 4 refuse.
+  Rule: PLN-3 The skill reads the acceptance repository at its "HEAD" and at the plan commit, and the norms repository only at the norms commit, only "data/tree.jsonl", "specs-repo-annotated/project.json", what gives the types of derived norms of the norms commit and the lists of derived norms
+    Rationale: the plan of implementation is about the acceptance units as they are committed, which is what layer 4 reads (ACU-41); of layer 2 it needs only the components and which acceptance units are behind layer 2, which layer 4 refuses (ACU-41, IMP-19). Whether an acceptance unit is behind layer 2 depends on its derived norm citations and its scope too (ACU-78), which the types of derived norms of the norms commit and its lists of derived norms give without the text of any derived norm.
 
     Scenario: The commits read
       Given every check of PLN-2 passed
@@ -99,7 +100,7 @@ Feature: Plan the implementation
       And in a run it reads the same commits
 
     Scenario: What the skill does not read (must not)
-      Then the skill reads no norm text, no file of "specs-repo-annotated/" other than "project.json", and no derived norm
+      Then the skill reads no norm text, no file of "specs-repo-annotated/" other than "project.json", and no derived norm: of "specs-derived/" it reads only "specs-derived/types-of-derived-norms.json" and the list of derived norms of each of the types of derived norms of the norms commit, for PLN-6, and never the lines of a derived norm; of the root of the norms repository, only "project.json", and only when that record does not meet NRM-16 (ACU-58 of define.md)
       And it reads no file of the working tree of the norms repository, and changes neither its working tree, nor its index, nor its local branches
       And it never reads the specs repository, a code repository or a published build (LAY-8)
 
@@ -126,7 +127,7 @@ Feature: Plan the implementation
       And each acceptance unit holds "unit_id", "title" (or null when its heading does not meet ACU-8, a title that holds a carriage return or a line separator included), "area_id" (the area ID of its line "Area:", or null), "unit_hash" (or null), "since_the_plan_commit" (PLN-6), "behind_layer_2" (true when it is an acceptance unit behind layer 2, otherwise false, PLN-6), "increment_name" (the name of the increment of the current plan that holds it, or null) and "position_in_current_plan" (its position, from 1, among all the planned acceptance units of the current plan in the order of the increments and, inside each, of "acceptance_units", or null)
       And each acceptance area holds "area_id", "title" (or null when its heading does not meet ACU-7) and "scenarios"
       And when "areas/<area ID>.md" at "HEAD" is not UTF-8, its "title" is null and its "scenarios" is the empty list
-      And when "units/<unit ID>.md" at "HEAD" is not UTF-8, its "title", "area_id" and "unit_hash" are null, its "behind_layer_2" is false, since none of its norm citations can be read, and its "since_the_plan_commit" is that of PLN-6 ("changed" when the plan commit holds the file, whose unit hash is then null or differs)
+      And when "units/<unit ID>.md" at "HEAD" is not UTF-8, its "title", "area_id" and "unit_hash" are null, its "behind_layer_2" is false, since none of its norm citations, its derived norm citations and the norms that give its scope can be read, and its "since_the_plan_commit" is that of PLN-6 ("changed" when the plan commit holds the file, whose unit hash is then null or differs)
       And each scenario of an acceptance area holds "scenario_id" (or null), "acceptance_units" (the unit IDs of its tags "@unit:<unit ID>") and "increment_name" (the name of the increment that ACU-29 gives it in the current plan, or null)
 
     Scenario: The binding example of the inventory of the plan
@@ -259,6 +260,12 @@ Feature: Plan the implementation
         | every norm that "AU-3" cites is a norm of the norms commit with the norm hash cited | false |
         | "INV-12" has the norm hash "7d6e5f40" | true |
         | "INV-12" is a retired node of "data/tree.jsonl", or is not in it | true |
+        | every norm that "AU-3" cites is a norm of the norms commit with the norm hash cited, and the scope of "AU-3" at the norms commit holds "grammar:7", which "## Derived norms" of "AU-3" does not cite | true |
+        | every norm that "AU-3" cites is a norm of the norms commit with the norm hash cited, and "## Derived norms" of "AU-3" cites "grammar:7@3a4b5c6d", and the derived norms of the norms commit hold "grammar:7" with another derived norm fingerprint, or no "grammar:7" | true |
+        | every norm and every derived norm that "AU-3" cites is one of the norms commit with the norm hash or the derived norm fingerprint cited, and "## Derived norms" cites every derived norm of the scope of "AU-3" | false |
+
+    Scenario: The derived norms of behind layer 2 are read as define reads them
+      Then the derived norm citations of "## Derived norms" and the scope of an acceptance unit are those of the inventory of define (ACU-60, ACU-62, ACU-78), read from the same lists of derived norms at the norms commit
 
   Rule: PLN-7 Each time the skill runs, it reviews the whole plan against every acceptance unit, and drafts a plan that is free of errors and changes as little of the current plan as it can
     Deliberate design: the skill keeps no record of what the requester decided in an invocation that committed nothing to plan.json; an acceptance unit that the requester left out of the plan is proposed again at every invocation, and an acceptance unit "added" or "changed" since the plan commit is counted and reviewed again at every invocation until the next commit of plan.json (PLN-6).

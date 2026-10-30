@@ -8,6 +8,10 @@ Run from `apps/indra-software-factory/modules/norms-management`.
 uv run pytest -q
 ```
 
+The scripts of the use cases are tested under `tests/use_cases/`, each test
+naming the clause of [specs/module.md](../specs/module.md) it checks; the
+traceability below covers only the norms generator.
+
 The examples E1–E89 of the specs are test cases. `tests/spec_examples.py`
 writes them under `tests/fixtures/`, and a test fails when a fixture and
 its spec differ. After changing a spec, write them again:

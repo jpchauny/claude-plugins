@@ -38,12 +38,12 @@
     {
       "name": "code-implementation",
       "source": "./apps/indra-software-factory/modules/code-implementation",
-      "description": "Module code-implementation, layer 4: code built from the norms and the derived norms, within the acceptance units of layer 3, and its traceability to norm IDs"
+      "description": "Module code-implementation, layer 4: code built from the norms and the derived norms, within the acceptance units of layer 3, and its traceability to the acceptance units it implements and the derived norms it is built from, each cited with its hash"
     },
     {
       "name": "drift-management",
       "source": "./apps/indra-software-factory/modules/drift-management",
-      "description": "Module drift-management: a drift found while defining acceptance (layer 3) or implementing (layer 4), sent back to layer 1"
+      "description": "Module drift-management: a drift found while defining acceptance (layer 3) or implementing (layer 4), sent back to where it is fixed: layer 1, or the plugin of the derived-norms generator that made a defect of a derived-norms generator"
     },
     {
       "name": "workflow-orchestration",
@@ -58,7 +58,7 @@
     {
       "name": "clean-derived-norms",
       "source": "./apps/clean-language/modules/clean-derived-norms",
-      "description": "Module clean-derived-norms of the app Clean Language, layer 2: the derived norms of Clean, one generator per type - the Lark grammar of Clean (/clean-derived-norms:derive-grammar) and its semantics in Lean 4 (/clean-derived-norms:derive-semantics) - run by /norms-management:build"
+      "description": "Module clean-derived-norms of the app Clean Language, layer 2: the derived norms of Clean, one generator per type - the Lark grammar of Clean (/clean-derived-norms:derive-grammar) and its semantics in Lean 4 (/clean-derived-norms:derive-semantics) - each writing its list of derived norms, every derived norm with its own ID and fingerprint - run by /norms-management:build"
     }
   ]
 }

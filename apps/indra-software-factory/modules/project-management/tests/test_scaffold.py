@@ -129,6 +129,34 @@ class Scaffold(unittest.TestCase):
                 self.assertNotIn("{{", text, path)
                 self.assertNotIn("four layers", text, path)
 
+    def test_lay5_claude_md_of_layers_3_and_4_restate_the_issue_of_an_inconsistency(self):
+        # LAY-5 (An inconsistency is fixed in layer 1 first) and ORC-14: the issue is opened
+        # once the person confirms its text, and a generator defect goes to the marketplace
+        # of the generator's plugin, not to the repository of layer 1.
+        self.assertEqual(scaffold(self.folder).returncode, 0)
+        for name in ["billing-acceptance", "billing-code"]:
+            with open(os.path.join(self.folder, name, "CLAUDE.md"), encoding="utf-8") as f:
+                line = next(l for l in f.read().splitlines() if "#rules)" in l and "LAY-5" in l)
+            self.assertIn("a derived norm is wrong, missing or contradictory", line, name)
+            self.assertIn("open an issue in `acme/billing-specs`, once the person confirms its text", line, name)
+            self.assertIn("is a defect of its generator", line, name)
+            self.assertIn("in the repository of the marketplace that holds the plugin that `generator`"
+                          " of the status file of its type names, not in `acme/billing-specs`", line, name)
+            self.assertIn("drift-management/specs/module.md#report-a-drift", line, name)
+
+    def test_lay3_claude_md_of_layer_2_restates_what_regenerates_it(self):
+        # LAY-3 (How layer 2 is derived) and NRM-7: layer 2 is regenerated where layer 1
+        # changed or where a derived-norms generator has a new version, even with no norm
+        # changed; its derived norms are listed with their derived norm ID (NRM-12).
+        self.assertEqual(scaffold(self.folder).returncode, 0)
+        with open(os.path.join(self.folder, "billing-norms", "CLAUDE.md"), encoding="utf-8") as f:
+            text = " ".join(f.read().split())
+        self.assertIn("regenerated only where layer 1 or a derived-norms generator changed", text)
+        self.assertIn("also when no norm changed", text)
+        self.assertNotIn("regenerated only where layer 1 changed", text)
+        self.assertIn("specs-derived/<type>/derived-norms.jsonl", text)
+        self.assertIn("layers.md#rules", text)
+
     def test_crp2_acceptance_json_with_the_profile_chosen(self):
         for profile in ("prototype", "product", "critical"):
             folder = os.path.join(os.path.realpath(self.tmp.name), profile)

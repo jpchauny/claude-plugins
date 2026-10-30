@@ -4,11 +4,11 @@
 
 **Audience:** The people who keep layer 2 of the Clean Language project; whoever builds or changes the use case `derive-grammar` of the plugin `clean-derived-norms`
 
-**Scope:** The use case `/clean-derived-norms:derive-grammar`, the generator of the type `grammar`, which derives, from the norms of layer 2, one Lark grammar of Clean ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how it splits a fragment into the files of its program and parses each one, how it cites the norms, how it finds what to derive again, how it verifies, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-11, is in [norms-management](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-7, is in [module.md](../../../specs/module.md#rules); neither is repeated here. The rules of the Clean examples are in [clean-examples](../../../../clean-examples/specs/module.md), and this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Out of scope: the semantics of Clean, and any other type of derived norms; how the norms get their IDs, which is in the specs of `norms-management`; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)). The citation is the one of a derived norm, as [LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules) says, in the form of the citation of a norm of [ACU-56](../../../../../../indra-software-factory/modules/acceptance-management/specs/module.md#hashes-and-citations). How an issue is opened is the skill `utilities:issue`; DGR-14 adds what the issue of a pending fragment holds, and that this use case opens it without the yes of the user, DGR-18 does the same for the issue of a stale citation of the script, in `jpchauny/claude-plugins`, and `SKILL.md` holds the templates.
+**Scope:** The use case `/clean-derived-norms:derive-grammar`, the generator of the type `grammar`, which derives, from the norms of layer 2, one Lark grammar of Clean ([LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). It covers what the use case reads, what it writes, how it splits a fragment into the files of its program and parses each one, how it cites the norms, how it lists its derived norms, how it finds what to derive again, how it verifies, and how a gap goes to layer 1 ([LAY-5](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules)). The interface that it follows as a generator, NRM-1 to NRM-15, is in norms-management, [NRM-1 to NRM-11](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms) and [NRM-12 to NRM-15](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#the-list-of-derived-norms), and what holds for every use case of its module, CDN-1 to CDN-10, is in [module.md](../../../specs/module.md#rules); neither is repeated here. The rules of the Clean examples are in [clean-examples](../../../../clean-examples/specs/module.md), and this use case does not check them ([CDN-4](../../../specs/module.md#rules)). Out of scope: the semantics of Clean, and any other type of derived norms; how the norms get their IDs, which is in the specs of `norms-management`; the commit and the push of the output, which the build makes ([NRM-9](../../../../../../indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)). Each citation line of a derived norm is a citation of a norm, as [LAY-3](../../../../../../indra-software-factory/modules/development-methodology/specs/layers.md#rules) says, in the form of the citation of a norm of [ACU-56](../../../../../../indra-software-factory/modules/acceptance-management/specs/module.md#hashes-and-citations). How an issue is opened is the skill `utilities:issue`; DGR-14 adds what the issue of a pending fragment holds, and that this use case opens it without the yes of the user, DGR-18 does the same for the issue of a stale citation of the script, in `jpchauny/claude-plugins`, and `SKILL.md` holds the templates.
 
 A use case of the module `clean-derived-norms`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
-The use case has two parts. The script does what is deterministic: the work list, the case of each fragment, the meta line and the checks. The deriver, following `SKILL.md`, does the derivation: it writes the statements of the grammar and the status lines. The script never writes a statement and never decides a state.
+The use case has two parts. The script does what is deterministic: the work list, the case of each fragment, the list of derived norms, the meta line and the checks. The deriver, following `SKILL.md`, does the derivation: it writes the statements of the grammar and the status lines. The script never writes a statement and never decides a state.
 
 ## Terms
 
@@ -32,6 +32,8 @@ The use case has two parts. The script does what is deterministic: the work list
 | Statement | One definition of the grammar, a rule or a terminal, or one directive (`%ignore`, `%declare`), with all its lines. |
 | Key of a statement | The name of a rule or terminal, such as `power` or `NAME`; for a directive, its exact first line, such as `%ignore COMMENT`. The work list and the check name a statement by its key. |
 | Status file | The file `specs-derived/grammar/clean-language-code-examples-status.jsonl`, the status file of the type `grammar` (NRM-5). |
+| List of derived norms | The file `specs-derived/grammar/derived-norms.jsonl`, the list of derived norms of the type `grammar` (NRM-12), which `seal` writes (DGR-20). |
+| Derived norm, derived norm ID, derived norm fingerprint, lines of a derived norm, citation line, content of a derived norm, list before the run, commit of layer 2 of the run | As the terms of [module.md](../../../specs/module.md#terms) say, which take them from layers.md and norms-management; the module script reads the list before the run as [CDN-9](../../../specs/module.md#rules) says. A derived norm of the grammar is one statement (DGR-20). |
 | Case text | The code of a fragment, as DGR-6 "The case text" builds it. The script never cuts it (DGR-6). |
 | File line, path of a file line, file of a program, program | As [clean-examples](../../../../clean-examples/specs/module.md#terms) defines them, for the case text. |
 | File text | The text of one file of the program of a case, as DGR-19 builds it. A case text with no file line has one file, whose file text is the whole case text. |
@@ -66,10 +68,11 @@ Feature: Derive the grammar of Clean from the norms
       When the use case runs
       Then it reads "data/tree.jsonl" as it is in the working tree, and may read "specs-repo-annotated/"
       And for the old text of a stale cited norm, it reads the versions of "data/tree.jsonl" in the history of HEAD, with git (DGR-18)
-      And it reads the grammar and the status file, the files of its plugin, its "plugin.json" among them, and, for the marketplace commit, "~/.claude/plugins/installed_plugins.json" and the git data of the checkout that holds the plugin (DGR-4)
+      And it reads the grammar, the status file and the list of derived norms, and, with git, the list before the run (DGR-20)
+      And it reads the files of its plugin, its "plugin.json" among them, and, for the marketplace commit, "~/.claude/plugins/installed_plugins.json" and the git data of the checkout that holds the plugin (DGR-4)
       And it reads the issues of "Ivan-Pasco/clean-language-foundation" (DGR-14) and of "jpchauny/claude-plugins" (DGR-18)
       And it never reads a file of the foundation
-      And in the repository it writes only the grammar and the status file
+      And in the repository it writes only the grammar, the status file and the list of derived norms
       And outside the repository it writes only its work files in the scratchpad (the work list, the titles, bodies and comments of issues, and the record of the issues)
       And, during the run, in the foundation "Ivan-Pasco/clean-language-foundation": the issue of each pending fragment, a comment on an open issue that already has the ID of the fragment, the labels that the foundation lacks, and the edit that writes the number of an issue in its body (DGR-14)
       And, during the run, in "jpchauny/claude-plugins": the issue of each stale cited norm, a comment on an open issue that already has the ID of the norm, the labels that the repository lacks, and the edit that writes the number of an issue in its body (DGR-18)
@@ -102,12 +105,12 @@ Feature: Derive the grammar of Clean from the norms
         | ACO-130 | active  | ```toml                                               | is not |
         | EXP-28  | retired | ```clean-language expect=valid                        | is not |
 
-  Rule: DGR-3 The output is one grammar and one status file under specs-derived/grammar/
+  Rule: DGR-3 The output is one grammar, one status file and one list of derived norms under specs-derived/grammar/
 
     Scenario: The layout
       When the use case has run
       Then "specs-derived/" holds one folder per type of derived norms
-      And "specs-derived/grammar/" holds exactly "clean.lark" and "clean-language-code-examples-status.jsonl"
+      And "specs-derived/grammar/" holds exactly "clean.lark", "derived-norms.jsonl" and "clean-language-code-examples-status.jsonl"
 
   Rule: DGR-4 The first line of the status file records the specs commit, the generator, the model and the hashes of the output (NRM-5)
 
@@ -118,9 +121,10 @@ Feature: Derive the grammar of Clean from the norms
       When the script runs "seal --model claude-opus-5-5"
       Then the first line of the status file is
         """
-        {"type":"meta","specs_commit":"3a4ba07351c7f3f0f5f7e9a86e583263191ba15e","generator":{"plugin":"clean-derived-norms","version":"0.1.0","marketplace_commit":"<sha of 40 hex digits>"},"model":"claude-opus-5-5","grammar_sha256":"<sha256 of the grammar>","status_sha256":"<sha256 of the other lines of the status file>"}
+        {"type":"meta","specs_commit":"3a4ba07351c7f3f0f5f7e9a86e583263191ba15e","generator":{"plugin":"clean-derived-norms","version":"0.1.0","marketplace_commit":"<sha of 40 hex digits>"},"model":"claude-opus-5-5","grammar_sha256":"<sha256 of the grammar>","derived_norms_sha256":"<sha256 of the list of derived norms>","status_sha256":"<sha256 of the other lines of the status file>"}
         """
-      And its fields are exactly these six, in this order: "type", "specs_commit", "generator", "model", "grammar_sha256", "status_sha256"
+      And its fields are exactly these seven, in this order: "type", "specs_commit", "generator", "model", "grammar_sha256", "derived_norms_sha256", "status_sha256"
+      And "derived_norms_sha256" is the SHA-256 of the list of derived norms that the same "seal" writes (NRM-5, DGR-20)
       And the fields of "generator" are exactly these three, in this order: "plugin", "version", "marketplace_commit"
       And the script computes each value itself, except "model", which it takes from "--model"; the deriver writes none of them in the file
 
@@ -136,7 +140,7 @@ Feature: Derive the grammar of Clean from the norms
       And it writes nothing: the status file keeps its content
 
     Scenario: seal with a missing or malformed input
-      When "data/tree.jsonl" or the grammar does not exist, a line of the status file or of "data/tree.jsonl" is not JSON, or the plugin has no "version" in its "plugin.json"
+      When "data/tree.jsonl" or the grammar does not exist, the grammar is not UTF-8, a line of the status file or of "data/tree.jsonl" is not JSON, the list before the run cannot be read as DGR-20 "A list that cannot be read" says, or the plugin has no "version" in its "plugin.json"
       Then "seal" prints the error and exits with 2, and writes nothing
 
     Scenario: An unknown marketplace commit
@@ -402,6 +406,7 @@ Feature: Derive the grammar of Clean from the norms
       And the script reports each word of "RESERVED" that "NAME" matches
 
   Rule: DGR-12 Only what a change calls for is derived again (NRM-7)
+    Rationale: deriving again only what a change calls for keeps every statement that no change reached as it was, so its derived norm fingerprint does not change for nothing (NRM-7); a new version of the plugin is the exception, since any statement may be one that it fixes and no change of the norms would reach it, and a statement that it leaves as it is keeps its derived norm fingerprint, so only what it corrects makes acceptance units and code stale (NRM-7, LAY-12, ORC-14).
 
     Scenario Outline: The work list
       Given the status file and the grammar of the previous run
@@ -425,13 +430,17 @@ Feature: Derive the grammar of Clean from the norms
         | "%ignore COMMENT" cites "LEX-6" with a stale norm hash                                                   | "%ignore COMMENT" as "norm", with the citation |
         | "SEM-79" moved to another file, with the same norm hash                                                  | nothing for "SEM-79"; only its status line moves, to keep the order of "data/tree.jsonl" |
         | "SEM-79" moved into a list item, so its norm hash changed                                                | "SEM-79" as "changed" |
+        | the meta line of the status file names, in "generator", another "version" than the plugin version of the plugin that runs "worklist", or none (a new version, NRM-7) | every fragment that has a status line and is still a fragment as "changed", and every statement of the grammar as "version" |
+        | the meta line of the status file names, in "generator", the plugin version of the plugin that runs "worklist" | no item for that reason |
 
     Scenario: The output of the work list
       When the script runs "worklist"
-      Then it prints one JSON line per item, with exactly "kind" ("new", "changed", "gone" or "norm"), "id" or "statement" (its key), "old_hash", "new_hash", and, for a fragment, its "cases" and its "file", and, for a "norm" item, its "citation"
+      Then it prints one JSON line per item, the fragments in the order of "data/tree.jsonl", then the "gone" ones, then the "norm" ones in the order of the grammar, then the "version" ones in the order of the grammar
+      And a fragment item and a "norm" item have exactly "kind" ("new", "changed", "gone" or "norm"), "id" or "statement" (its key), "old_hash", "new_hash", and, for a fragment, its "cases" and its "file", and, for a "norm" item, its "citation"
+      And a "version" item has exactly "kind", "statement" (its key), "old_version" (the "version" of "generator" in the meta line of the status file, null when there is none) and "new_version" (the plugin version of the plugin that runs "worklist")
       And the "cases" of a "new" or "changed" fragment are the ones that the script gives now from its opening line, [] when it is none of the forms of CEX-4 (DGR-6); a "gone" fragment has no text, so its "cases" are the ones of its old status line
       And it exits with 0, whether the list is empty or not
-      And it exits with 2 when "data/tree.jsonl" does not exist, or a line of the status file or of "data/tree.jsonl" is not JSON
+      And it exits with 2 when "data/tree.jsonl" does not exist, a line of the status file or of "data/tree.jsonl" is not JSON, or the plugin has no "version" in its "plugin.json"
 
     Scenario: A fragment that is gone
       Given "SEM-79" is in the work list as "gone"
@@ -454,11 +463,28 @@ Feature: Derive the grammar of Clean from the norms
       Then it derives "MOD-83" again, as a new fragment
       And each statement that cites the old norm hash of "MOD-83" is evaluated again, as an item "norm"
 
+    Scenario: A new version of the plugin derives the whole grammar again (NRM-7)
+      Given the meta line of the status file names the version "0.3.1" in "generator", and the plugin that runs "worklist" has the plugin version "0.4.0"
+      When the script runs "worklist"
+      Then every fragment that has a status line is "changed", also when its norm hash and its cases did not change, each new fragment is "new" and each fragment that is gone is "gone"
+      And every statement of the grammar is an item "version", with "old_version" "0.3.1" and "new_version" "0.4.0"
+      And the deriver evaluates each statement of a "version" item again against the current text of every norm it cites, as for an item "norm", and each "changed" fragment again, as a new fragment
+      And a statement that still follows from its norms keeps its content and its citations, so it keeps its derived norm ID and its derived norm fingerprint (NRM-14)
+      And a statement that the new version corrects is rewritten or removed, so it gets another derived norm fingerprint, or its derived norm is gone (LAY-12 item 2)
+      And "seal" then writes the plugin version "0.4.0" in the meta line, so the next run with the same plugin version derives again only what a change calls for
+
     Scenario: Nothing else is touched
       When the deriver has worked through the work list
       Then every statement and status line that no item reaches keeps the same content
       And a statement that the deriver changes while it works on an item is part of that item, and DGR-15 reports it
-      And an empty work list leaves both files with the same content, except the meta line
+      And an empty work list leaves the grammar and the status file with the same content, except the meta line
+      And a new version of the plugin gives no empty work list while the grammar holds a statement or the status file a fragment line (NRM-7)
+
+    Scenario: The list of derived norms is written again at every run (NRM-7)
+      When the deriver has worked through the work list, whether it was empty or not
+      Then "seal" writes the list of derived norms again, from the whole grammar and the lists before it (DGR-20)
+      And a statement whose citations alone changed, such as only the norm hash of "EXP-11" in the citations of "power", keeps its derived norm ID and gets another derived norm fingerprint (NRM-14)
+      And a statement that no item reaches keeps its derived norm ID and its derived norm fingerprint, and only its "first_line" and "last_line" change when the statements above it gained or lost lines
 
     Scenario: A status file of the local skill
       Given the status file has a meta line with no field "generator", as the local skill "/derive-grammar" of the repository of layer 2 wrote it
@@ -488,7 +514,8 @@ Feature: Derive the grammar of Clean from the norms
       And the specs commit of the meta line is the one of "data/tree.jsonl"
       And its generator names the plugin "clean-derived-norms" and the plugin version of the plugin that runs "check"; "check" does not judge its marketplace commit
       And its model is a non-empty string of the form of a model ID: "check" cannot know that it is the model that derived, only that the field is there and well formed (DGR-4)
-      And the hashes of the meta line are the ones of the grammar and the status file (DGR-17)
+      And the hashes of the meta line are the ones of the grammar, the list of derived norms and the status file (DGR-17)
+      And the list of derived norms meets DGR-20 "The check of the list"
       And no two status lines hold the same issue URL (DGR-5)
       And no fragment is "pending"
 
@@ -532,7 +559,7 @@ Feature: Derive the grammar of Clean from the norms
         | {"plugin":"clean-derived-norms","version":"0.1.0","marketplace_commit":"none"}    | it reports no problem "meta" |
         | {"plugin":"clean-derived-norms","version":"0.0.9","marketplace_commit":"<sha>"}   | it reports the problem "meta generator", naming both versions |
         | {"plugin":"derive-grammar","version":"0.1.0","marketplace_commit":"<sha>"}        | it reports the problem "meta generator", naming both names |
-        | none: the meta line has no field "generator"                                      | it reports the problem "meta generator", and that the meta line does not have exactly its six fields |
+        | none: the meta line has no field "generator"                                      | it reports the problem "meta generator", and that the meta line does not have exactly its seven fields |
 
     Scenario Outline: The model at check time
       Given the meta line <model>, and its other fields and hashes are right
@@ -543,7 +570,7 @@ Feature: Derive the grammar of Clean from the norms
         | model                                  | result |
         | records "model" "claude-opus-5-5"      | it reports no problem "meta" |
         | records "model" "claude-sonnet-4.5"    | it reports no problem "meta" |
-        | has no field "model"                   | it reports the problem "meta" "model", and that the meta line does not have exactly its six fields |
+        | has no field "model"                   | it reports the problem "meta" "model", and that the meta line does not have exactly its seven fields |
         | records "model" ""                     | it reports the problem "meta" "model" |
         | records "model" null, or a number      | it reports the problem "meta" "model" |
         | records "model" "claude opus"          | it reports the problem "meta" "model": a blank is not of the form of a model ID |
@@ -571,8 +598,8 @@ Feature: Derive the grammar of Clean from the norms
     Scenario: No fragment yet
       Given "data/tree.jsonl" holds no fragment
       When the use case runs
-      Then the grammar holds no statement and the status file only its meta line
-      And "check" does not build the grammar, checks only the meta line and the citations of the script, and exits with 0 when they pass
+      Then the grammar holds no statement, the status file only its meta line, and the list of derived norms only its meta line
+      And "check" does not build the grammar, checks only the meta line, the list of derived norms (DGR-20) and the citations of the script, and exits with 0 when they pass
       And the end report says that layer 2 holds no Clean example yet
 
     Scenario: The last line of check
@@ -601,7 +628,8 @@ Feature: Derive the grammar of Clean from the norms
         | the grammar was changed after the last "seal"                                             | 1      |
         | the generator of the meta line is not the plugin that runs "check", by name or by version | 1      |
         | the meta line has no model, or its model is empty or not of the form of a model ID         | 1      |
-        | "data/tree.jsonl", the grammar or the status file does not exist, or Lark cannot be loaded | 2      |
+        | the list of derived norms does not hold what DGR-20 "The check of the list" says           | 1      |
+        | "data/tree.jsonl", the grammar, the status file or the list of derived norms does not exist, the grammar is not UTF-8, or Lark cannot be loaded | 2      |
 
     Scenario: How problems are shown
       Given a check fails
@@ -720,6 +748,7 @@ Feature: Derive the grammar of Clean from the norms
       And the end report (DGR-15) lists it among the issues opened
 
   Rule: DGR-15 The use case ends by showing what it did, the issues it opened, and the result of the check
+    Rationale: the report is what the person, and the step of layer 2 (NRM-11), see of the run. The derived norms that changed are not in it: NRM-11 is the only rule that compares them, so that the report of the step and the orchestrator (ORC-10) tell the same ones; the use case ends before the commit of layer 2 of the run exists (NRM-9), so a comparison of its own could only take another base, and a run that builds again the same commit of layer 1 would show no change where NRM-11 shows one.
 
     Scenario: The end of a run
       When the use case has run
@@ -734,17 +763,25 @@ Feature: Derive the grammar of Clean from the norms
       And the issues of fragments that are no longer pending, which the fix in layer 1 may close
       And the stale citations of the script, which need a change of the plugin, released as a new version, each with the issue of its norm opened in "jpchauny/claude-plugins", or the open duplicate commented on instead, or the error, and each issue whose number could not be written in its body (DGR-18)
       And then the output of the check, and its exit status
+      And it does not list the derived norms new, changed and gone, and its script has no command that compares two lists of derived norms: the step of layer 2 compares them, for its report, as NRM-11 says
 
-  Rule: DGR-17 The grammar and the status file change only through a run of the use case
+  Rule: DGR-17 The grammar, the list of derived norms and the status file change only through a run of the use case
 
     Scenario: A run seals its output
       When the deriver has worked through the work list
-      Then the deriver runs "seal --model <model ID>", with its own model ID, and the script writes the meta line with that model and the hashes of the grammar and of the fragment lines
+      Then the deriver runs "seal --model <model ID>", with its own model ID, and the script writes the list of derived norms (DGR-20), then the meta line with that model and the hashes of the grammar, of the list of derived norms and of the fragment lines
+      And the deriver never writes the list of derived norms
 
     Scenario: A change by hand
       Given a person or another session changed a line of the grammar after the last "seal"
       When the script runs "check"
       Then it reports that the grammar does not match the hash of its meta line
+      And it exits with 1
+
+    Scenario: A change by hand of the list of derived norms
+      Given a person or another session changed a line of the list of derived norms after the last "seal"
+      When the script runs "check"
+      Then it reports the problem "meta" "derived_norms_sha256": the list does not match the hash of its meta line
       And it exits with 1
 
   Rule: DGR-18 Each stale cited norm of the script gets its own issue in jpchauny/claude-plugins at once (CDN-5), and check still fails
@@ -897,4 +934,118 @@ Feature: Derive the grammar of Clean from the norms
     Scenario: The status file and the work list
       Given a fragment whose program has several files
       Then it is one case, as DGR-6 says, and its status line and its item of the work list have the fields of DGR-5 and DGR-12, and nothing more for its files
+
+  Rule: DGR-20 Each statement of the grammar is one derived norm, which the list of derived norms names by its derived norm ID and its derived norm fingerprint (NRM-12 to NRM-15, CDN-8)
+    Rationale: layers 3 and 4 cite a rule of the grammar by its derived norm ID and see that it changed by its derived norm fingerprint, with one reader that knows no type (NRM-12); a statement is the smallest part of the grammar that cites its own norms (DGR-8), so it is the derived norm; its name, which CDN-10 makes from its key, is what keeps it the same from one run to the next, as CDN-8 says for every use case of the module; a name need not be unique, since two keys may give one name (CDN-10), and CDN-8 then pairs the statements of that name in order.
+
+    Scenario: What one derived norm of the grammar is (NRM-15)
+      Given the grammar
+      Then each statement of the grammar, a rule, a terminal or a directive, is one derived norm, and nothing else of the grammar is one
+      And its lines go from the first of the comment lines just above it, with no blank line between (DGR-8), or from its first line when it has none, to its last line that is not blank
+      And its name in the list of derived norms is the key of the statement as CDN-10 makes a name of it: the key itself, such as "power", "NAME" or "%ignore COMMENT", when it holds no tab nor other character that CDN-10 replaces
+      And its citation lines are the citations of DGR-8, of the form "// <norm ID>@<norm hash>: <reason>": in its lines, each line that matches "^// ([A-Z]{3,}(-[0-9]+)?)@([0-9a-f]{8}): (\S.*)$" once the blanks at its end are removed
+      And its "path" is "specs-derived/grammar/clean.lark"
+      And a line that is neither a statement, a line of one, a comment line nor a blank line, which "check" reports (DGR-13), is no derived norm
+      And what keeps it the same derived norm from one run to the next is its name, as CDN-8 says
+
+    Scenario: A key with a tab (CDN-10)
+      Given the grammar holds the directive below, whose first line has a tab between "%ignore" and "WS", and the citation of a norm above it
+        """
+        // LEX-6@0123abcd: blanks between tokens are ignored
+        %ignore<tab>WS
+        """
+      When the script runs "seal --model <model ID>"
+      Then the work list and the check name the statement by its key, "%ignore<tab>WS"
+      And its name in the list of derived norms is "%ignore WS", with a space in place of the tab
+      And "check" reports no problem "derived-norms" for that name
+      And a directive "%ignore WS", with a space, in the same grammar, has the same name, so the first of the two in the order of NRM-13 keeps the lowest derived norm ID of that name in the list before the run, and the second keeps the next one there, or is new when there is none (CDN-8)
+      And a second "seal" over the list that the first one wrote, committed as the list before the run, with the grammar unchanged, gives both the derived norm IDs that the first one gave them
+
+    Scenario: The list after a run
+      Given the grammar holds, at its lines 40 to 42, the rule "power" below, and the list before the run names "power" with the derived norm ID "grammar:12" and holds "last_derived_norm_number" 41
+        """
+        // EXP-11@e105eaa8: ^ is right-associative
+        // EXP-8@a0b54578: the operators and their order
+        power: unary ("^" power)?
+        """
+      When the script runs "seal --model <model ID>"
+      Then the list of derived norms is the binding example of NRM-12, with the line of "power":
+        """
+        {"kind": "derived_norm", "derived_norm_id": "grammar:12", "derived_norm_fingerprint": "0ced57c3", "name": "power", "path": "specs-derived/grammar/clean.lark", "first_line": 40, "last_line": 42, "cited_norms": [{"norm_id": "EXP-11", "norm_hash": "e105eaa8"}, {"norm_id": "EXP-8", "norm_hash": "a0b54578"}]}
+        """
+      And each line is the JSON object of its fields as Python's "json.dumps" writes it with "ensure_ascii" false and its default separators, ", " and ": "
+
+    Scenario Outline: The same derived norm (NRM-13)
+      Given the list before the run names the statement "<before>" with the derived norm ID "grammar:12"
+      And the run <change>
+      When the script runs "seal --model <model ID>"
+      Then <result>
+
+      Examples:
+        | before          | change                                                              | result |
+        | power           | rewrites the rule "power", or changes only the reasons of its citations | "power" keeps "grammar:12" |
+        | power           | changes the norm hash of "EXP-11" in a citation of "power"          | "power" keeps "grammar:12", with another derived norm fingerprint |
+        | power           | moves "power" to another place of the grammar                       | "power" keeps "grammar:12", with other "first_line" and "last_line" |
+        | power           | renames the rule "power" to "exponent"                              | "exponent" is a new derived norm, with a new derived norm ID, and "grammar:12" is gone |
+        | %ignore COMMENT | writes "%ignore COMMENT" again, citing other norms                  | "%ignore COMMENT" keeps "grammar:12" |
+        | %ignore COMMENT | replaces it with "%ignore WS"                                       | "%ignore WS" is a new derived norm, and "grammar:12" is gone |
+
+    Scenario: The derived norm IDs that a seal gives
+      When the script runs "seal --model <model ID>"
+      Then it gives each statement its derived norm ID as NRM-13 and CDN-8 say, from the list before the run alone: the one of the same name in the list before the run, paired in order when several have one name (CDN-8), otherwise a new one, in the order of NRM-13: by "path", then by "first_line"
+      And a list before the run that does not exist counts as a list with no derived norm and "last_derived_norm_number" 0
+      And it does not read the list in the working tree, so a later "seal" of the same run gives each new statement its derived norm ID again, in the order of the whole grammar (CDN-8)
+      And the deriver gives no derived norm ID and computes no derived norm fingerprint: the script does (NRM-15)
+
+    Scenario: A list that cannot be read
+      Given git cannot give the list before the run, in a case of CDN-9 where it cannot be read, or the list before the run has a line that is not UTF-8 or is not a JSON object (an empty line or a line of only blanks is none), or its first line is not a JSON object with "kind" "meta", "type" "grammar" and "last_derived_norm_number" an integer, 0 or greater
+      When the script runs "seal --model <model ID>"
+      Then it prints the error, naming the list and, when the error is in a line of it, the line, and exits with 2
+      And it writes nothing (DGR-4)
+      And so it never gives a derived norm ID again that a list it cannot read may hold
+      And its lines are the text between line feeds; only the empty text after the line feed that ends the list is no line
+
+    Scenario: The check of the list
+      When the script runs "check"
+      Then it checks the list of derived norms against NRM-12 to NRM-14 and against the grammar, and reports each fact below as the problem "derived-norms" (complete list):
+        | fact | subject of the problem |
+        | the list is not UTF-8, starts with a byte order mark, holds a carriage return, does not end with a line feed, or holds an empty line | "derived-norms.jsonl" or "derived-norms.jsonl:<n>" |
+        | a line is not a JSON object, or gives one field twice | "derived-norms.jsonl:<n>" |
+        | the first line is not the meta line of NRM-12 for the type "grammar": not exactly its three fields in their order, "kind" not "meta", "type" not "grammar", or "last_derived_norm_number" not an integer, 0 or greater | "derived-norms.jsonl:1" |
+        | a line after the first does not have exactly the eight fields of NRM-12 in their order, or "kind" is not "derived_norm" | "derived-norms.jsonl:<n>" |
+        | a "derived_norm_id" is not "grammar:<n>", with <n> a number from 1 without leading zeros, or its number is greater than "last_derived_norm_number" | "derived-norms.jsonl:<n>" |
+        | a "derived_norm_fingerprint" is not 8 hex digits in lower case | the derived norm ID |
+        | a "name" is not a string of NRM-12: empty, only blanks, or with a control character, a line separator or a paragraph separator | the derived norm ID |
+        | "first_line" or "last_line" is not an integer from 1, or "first_line" is greater than "last_line" | the derived norm ID |
+        | "cited_norms" is not a list of at least one object with exactly "norm_id" (a norm ID) and "norm_hash" (8 hex digits in lower case), in the order of the norm IDs, with no norm ID twice | the derived norm ID |
+        | the lines of the derived norms are not in the ascending order of the numbers of their derived norm IDs, or two hold one derived norm ID | the derived norm ID |
+        | two derived norms of one file have a line in common | the derived norm ID of the second |
+        | a line names a "name", "path", "first_line" and "last_line" that are no derived norm of the grammar | the derived norm ID |
+        | a derived norm of the grammar has no line with its name, its "path", its "first_line" and its "last_line" | its name |
+        | the "cited_norms" of a derived norm are not the norms, with their norm hashes, that its citation lines cite | the derived norm ID |
+        | the "derived_norm_fingerprint" of a derived norm is not the one that NRM-14 computes from its lines and its "cited_norms" | the derived norm ID |
+        | the list before the run cannot be read, as "A list that cannot be read" says | "derived-norms.jsonl" |
+        | the list before the run holds a greater "last_derived_norm_number" | "derived-norms.jsonl:1" |
+        | a derived norm ID that the list before the run also holds names another derived norm there, by name | the derived norm ID |
+        | a derived norm ID that the list before the run does not hold has a number not greater than the "last_derived_norm_number" of that list: an ID given again | the derived norm ID |
+        | a derived norm of a name that the list before the run gives derived norm IDs does not hold the one that CDN-8 pairs it with: the k-th derived norm of that name in the list, in the order of NRM-13, does not hold the k-th derived norm ID of that name in the list before the run, in the ascending order of their numbers | the name |
+      And it prints each one as "derived-norms: <subject>: <what is wrong>", which says the fact and the values involved
+      And with no list before the run (CDN-9), or with one that cannot be read, the last four facts are not checked: with none, the type starts from 0 (NRM-13), so none of them can fail; one that cannot be read is the fact before them
+      And when a line is not a JSON object or gives one field twice, or the meta line does not check, it reports that line and checks no derived norm of the list against the grammar
+      And a line that does not have exactly the fields of NRM-12, whose "derived_norm_id" is not "grammar:<n>", whose "name" or "path" is not a string, or whose "first_line" and "last_line" are not line numbers, it reports, and compares neither with the grammar nor with the list before the run; the other lines it checks
+
+    Scenario Outline: A list that does not check
+      Given the list of derived norms, sealed from the grammar, then <change>
+      And the hash of the meta line of the status file is made to match the list again
+      When the script runs "check"
+      Then it reports "derived-norms" "<subject>", and exits with 1
+
+      Examples:
+        | change                                                                        | subject      |
+        | gives the derived norm "power" the derived norm fingerprint "00000000"        | grammar:12   |
+        | drops the line of "power"                                                     | power        |
+        | gives "power" the "last_line" of the line after it                            | grammar:12   |
+        | drops "EXP-8" from the "cited_norms" of "power"                               | grammar:12   |
+        | gives "power" the "name" ["power"], a JSON array                              | grammar:12   |
+        | gives "power" the derived norm ID "grammar:42", with "last_derived_norm_number" 41 | derived-norms.jsonl:<its line> |
 ```

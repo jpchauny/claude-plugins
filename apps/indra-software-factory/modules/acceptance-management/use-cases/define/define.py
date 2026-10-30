@@ -1,4 +1,4 @@
-"""The script of the use case define of acceptance-management, with no model (ACU-57 to ACU-73).
+"""The script of the use case define of acceptance-management, with no model (ACU-57 to ACU-73, ACU-77, ACU-79).
 
 Spec: specs/define.md of this folder, and specs/module.md of the module. The
 fingerprints (ACU-51 to ACU-54) are those of scripts/acceptance_hashes.py of the
@@ -6,8 +6,9 @@ module; the checks that every use case of the module shares (ACU-74), the
 checks before a commit, the commit command and the diff of a file of a
 commit (ACU-75) those of
 scripts/acceptance_repository_checks.py; and the inventory (ACU-60 to ACU-62:
-the norms, the files of areas/ and units/, their format errors and the
-citation statuses, and the ID fields of ACU-55 and ACU-61) that of
+the norms, the derived norms (ACU-78), the files of areas/ and units/, their
+format errors and the citation statuses, and the ID fields of ACU-55 and
+ACU-61) that of
 scripts/acceptance_repository_files.py, which write-acceptance-tests reads
 too. This script imports all three.
 
@@ -30,6 +31,26 @@ repository only):
     define.py inventory REPO --norms-commit SHA [--worktree]
         ACU-60, ACU-61, ACU-62: prints the inventory, at HEAD, or with
         --worktree of areas/, units/ and acceptance.json as they are on disk.
+    define.py derived-norms REPO --norms-commit SHA UNIT_ID
+        ACU-67, ACU-78: prints, for units/<unit ID>.md as the working tree
+        holds it, the derived norms of the scope of its "## Norms" at the
+        norms commit, in the order of ACU-78, each with "derived_norm_id",
+        "derived_norm_fingerprint", "name", "path", "first_line",
+        "last_line", "lines_of_derived_norm" (the lines of a derived norm at
+        the norms commit, or null), "reason_in_acceptance_unit" (the reason
+        that its "## Derived norms" already gives that derived norm ID, or
+        null) and "derived_norm_citation_without_reason" (the line
+        "- <derived norm ID>@<derived norm fingerprint>: " to complete with
+        the reason).
+    define.py derived-norms-generator REPO --norms-commit SHA DERIVED_NORM_ID
+        ACU-79: prints what the issue of a defect of a derived-norms
+        generator needs: the derived norm as its list gives it, "status_file",
+        "generator" (of the status file of its type at the norms commit, or
+        null), "marketplace_repository" (<owner>/<name>, found in
+        ~/.claude/plugins/installed_plugins.json and known_marketplaces.json,
+        or null), "issue_body_start" and "no_issue_message". Reads only the
+        list of derived norms of the type of the ID. Exits 1 when the norms
+        commit holds no such derived norm or that list cannot be read.
     define.py check REPO --norms-commit SHA
         ACU-69 and ACU-73: the files written (those of areas/, units/ and
         acceptance.json that differ from HEAD) and each problem; exits 1 when
@@ -103,7 +124,9 @@ import acceptance_repository_checks as checks  # noqa: E402
 from acceptance_repository_checks import git, ls_tree, out, show  # noqa: E402
 from acceptance_repository_files import (ACCEPTANCE_AREA_FILE, ACCEPTANCE_UNIT_FILE, ID_FIELDS, Layer3,  # noqa: E402
                                          acceptance_ok, expected_fields, field_line, inventory, number, plural,
-                                         public, read_norms)
+                                         path_of_list_of_derived_norms, public, read_derived_norms,
+                                         read_derived_norms_of_type, read_norms, scope_of,
+                                         types_of_derived_norms_of_commit)
 
 PREFIX = "acceptance-management:define: "
 CHANGE = re.compile(r"(add|change|delete) ((?:AA|AU)-[1-9][0-9]*)")
@@ -133,16 +156,27 @@ def locate(cwd):
 
 # ---------------------------------------------------------------- the summary (ACU-64)
 
-def summary(inv):
-    """ACU-64: the line that sums up the inventory."""
+def summary(inv, with_derived_norms=False):
+    """ACU-64: the line that sums up the inventory; with the derived norms when project.json names at least one type
+    of derived_norms."""
     norm_citations = [c for u in inv["acceptance_units"] for c in u["norm_citations"]]
     changed = sum(c["citation_status"] == "changed" for c in norm_citations)
     retired = sum(c["citation_status"] == "retired" for c in norm_citations)
     errors = len(inv["errors"]) + sum(len(x["errors"]) for x in inv["acceptance_areas"] + inv["acceptance_units"])
-    return (f"Layer 2 at {inv['norms_commit'][:7]}: {plural(len(inv['norms']), 'norm')}. "
+    derived_norms = derived_norm_citations = ""
+    if with_derived_norms:
+        citations = [c for u in inv["acceptance_units"] for c in u["derived_norm_citations"]]
+        derived_norm_citations_changed = sum(c["citation_status"] == "changed" for c in citations)
+        derived_norm_citations_retired = sum(c["citation_status"] == "retired" for c in citations)
+        derived_norms_not_cited = sum(len(u["derived_norms_not_cited"]) for u in inv["acceptance_units"])
+        derived_norms = f", {plural(len(inv['derived_norms']), 'derived norm')}"
+        derived_norm_citations = (f"; {plural(derived_norm_citations_changed, 'derived norm citation')} changed, "
+                                  f"{derived_norm_citations_retired} retired, {derived_norms_not_cited} not cited")
+    return (f"Layer 2 at {inv['norms_commit'][:7]}: {plural(len(inv['norms']), 'norm')}{derived_norms}. "
             f"Layer 3 at {inv['acceptance_commit'][:7]}: {plural(len(inv['acceptance_areas']), 'acceptance area')}, "
             f"{plural(len(inv['acceptance_units']), 'acceptance unit')}; "
-            f"{plural(changed, 'norm citation')} changed, {retired} retired; {plural(errors, 'format error')}.")
+            f"{plural(changed, 'norm citation')} changed, {retired} retired{derived_norm_citations}; "
+            f"{plural(errors, 'format error')}.")
 
 
 # ---------------------------------------------------------------- start (ACU-74, ACU-58)
@@ -161,12 +195,17 @@ def start(cwd, args):
     acceptance_at_head = acceptance_ok(show(root, "HEAD", "acceptance.json") or b"")
     if acceptance_at_head is None:
         raise Stop("acceptance.json does not meet ACU-6")
-    inv = inventory(where, where["norms_commit"])
+    try:
+        types = types_of_derived_norms_of_commit(where, where["norms_commit"])
+        derived_norms = read_derived_norms(where, where["norms_commit"], types)
+    except checks.Refusal as refusal:
+        raise Stop(refusal.message)
+    inv = inventory(where, where["norms_commit"], derived_norms=derived_norms, types=types)
     return {"acceptance_repository": where["acceptance_repository"], "norms_repository": where["norms_repository"],
             "specs_repository": where["specs_repository"],
             "acceptance_default_branch": where["acceptance_default_branch"],
             "norms_default_branch": where["norms_default_branch"], "norms_commit": where["norms_commit"],
-            "acceptance_commit": inv["acceptance_commit"], "summary": summary(inv),
+            "acceptance_commit": inv["acceptance_commit"], "summary": summary(inv, bool(types)),
             "empty_fields_of_acceptance_json": [field for field in FILLABLE_FIELDS
                                                 if is_empty(acceptance_at_head[field])],
             "code_repositories": code_repositories(where)}
@@ -318,8 +357,10 @@ def check(where, norms_commit):
     """ACU-69, ACU-73: the problems of the files written."""
     root = where["root"]
     norms = read_norms(where, norms_commit)
-    before = inventory(where, norms_commit, "HEAD", norms)
-    after = inventory(where, norms_commit, None, norms)
+    types = types_of_derived_norms_of_commit(where, norms_commit)
+    derived_norms = read_derived_norms(where, norms_commit, types)
+    before = inventory(where, norms_commit, "HEAD", norms, derived_norms, types)
+    after = inventory(where, norms_commit, None, norms, derived_norms, types)
     files = written(root)
     paths = [p for p, _, new in files]
     problems = []
@@ -331,6 +372,20 @@ def check(where, norms_commit):
                     problems.append({"path": acceptance_unit["path"], "line": c["_line"],
                                      "message": f"{c['norm_id']}@{c['hash_in_acceptance_unit']} is "
                                                 f"{c['citation_status']}; its norm hash at the norms commit is {now}"})
+            # ACU-69, ACU-62: every derived norm citation current, and no derived norm not cited (ACU-78).
+            for c in acceptance_unit["derived_norm_citations"]:
+                if c["citation_status"] != "current":
+                    now = (c["derived_norm_fingerprint_in_norms_repository"]
+                           or "none: the derived norm is not in layer 2")
+                    problems.append({"path": acceptance_unit["path"], "line": c["_line"],
+                                     "message": f"{c['derived_norm_id']}@"
+                                                f"{c['derived_norm_fingerprint_in_acceptance_unit']} is "
+                                                f"{c['citation_status']}; its derived norm fingerprint at the norms "
+                                                f"commit is {now}"})
+            for d in acceptance_unit["derived_norms_not_cited"]:
+                problems.append({"path": acceptance_unit["path"], "line": None,
+                                 "message": f"{d['derived_norm_id']}@{d['derived_norm_fingerprint']} is in the scope "
+                                            f"of {acceptance_unit['unit_id']} and not in ## Derived norms (ACU-78)"})
     old = {(e["path"], e["message"]) for e in before["errors"]}
     for x in before["acceptance_areas"] + before["acceptance_units"]:
         old |= {(x["path"], e["message"]) for e in x["errors"]}
@@ -358,6 +413,142 @@ def check(where, norms_commit):
                     for problem in fill_problems(where, a, {field: b[field]}):
                         problems.append({"path": path, "line": field_line(new_bytes, field), "message": problem})
     return {"written": paths, "problems": problems}
+
+
+def derived_norms_of_scope(where, norms_commit, unit_id):
+    """ACU-67, ACU-78: the derived norms of the scope of "## Norms" of units/<unit ID>.md as the working tree holds it,
+    at the norms commit, in the order of ACU-78, each with the reason that its "## Derived norms" already gives."""
+    if not re.fullmatch(r"AU-[1-9][0-9]*", unit_id):
+        raise Stop(f"{unit_id} is not a unit ID")
+    data = Layer3(where["root"], None).read(f"units/{unit_id}.md")
+    if data is None:
+        raise Stop(f"units/{unit_id}.md is not in the working tree")
+    try:
+        norm_ids = [norm_id for norm_id, _, _ in hashes.norm_citations(data)]
+        reasons = {}
+        for derived_norm_id, _, reason in hashes.derived_norm_citations(data):
+            reasons.setdefault(derived_norm_id, reason)
+    except UnicodeDecodeError:
+        raise Stop(f"units/{unit_id}.md is not UTF-8")
+    found, lines_of_a_file = [], {}
+    for derived_norm in scope_of(norm_ids, read_derived_norms(where, norms_commit)):
+        entry = {k: derived_norm[k] for k in ("derived_norm_id", "derived_norm_fingerprint", "name", "path",
+                                              "first_line", "last_line")}
+        path = derived_norm["path"]
+        if path not in lines_of_a_file:
+            data = show(where["norms_repository_path"], norms_commit, path)
+            try:
+                # NRM-14, steps 1 and 2: UTF-8, each "\r\n" replaced by "\n", split at "\n", trailing blanks removed.
+                lines_of_a_file[path] = hashes.lines_of(data) if data is not None else None
+            except UnicodeDecodeError:
+                lines_of_a_file[path] = None
+        lines = lines_of_a_file[path]
+        entry["lines_of_derived_norm"] = ("\n".join(lines[derived_norm["first_line"] - 1:derived_norm["last_line"]])
+                                         if lines is not None and derived_norm["last_line"] <= len(lines) else None)
+        entry["reason_in_acceptance_unit"] = reasons.get(derived_norm["derived_norm_id"])
+        entry["derived_norm_citation_without_reason"] = f"- {derived_norm['derived_norm_id']}@{derived_norm['derived_norm_fingerprint']}: "
+        found.append(entry)
+    return found
+
+
+# ---------------------------------------------------------------- a defect of a derived-norms generator (ACU-79)
+
+GENERATOR_FIELDS = ["plugin", "version", "marketplace_commit"]  # NRM-5
+PLUGINS_OF_CLAUDE_CODE = os.path.join("~", ".claude", "plugins")
+
+
+def status_file_of(where, norms_commit, type_of_derived_norms):
+    """ACU-79, NRM-5: the path and the "generator" of the one file under specs-derived/<type>/ at the norms commit,
+    other than its list of derived norms, whose first line is a JSON object with "type" "meta" and a "generator" of
+    exactly the fields of NRM-5, each a string; (None, None) when no file, or more than one, is such a file."""
+    found = []
+    for path in ls_tree(where["norms_repository_path"], norms_commit, f"specs-derived/{type_of_derived_norms}/"):
+        if path == path_of_list_of_derived_norms(type_of_derived_norms):
+            continue
+        data = show(where["norms_repository_path"], norms_commit, path) or b""
+        try:
+            meta = json.loads(data.split(b"\n", 1)[0].decode("utf-8"))
+        except (ValueError, RecursionError):
+            continue
+        generator = meta.get("generator") if isinstance(meta, dict) and meta.get("type") == "meta" else None
+        if (isinstance(generator, dict) and sorted(generator) == sorted(GENERATOR_FIELDS)
+                and all(isinstance(generator[k], str) for k in GENERATOR_FIELDS)):
+            found.append((path, {k: generator[k] for k in GENERATOR_FIELDS}))
+    return found[0] if len(found) == 1 else (None, None)
+
+
+def _json_object_of(path):
+    try:
+        with open(os.path.expanduser(path), encoding="utf-8") as f:
+            value = json.load(f)
+    except (OSError, ValueError, RecursionError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def marketplace_repository_of(generator):
+    """ACU-79: the <owner>/<name> on GitHub of the one marketplace that holds the plugin of `generator`, as Claude Code
+    records the installed plugins and the known marketplaces; when several hold a plugin of that name, the one whose
+    entry was installed from its "marketplace_commit"; otherwise None."""
+    installed = _json_object_of(os.path.join(PLUGINS_OF_CLAUDE_CODE, "installed_plugins.json"))
+    known = _json_object_of(os.path.join(PLUGINS_OF_CLAUDE_CODE, "known_marketplaces.json"))
+    if installed is None or known is None or not isinstance(installed.get("plugins"), dict):
+        return None
+    prefix = generator["plugin"] + "@"
+    candidates = {key[len(prefix):]: entries for key, entries in installed["plugins"].items()
+                  if key.startswith(prefix) and len(key) > len(prefix)}
+    if len(candidates) > 1:
+        candidates = {marketplace: entries for marketplace, entries in candidates.items()
+                      if isinstance(entries, list) and any(
+                          isinstance(entry, dict) and entry.get("gitCommitSha") == generator["marketplace_commit"]
+                          for entry in entries)}
+    if len(candidates) != 1:
+        return None
+    marketplace = known.get(next(iter(candidates)))
+    source = marketplace.get("source") if isinstance(marketplace, dict) else None
+    if not isinstance(source, dict) or source.get("source") != "github":
+        return None
+    repository = source.get("repo")
+    if not isinstance(repository, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+        return None
+    return repository
+
+
+def derived_norms_generator(where, norms_commit, derived_norm_id):
+    """ACU-79: what the issue of a defect of the derived-norms generator of `derived_norm_id` needs. Of the lists of
+    derived norms, it reads only that of the type of `derived_norm_id`."""
+    type_of_derived_norms = derived_norm_id.rsplit(":", 1)[0]
+    if type_of_derived_norms not in types_of_derived_norms_of_commit(where, norms_commit):
+        raise Stop(f"{derived_norm_id} is not a derived norm of the norms commit")
+    derived_norm = next((d for d in read_derived_norms_of_type(where, norms_commit, type_of_derived_norms)
+                         if d["derived_norm_id"] == derived_norm_id), None)
+    if derived_norm is None:
+        raise Stop(f"{derived_norm_id} is not a derived norm of the norms commit")
+    status_file, generator = status_file_of(where, norms_commit, type_of_derived_norms)
+    marketplace_repository = marketplace_repository_of(generator) if generator is not None else None
+    if generator is None:
+        generator_line = "Generator: no status file with a generator (NRM-5)"
+        no_issue_message = (f"{PREFIX}the output of {type_of_derived_norms} has no status file with a generator "
+                            f"(NRM-5); no issue is opened for {derived_norm_id}")
+    else:
+        generator_line = (f"Generator: {generator['plugin']} {generator['version']}, "
+                          f"marketplace commit {generator['marketplace_commit']}")
+        no_issue_message = None if marketplace_repository is not None else (
+            f"{PREFIX}no installed marketplace on GitHub holds the plugin {checks.text_of(generator['plugin'])}; "
+            f"no issue is opened for {derived_norm_id}")
+    issue_body_start = "".join(line + "\n" for line in (
+        f"Derived norm: {derived_norm_id}@{derived_norm['derived_norm_fingerprint']}, of the type "
+        f"{type_of_derived_norms}, lines {derived_norm['first_line']} to {derived_norm['last_line']} of "
+        f"{derived_norm['path']}",
+        "Cited norms: " + ", ".join(f"{c['norm_id']}@{c['norm_hash']}" for c in derived_norm["cited_norms"]),
+        generator_line,
+        f"Norms commit: {norms_commit}"))
+    return {"derived_norm_id": derived_norm_id, "derived_norm_fingerprint": derived_norm["derived_norm_fingerprint"],
+            "type": type_of_derived_norms, "name": derived_norm["name"], "path": derived_norm["path"],
+            "first_line": derived_norm["first_line"], "last_line": derived_norm["last_line"],
+            "cited_norms": derived_norm["cited_norms"], "status_file": status_file, "generator": generator,
+            "marketplace_repository": marketplace_repository, "issue_body_start": issue_body_start,
+            "no_issue_message": no_issue_message}
 
 
 def set_ids(root):
@@ -729,6 +920,18 @@ def main(argv):
         result = check(where, norms_commit_of(where, rest))
         print(checks.json_text(result))
         return 1 if result["problems"] else 0
+    if command == "derived-norms":
+        unit_ids = [a for a in rest if re.fullmatch(r"AU-[0-9]+", a)]
+        if len(unit_ids) != 1:
+            raise Stop("derived-norms takes one unit ID")
+        print(checks.json_text(derived_norms_of_scope(where, norms_commit_of(where, rest), unit_ids[0])))
+        return 0
+    if command == "derived-norms-generator":
+        derived_norm_ids = [a for a in rest if re.fullmatch(r"[a-z0-9-]+:[1-9][0-9]*", a)]
+        if len(derived_norm_ids) != 1:
+            raise Stop("derived-norms-generator takes one derived norm ID")
+        print(checks.json_text(derived_norms_generator(where, norms_commit_of(where, rest), derived_norm_ids[0])))
+        return 0
     if command == "ids":
         print(checks.json_text(set_ids(root)))
         return 0

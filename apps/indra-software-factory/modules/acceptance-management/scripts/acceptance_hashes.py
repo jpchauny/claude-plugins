@@ -3,7 +3,7 @@
 Spec: specs/module.md of acceptance-management, section "Hashes and
 citations": the fingerprint of ACU-51, the unit hash of ACU-52, the area hash
 of ACU-53, the scenarios and the scenario hash of ACU-54, and the citations of
-ACU-56. A fingerprint is computed here, never by the model, and never stored
+ACU-56, the derived norm citations included. A fingerprint is computed here, never by the model, and never stored
 (ACU-51).
 
 API (every function that takes `data` takes the bytes or the text of one file):
@@ -17,6 +17,9 @@ API (every function that takes `data` takes the bytes or the text of one file):
                                                 "gherkin" block that start with a keyword it may not hold
     norm_citations(data)  -> list[tuple[str, str, str]]  the norm citations of "## Norms" (ACU-8):
                                                 (norm ID, norm hash, reason), in the order of the file
+    derived_norm_citations(data) -> list[tuple[str, str, str]]  the derived norm citations of
+                                                "## Derived norms" (ACU-8, ACU-78): (derived norm ID,
+                                                derived norm fingerprint, reason), in the order of the file
     citations(data)       -> list[tuple[str, str]]  every citation of an acceptance unit, an
                                                 acceptance area or a scenario in a file (ACU-56):
                                                 (unit ID, area ID or scenario ID; its unit hash,
@@ -47,12 +50,17 @@ NORM_TAG = re.compile(rf"^@({NORM_ID})$")
 ACCEPTANCE_UNIT_TAG = re.compile(r"^@unit:(AU-[1-9][0-9]*)$")
 SC_TAG = re.compile(r"^@(SC-[1-9][0-9]*)$")
 NORM_CITATION = re.compile(rf"^- ({NORM_ID})@([0-9a-f]{{8}}): (\S.*)$")  # ACU-8, ACU-56
+DERIVED_NORM_ID = r"[a-z0-9-]+:[1-9][0-9]*"  # ACU-56, NRM-13: a type of derived_norms (ORC-20), ":" and a number
+DERIVED_NORM_CITATION = re.compile(rf"^- ({DERIVED_NORM_ID})@([0-9a-f]{{8}}): (\S.*)$")  # ACU-8, ACU-56, ACU-78
 # ACU-56, "a citation found in a line": an ID and "@" and 8 lower-case hex digits, between two boundaries: before
 # the ID the start of the line or a character that is not a letter or a number of Unicode, "_" or "-"; after the 8
 # hex digits the end of the line or such a character. The one definition of it: the evidence run and every use
 # case of this module use these two.
 CITATION = re.compile(r"(?<![\w-])((?:AU|AA|SC)-[1-9][0-9]*)@([0-9a-f]{8})(?![\w-])")
 NORM_CITATION_IN_LINE = re.compile(rf"(?<![\w-])({NORM_ID})@([0-9a-f]{{8}})(?![\w-])")
+# The type of a derived norm ID is the whole run of characters from its boundary to the ":", so "xgrammar:12@0ced57c3"
+# cites "xgrammar:12" (ACU-56).
+DERIVED_NORM_CITATION_IN_LINE = re.compile(rf"(?<![\w-])({DERIVED_NORM_ID})@([0-9a-f]{{8}})(?![\w-])")
 FORBIDDEN = ("Feature:", "Rule:", "Background:", "Example:", "Scenario Outline:", "Scenario Template:",
              "Examples:", "Scenarios:")  # ACU-54
 
@@ -186,6 +194,16 @@ def norm_citations(data) -> list[tuple[str, str, str]]:
     if section is None:
         return []
     return [m.groups() for m in map(NORM_CITATION.match, lines[slice(*section)]) if m]
+
+
+def derived_norm_citations(data) -> list[tuple[str, str, str]]:
+    """The derived norm citations of "## Derived norms" of the file of an acceptance unit (ACU-8, ACU-56, ACU-78):
+    (derived norm ID, derived norm fingerprint, reason)."""
+    lines = lines_of(data)
+    section = _section(lines, "## Derived norms")
+    if section is None:
+        return []
+    return [m.groups() for m in map(DERIVED_NORM_CITATION.match, lines[slice(*section)]) if m]
 
 
 def citations(data) -> list[tuple[str, str]]:

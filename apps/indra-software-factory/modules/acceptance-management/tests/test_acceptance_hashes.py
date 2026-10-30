@@ -55,6 +55,17 @@ class BindingExamples(unittest.TestCase):
         self.assertIn(f"// SC-21@{h.scenarios(AU11)[0].scenario_hash}: Two integers give their product", SPEC)
         self.assertIn(f'"SC-6": "{h.scenarios(AU3)[1].scenario_hash}"', SPEC)
 
+    def test_acu56_the_example_built_from_a_derived_norm_cites_au11_with_its_derived_norms(self):
+        # The example in Rust of ACU-56 cites AU-11 with the part "## Derived norms" of ACU-78, which the unit hash
+        # covers (ACU-52), not the AU-11 of ACU-8 without it.
+        part = re.search(r"^  ```markdown\n(  ## Derived norms\n.*?)^  ```$", SPEC, re.S | re.M).group(1)
+        part = "".join(line[2:] + "\n" for line in part.splitlines()) + "\n"
+        with_part = AU11.replace("## Scenarios\n", part + "## Scenarios\n", 1)
+        self.assertNotEqual(h.unit_hash(with_part), h.unit_hash(AU11))
+        self.assertIn(f"  // AU-11@{h.unit_hash(with_part)}: parse multiplications\n"
+                      "  // grammar:7@3a4b5c6d: the rule of the binary operators\n", SPEC)
+        self.assertIn(f"whose unit hash is then `{h.unit_hash(with_part)}`, not the `{h.unit_hash(AU11)}`", SPEC)
+
 
 class Fingerprint(unittest.TestCase):
     def test_acu51_crlf_trailing_blanks_and_trailing_empty_lines_do_not_count(self):
@@ -148,6 +159,53 @@ class Citations(unittest.TestCase):
             self.assertEqual(h.citations(text), [], text)
         self.assertEqual(h.citations("(SC-5@147d88d2)."), [("SC-5", "147d88d2")])
         self.assertEqual(h.NORM_CITATION_IN_LINE.findall("XINV-7@5a627175 INV-7@5a627175_v2"), [("XINV-7", "5a627175")])
+
+
+
+AU11_WITH_DERIVED_NORMS = AU11.replace("\n## Scenarios\n", """
+## Derived norms
+
+- grammar:7@3a4b5c6d: the rule of the binary operators
+- semantics:31@5e6f7a8b: the evaluation of an integer product
+
+## Scenarios
+""", 1)
+
+
+class DerivedNormCitations(unittest.TestCase):
+    def test_acu56_acu78_the_derived_norm_citations_of_derived_norms(self):
+        self.assertEqual(h.derived_norm_citations(AU11_WITH_DERIVED_NORMS), [
+            ("grammar:7", "3a4b5c6d", "the rule of the binary operators"),
+            ("semantics:31", "5e6f7a8b", "the evaluation of an integer product")])
+        self.assertEqual(h.derived_norm_citations(AU11), [])
+        self.assertEqual(h.derived_norm_citations(
+            "## Derived norms\n\n- Grammar:7@3a4b5c6d: upper\n- grammar:07@3a4b5c6d: zero\n"
+            "- grammar@3a4b5c6d: no number\n- INV-7@5a627175: a norm\n"), [])
+
+    def test_acu8_derived_norm_citations_are_not_norm_citations(self):
+        self.assertEqual(h.norm_citations(AU11_WITH_DERIVED_NORMS), h.norm_citations(AU11))
+
+    def test_acu52_derived_norms_are_inside_the_unit_hash(self):
+        self.assertNotEqual(h.unit_hash(AU11_WITH_DERIVED_NORMS), h.unit_hash(AU11))
+        changed = AU11_WITH_DERIVED_NORMS.replace("grammar:7@3a4b5c6d", "grammar:7@4b5c6d7e")
+        self.assertNotEqual(h.unit_hash(changed), h.unit_hash(AU11_WITH_DERIVED_NORMS))
+
+    def test_acu52_the_unit_hash_of_au3_and_au11_are_unchanged(self):
+        self.assertEqual(h.unit_hash(AU3), "efc7ae86")
+        self.assertIn(f"// AU-11@{h.unit_hash(AU11)}: Multiply two integers", SPEC)
+
+    def test_acu56_a_derived_norm_citation_found_in_a_line(self):
+        found = h.DERIVED_NORM_CITATION_IN_LINE.findall
+        self.assertEqual(found("// grammar:7@3a4b5c6d: the rule"), [("grammar:7", "3a4b5c6d")])
+        # The boundary example of ACU-56: the type is the whole run of characters from its boundary to the ":".
+        self.assertEqual(found("xgrammar:12@0ced57c3"), [("xgrammar:12", "0ced57c3")])
+        self.assertIn("`xgrammar:12@0ced57c3` cites the derived norm `xgrammar:12`", SPEC)
+        for text in ("Xgrammar:12@0ced57c3", "_grammar:12@0ced57c3", "égrammar:12@0ced57c3", "grammar:12@0ced57c3a",
+                     "grammar:12@0ced57c3_v2", "grammar:012@0ced57c3", "grammar:12@0CED57C3"):
+            self.assertEqual(found(text), [], text)
+        self.assertEqual(found("(x-y2:3@0ced57c3)."), [("x-y2:3", "0ced57c3")])
+        self.assertEqual(h.citations("grammar:12@0ced57c3"), [])
+        self.assertEqual(h.NORM_CITATION_IN_LINE.findall("grammar:12@0ced57c3"), [])
 
 
 if __name__ == "__main__":

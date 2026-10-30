@@ -5,9 +5,10 @@ The scripts of the use cases derive-grammar and derive-semantics import it
 (CDN-7); it is not run on its own. It holds the reading of data/tree.jsonl,
 the fragments, their case text and the files of their program, the
 citations in the code of a script, the plugin and the parts of a meta line
-that every status file has, and the parser of the grammar with its indenter.
+that every status file has, the parser of the grammar with its indenter, and
+the list of derived norms of a type, which knows no type.
 
-Spec: specs/module.md (CDN-7) of the plugin, and the rules of
+Spec: specs/module.md (CDN-7, CDN-8) of the plugin, and the rules of
 use-cases/derive-grammar/specs/derive-grammar.md (DGR) that each function cites.
 """
 
@@ -532,6 +533,10 @@ class Statement:
         """
         self.line = line_number
         self.lines = [first_line]
+        # The lines of the derived norm that the statement is (DGR-20): from the
+        # first comment line just above it, set by parse_grammar, to its last line.
+        self.derived_norm_first_line = line_number
+        self.derived_norm_last_line = line_number
         self.citations = []
         self.refs = set()
         self.defines = set()
@@ -621,12 +626,15 @@ def parse_grammar(text):
                 problems.append(("statement", f"line {number}", "an indented line outside a statement"))
             else:
                 current.lines.append(line)
+                current.derived_norm_last_line = number
             for n, _ in pending:
                 problems.append(("citation", f"line {n}", f"a citation inside the statement {current.key if current else ''}".rstrip()))
             pending = []
             continue
         current = Statement(number, line)
         current.citations = [(n, m.group(1), m.group(2)) for n, m in pending if m]
+        if pending:
+            current.derived_norm_first_line = pending[0][0]
         if not pending:
             problems.append(("citation", current.key, "a statement with no citation just above it"))
         pending = []
@@ -883,13 +891,15 @@ def read_status(path):
     return out
 
 
-def git(root, *args):
+def git(root, *args, text=True):
     """Run git in a folder, with literal paths; the CompletedProcess, or None when git cannot run.
 
-    Spec: DGR-4, DGR-18.
+    With text False, its output is bytes, which git() never decodes.
+
+    Spec: DGR-4, DGR-18, DGR-20.
     """
     try:
-        return subprocess.run(["git", "-C", str(root), "--literal-pathspecs", *args], capture_output=True, text=True)
+        return subprocess.run(["git", "-C", str(root), "--literal-pathspecs", *args], capture_output=True, text=text)
     except OSError:
         return None
 
@@ -936,6 +946,20 @@ def check_unique_issues(rows):
     return problems
 
 
+def version_of_generator_in_status(rows):
+    """The "version" of "generator" in the meta line of a status file, or None when there is none.
+
+    rows: the JSON objects of the lines of the status file. The meta line is
+    the first object whose "type" is "meta".
+
+    Spec: CDN-7, DGR-12, DSM-12 (NRM-7).
+    """
+    meta = next((r for r in rows if r.get("type") == "meta"), None)
+    generator = meta.get("generator") if meta is not None else None
+    version = generator.get("version") if isinstance(generator, dict) else None
+    return version if isinstance(version, str) else None
+
+
 def check_generator(meta, version):
     """The generator of the meta line names this plugin and its version; its marketplace commit is not judged.
 
@@ -971,3 +995,525 @@ def check_model(meta):
     if not MODEL_RE.fullmatch(model):
         return [("meta", "model", f"{model!r} holds a character that is not a letter, a digit, '.', '-' or '_'")]
     return []
+
+
+# ---------------------------------------------------------------- the list of derived norms (NRM-12 to NRM-15)
+
+LIST_OF_DERIVED_NORMS_FILE_NAME = "derived-norms.jsonl"
+META_LINE_OF_LIST_OF_DERIVED_NORMS_KEYS = ["kind", "type", "last_derived_norm_number"]
+DERIVED_NORM_KEYS = ["kind", "derived_norm_id", "derived_norm_fingerprint", "name", "path", "first_line", "last_line",
+                     "cited_norms"]
+CITED_NORM_KEYS = ["norm_id", "norm_hash"]
+NORM_HASH_RE = re.compile(r"[0-9a-f]{8}")
+DERIVED_NORM_FINGERPRINT_RE = re.compile(r"[0-9a-f]{8}")
+NORM_ID_RE = re.compile(NORM_ID)
+# Characters a name never holds (NRM-12): control characters (Cc), the line and paragraph separators.
+NAME_FORBIDDEN_RE = re.compile("[\x00-\x1f\x7f-\x9f\u2028\u2029]")
+
+
+class DerivedNorm:
+    """One derived norm of the output, as the files of the output give it.
+
+    cited_norms: [(norm ID, norm hash)], in the order of the norm IDs.
+
+    Spec: CDN-7, DGR-20, DSM-18.
+    """
+
+    def __init__(self, name, path, first_line, last_line, cited_norms, derived_norm_fingerprint):
+        """A derived norm with its place, its cited norms and its derived norm fingerprint.
+
+        Spec: DGR-20.
+        """
+        self.name = name
+        self.path = path
+        self.first_line = first_line
+        self.last_line = last_line
+        self.cited_norms = cited_norms
+        self.derived_norm_fingerprint = derived_norm_fingerprint
+
+
+def output_file_lines(data):
+    """The lines of a file of the output, as step 1 of NRM-14 splits them: UTF-8, CRLF as LF, split at each LF.
+
+    Spec: CDN-7, DGR-20 (NRM-14).
+    """
+    return data.decode("utf-8").replace("\r\n", "\n").split("\n")
+
+
+def derived_norm_lines(lines, first_line, last_line):
+    """The lines of a derived norm, from first_line to last_line, without the blanks at their end (NRM-14 step 2).
+
+    Spec: DGR-20.
+    """
+    return [line.rstrip(BLANKS) for line in lines[first_line - 1:last_line]]
+
+
+def cited_norms_of_lines(lines, first_line, last_line, citation_re):
+    """The norms that the citation lines of a derived norm cite: [(norm ID, norm hash)], sorted, each pair once.
+
+    Spec: DGR-20, DSM-18.
+    """
+    cited = set()
+    for line in derived_norm_lines(lines, first_line, last_line):
+        match = citation_re.match(line)
+        if match:
+            cited.add((match.group(1), match.group(2)))
+    return sorted(cited)
+
+
+def derived_norm_fingerprint(lines, first_line, last_line, citation_re, cited_norms):
+    """The derived norm fingerprint of NRM-14, from the lines of the file and the cited norms.
+
+    Spec: DGR-20 (NRM-14).
+    """
+    content = [line for line in derived_norm_lines(lines, first_line, last_line) if not citation_re.match(line)]
+    while content and content[0] == "":
+        content.pop(0)
+    while content and content[-1] == "":
+        content.pop()
+    text = "".join(f"{norm_id}@{norm_hash}\n" for norm_id, norm_hash in cited_norms) + "\n"
+    text += "".join(line + "\n" for line in content)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:8]
+
+
+def name_of_derived_norm(key):
+    """The name of a derived norm: the key of its item, each character that NRM-12 forbids in a name replaced by one space.
+
+    Spec: CDN-10, DGR-20, DSM-18.
+    """
+    return NAME_FORBIDDEN_RE.sub(" ", key)
+
+
+def derived_norm(lines, key, path, first_line, last_line, citation_re):
+    """A derived norm of a file of the output, named from the key of its item, with its cited norms and its derived norm fingerprint.
+
+    Spec: CDN-10, DGR-20, DSM-18.
+    """
+    cited = cited_norms_of_lines(lines, first_line, last_line, citation_re)
+    return DerivedNorm(name_of_derived_norm(key), path, first_line, last_line, cited,
+                       derived_norm_fingerprint(lines, first_line, last_line, citation_re, cited))
+
+
+def derived_norm_number(type_of_derived_norms, derived_norm_id):
+    """The number of a derived norm ID of the type, or None when it is not of the form <type>:<n>.
+
+    Spec: DGR-20 (NRM-13).
+    """
+    if not isinstance(derived_norm_id, str):
+        return None
+    match = re.fullmatch(re.escape(type_of_derived_norms) + r":([1-9][0-9]*)", derived_norm_id)
+    return int(match.group(1)) if match else None
+
+
+def read_list_of_derived_norms(data, type_of_derived_norms, where):
+    """The last_derived_norm_number and the derived norm lines of a list, from its bytes.
+
+    InputError, naming the list and the line, when a line is not UTF-8 or not
+    a JSON object (an empty line or a line of only blanks is none), or the
+    first line is not a meta line of the type with a last_derived_norm_number
+    that is an integer, 0 or greater. Only the empty text after the line feed
+    that ends the list is no line.
+
+    Spec: CDN-8, DGR-20 (A list that cannot be read).
+    """
+    rows = []
+    raw_lines = data.split(b"\n")
+    if raw_lines[-1] == b"":
+        raw_lines.pop()
+    for number, raw in enumerate(raw_lines, 1):
+        try:
+            line = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            raise InputError(f"{where}:{number}: not UTF-8") from None
+        value, error = json_object(line)
+        if value is None:
+            raise InputError(f"{where}:{number}: {error}")
+        rows.append((number, value))
+    if not rows:
+        raise InputError(f"{where}: no meta line")
+    number, meta = rows[0]
+    last_derived_norm_number = meta.get("last_derived_norm_number")
+    if (meta.get("kind") != "meta" or meta.get("type") != type_of_derived_norms
+            or not isinstance(last_derived_norm_number, int) or isinstance(last_derived_norm_number, bool) or last_derived_norm_number < 0):
+        raise InputError(f"{where}:{number}: not a meta line with the type {type_of_derived_norms} and a last_derived_norm_number")
+    return last_derived_norm_number, [value for _, value in rows[1:]]
+
+
+def default_branch(root):
+    """The default branch of the repository of layer 2: the branch of refs/remotes/origin/HEAD, or else the branch HEAD names.
+
+    InputError when git cannot run, the folder is not in a git work tree,
+    or HEAD names no branch and there is no refs/remotes/origin/HEAD.
+
+    Spec: CDN-9.
+    """
+    inside = git(root, "rev-parse", "--is-inside-work-tree")
+    if inside is None:
+        raise InputError("git cannot run, so the list before the run cannot be read (CDN-9)")
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        raise InputError(f"{root} is not in a git work tree, so the list before the run cannot be read (CDN-9)")
+    origin = git(root, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
+    if origin is not None and origin.returncode == 0 and origin.stdout.strip().startswith("origin/"):
+        return origin.stdout.strip()[len("origin/"):]
+    head = git(root, "symbolic-ref", "--quiet", "--short", "HEAD")
+    if head is None or head.returncode != 0 or not head.stdout.strip():
+        raise InputError("HEAD names no branch and there is no refs/remotes/origin/HEAD, so the default branch, "
+                         "and the list before the run, cannot be told (CDN-9)")
+    return head.stdout.strip()
+
+
+def bytes_of_list_before_the_run(root, path_of_list_of_derived_norms):
+    """The list before the run, as (its bytes, where it was read), or (None, where) when there is none.
+
+    Read with git at the head of the default branch, never from the working
+    tree. None only when that commit does not hold the list, or the repository
+    has no commit yet; InputError in every other case where git cannot give it.
+
+    Spec: CDN-9 (Terms: List before the run), DGR-20.
+    """
+    branch = default_branch(root)
+    where = f"{branch}:{path_of_list_of_derived_norms}"
+    commit = git(root, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}^{{commit}}")
+    if commit is None:
+        raise InputError("git cannot run, so the list before the run cannot be read (CDN-9)")
+    if commit.returncode != 0:
+        any_commit = git(root, "rev-list", "-n", "1", "--all")
+        if any_commit is not None and any_commit.returncode == 0 and not any_commit.stdout.strip():
+            return None, where
+        raise InputError(f"the default branch {branch} has no commit in this repository, so the list before the run cannot be read (CDN-9)")
+    commit = commit.stdout.strip()
+    blob = git(root, "rev-parse", "--verify", "--quiet", f"{commit}:./{path_of_list_of_derived_norms}")
+    if blob is None:
+        raise InputError("git cannot run, so the list before the run cannot be read (CDN-9)")
+    if blob.returncode != 0:
+        return None, where
+    shown = git(root, "cat-file", "blob", blob.stdout.strip(), text=False)
+    if shown is None or shown.returncode != 0:
+        error = shown.stderr.decode("utf-8", "replace").strip() if shown is not None else "git cannot run"
+        raise InputError(f"{where}: git cannot give the list before the run: {error} (CDN-9)")
+    return shown.stdout, where
+
+
+def read_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms):
+    """The list before the run that seal gives the derived norm IDs from, as (last_derived_norm_number, derived norm lines), or None.
+
+    seal never reads the list in the working tree. InputError when the list
+    before the run cannot be read.
+
+    Spec: CDN-8, CDN-9, DGR-20.
+    """
+    bytes_of_list, where = bytes_of_list_before_the_run(root, path_of_list_of_derived_norms)
+    if bytes_of_list is None:
+        return None
+    return read_list_of_derived_norms(bytes_of_list, type_of_derived_norms, where)
+
+
+def numbers_of_derived_norm_ids_by_name(type_of_derived_norms, entries):
+    """The numbers of the derived norm IDs that each name holds in a list, in ascending order.
+
+    A line whose derived norm ID is not of the form of the type, or whose
+    name is not a string, gives none.
+
+    Spec: CDN-8, DGR-20 (NRM-13).
+    """
+    numbers_by_name = {}
+    for entry in entries:
+        number_of_derived_norm_id = derived_norm_number(type_of_derived_norms, entry.get("derived_norm_id"))
+        if number_of_derived_norm_id is not None and isinstance(entry.get("name"), str):
+            numbers_by_name.setdefault(entry["name"], []).append(number_of_derived_norm_id)
+    return {name: sorted(set(numbers)) for name, numbers in numbers_by_name.items()}
+
+
+def give_derived_norm_ids(type_of_derived_norms, list_before_the_run, found):
+    """The last_derived_norm_number and the lines of the list of derived norms, in the order of their numbers.
+
+    list_before_the_run: (last_derived_norm_number, derived norm lines), or
+    None when there is none. The k-th derived norm of a name, in the order
+    of NRM-13, takes the k-th derived norm ID of that name there, in the
+    ascending order of their numbers; one beyond them gets a new one, in
+    that order.
+
+    Spec: CDN-8, DGR-20 (NRM-13).
+    """
+    last_derived_norm_number, numbers_by_name = 0, {}
+    if list_before_the_run is not None:
+        last_derived_norm_number, entries = list_before_the_run
+        for entry in entries:
+            number_of_derived_norm_id = derived_norm_number(type_of_derived_norms, entry.get("derived_norm_id"))
+            if number_of_derived_norm_id is not None:
+                last_derived_norm_number = max(last_derived_norm_number, number_of_derived_norm_id)
+        numbers_by_name = numbers_of_derived_norm_ids_by_name(type_of_derived_norms, entries)
+    count_of_derived_norms_of_name, entries = {}, []
+    for item in sorted(found, key=lambda d: (d.path, d.first_line)):
+        position_in_name = count_of_derived_norms_of_name.get(item.name, 0)
+        count_of_derived_norms_of_name[item.name] = position_in_name + 1
+        numbers_of_name = numbers_by_name.get(item.name, [])
+        if position_in_name < len(numbers_of_name):
+            number_of_derived_norm_id = numbers_of_name[position_in_name]
+        else:
+            last_derived_norm_number += 1
+            number_of_derived_norm_id = last_derived_norm_number
+        entries.append((number_of_derived_norm_id, {
+            "kind": "derived_norm", "derived_norm_id": f"{type_of_derived_norms}:{number_of_derived_norm_id}",
+            "derived_norm_fingerprint": item.derived_norm_fingerprint, "name": item.name, "path": item.path,
+            "first_line": item.first_line, "last_line": item.last_line,
+            "cited_norms": [{"norm_id": i, "norm_hash": h} for i, h in item.cited_norms]}))
+    entries.sort(key=lambda e: e[0])
+    return last_derived_norm_number, [entry for _, entry in entries]
+
+
+def text_of_list_of_derived_norms(type_of_derived_norms, last_derived_norm_number, entries):
+    """The text of the list of derived norms: the meta line, then one line per derived norm.
+
+    Spec: DGR-20 (NRM-12).
+    """
+    meta = {"kind": "meta", "type": type_of_derived_norms, "last_derived_norm_number": last_derived_norm_number}
+    return "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in [meta] + entries)
+
+
+def seal_derived_norms(root, path_of_list_of_derived_norms, type_of_derived_norms, found):
+    """The text of the list of derived norms that seal writes, from the derived norms found and the list before the run.
+
+    Reads the list before the run before it writes nothing; InputError when it cannot be read.
+
+    Spec: CDN-8, DGR-20, DSM-18.
+    """
+    last_derived_norm_number, entries = give_derived_norm_ids(type_of_derived_norms, read_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms), found)
+    return text_of_list_of_derived_norms(type_of_derived_norms, last_derived_norm_number, entries)
+
+
+def is_whole_number(value, low):
+    """True when a JSON value is an integer, not a boolean, and not lower than low.
+
+    Spec: DGR-20.
+    """
+    return isinstance(value, int) and not isinstance(value, bool) and value >= low
+
+
+def check_derived_norm_fields(type_of_derived_norms, last_derived_norm_number, number, entry):
+    """The problems of the fields of one derived norm line, as (subject, what is wrong), and whether its place can be compared.
+
+    Its place can be compared when it has exactly its fields, its derived
+    norm ID is of the form of the type, its name and its path are strings,
+    and its lines are line numbers.
+
+    Spec: DGR-20 (The check of the list, NRM-12).
+    """
+    where = f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{number}"
+    if list(entry) != DERIVED_NORM_KEYS or entry.get("kind") != "derived_norm":
+        return [(where, f"does not have exactly the fields {', '.join(DERIVED_NORM_KEYS)}, in that order, with kind derived_norm")], False
+    derived_norm_id = entry["derived_norm_id"]
+    number_of_derived_norm_id = derived_norm_number(type_of_derived_norms, derived_norm_id)
+    if number_of_derived_norm_id is None:
+        return [(where, f"{json.dumps(derived_norm_id)} is not a derived norm ID {type_of_derived_norms}:<n>")], False
+    problems, comparable = [], True
+    if number_of_derived_norm_id > last_derived_norm_number:
+        problems.append((where, f"{derived_norm_id} has a number greater than last_derived_norm_number {last_derived_norm_number}"))
+    derived_norm_fingerprint = entry["derived_norm_fingerprint"]
+    if not (isinstance(derived_norm_fingerprint, str) and DERIVED_NORM_FINGERPRINT_RE.fullmatch(derived_norm_fingerprint)):
+        problems.append((derived_norm_id, f"the derived norm fingerprint {json.dumps(derived_norm_fingerprint)} is not 8 hex digits in lower case"))
+    name = entry["name"]
+    if not isinstance(name, str):
+        problems.append((derived_norm_id, f"the name {json.dumps(name, ensure_ascii=False)} is not a string"))
+        comparable = False
+    elif not (name.strip(BLANKS) and not NAME_FORBIDDEN_RE.search(name)):
+        problems.append((derived_norm_id, f"the name {json.dumps(name, ensure_ascii=False)} is empty, only blanks, or holds a control character or a line or paragraph separator"))
+    if not isinstance(entry["path"], str):
+        problems.append((derived_norm_id, "the path is not a string"))
+        comparable = False
+    first_line, last_line = entry["first_line"], entry["last_line"]
+    if not (is_whole_number(first_line, 1) and is_whole_number(last_line, 1) and first_line <= last_line):
+        problems.append((derived_norm_id, f"first_line {json.dumps(first_line)} and last_line {json.dumps(last_line)} are not line numbers from 1 with first_line not greater than last_line"))
+        comparable = False
+    cited = entry["cited_norms"]
+    good = isinstance(cited, list) and bool(cited) and all(
+        isinstance(c, dict) and list(c) == CITED_NORM_KEYS and isinstance(c["norm_id"], str)
+        and NORM_ID_RE.fullmatch(c["norm_id"]) and isinstance(c["norm_hash"], str) and NORM_HASH_RE.fullmatch(c["norm_hash"])
+        for c in cited)
+    if good:
+        cited_norm_ids = [c["norm_id"] for c in cited]
+        good = cited_norm_ids == sorted(cited_norm_ids) and len(set(cited_norm_ids)) == len(cited_norm_ids)
+    if not good:
+        problems.append((derived_norm_id, "cited_norms is not a list of at least one object with exactly norm_id and norm_hash, in the order of the norm IDs, with no norm ID twice"))
+    return problems, comparable
+
+
+def json_object_with_each_field_once(line):
+    """One line of the list of derived norms as (object, None), or (None, what is wrong): not JSON, not a JSON object, or a field given twice.
+
+    Spec: DGR-20 (The check of the list).
+    """
+    def each_field_once(pairs):
+        """The object of the pairs; FieldGivenTwice when a name is given twice.
+
+        Spec: DGR-20 (The check of the list).
+        """
+        names = [name for name, _ in pairs]
+        twice = sorted({name for name in names if names.count(name) > 1})
+        if twice:
+            raise FieldGivenTwice(twice[0])
+        return dict(pairs)
+
+    try:
+        value = json.loads(line, object_pairs_hook=each_field_once)
+    except FieldGivenTwice as error:
+        return None, f"the field {json.dumps(str(error.args[0]), ensure_ascii=False)} is given twice"
+    except json.JSONDecodeError:
+        return None, "not JSON"
+    if not isinstance(value, dict):
+        return None, "not a JSON object"
+    return value, None
+
+
+class FieldGivenTwice(Exception):
+    """A JSON object of the list of derived norms that gives one field twice.
+
+    Spec: DGR-20 (The check of the list).
+    """
+
+
+def read_list_for_check(data, type_of_derived_norms):
+    """The rows of the list of derived norms that check reads, and the problems of its bytes, its lines and its meta line.
+
+    The rows are None when a line is not a JSON object or the meta line does
+    not check: then no derived norm of the list is compared with the output.
+
+    Spec: DGR-20 (The check of the list).
+    """
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None, [(LIST_OF_DERIVED_NORMS_FILE_NAME, "the list is not UTF-8")]
+    problems = []
+    if text.startswith("\ufeff"):
+        problems.append((LIST_OF_DERIVED_NORMS_FILE_NAME, "the list starts with a byte order mark"))
+        text = text[1:]
+    if not text.endswith("\n"):
+        problems.append((LIST_OF_DERIVED_NORMS_FILE_NAME, "the list does not end with a line feed"))
+    lines = text.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    rows, broken = [], False
+    for number, line in enumerate(lines, 1):
+        if not line:
+            problems.append((f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{number}", "an empty line"))
+            continue
+        if "\r" in line:
+            problems.append((f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{number}", "the line holds a carriage return"))
+        value, error = json_object_with_each_field_once(line)
+        if value is None:
+            problems.append((f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{number}", f"not a JSON object: {error}"))
+            broken = True
+        else:
+            rows.append((number, value))
+    if broken:
+        return None, problems
+    if not rows:
+        return None, problems + [(LIST_OF_DERIVED_NORMS_FILE_NAME, "the list has no meta line")]
+    number, meta = rows[0]
+    if (list(meta) != META_LINE_OF_LIST_OF_DERIVED_NORMS_KEYS or meta.get("kind") != "meta" or meta.get("type") != type_of_derived_norms
+            or not is_whole_number(meta.get("last_derived_norm_number"), 0)):
+        return None, problems + [(f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{number}", f"not the meta line of the type {type_of_derived_norms}: exactly kind meta, type {type_of_derived_norms} and last_derived_norm_number, an integer, 0 or greater, in that order")]
+    return rows, problems
+
+
+def check_list_of_derived_norms(root, path_of_list_of_derived_norms, type_of_derived_norms, found):
+    """Every check of the list of derived norms: NRM-12 to NRM-14, the output, and the list before the run.
+
+    found: the derived norms of the output (DerivedNorm), each with the
+    derived norm fingerprint of NRM-14. Returns [("derived-norms", subject, what)].
+
+    Spec: DGR-13, DGR-20 (The check of the list), DSM-18.
+    """
+    rows, problems = read_list_for_check((root / path_of_list_of_derived_norms).read_bytes(), type_of_derived_norms)
+    if rows is None:
+        return [("derived-norms", s, m) for s, m in problems]
+    line_number_of_meta_line, meta = rows[0]
+    last_derived_norm_number = meta["last_derived_norm_number"]
+    entries, previous_number, derived_norm_ids_seen, lines_taken = [], 0, set(), {}
+    for number, entry in rows[1:]:
+        fields, comparable = check_derived_norm_fields(type_of_derived_norms, last_derived_norm_number, number, entry)
+        problems += fields
+        if not comparable:
+            continue
+        derived_norm_id, path = entry["derived_norm_id"], entry["path"]
+        number_of_derived_norm_id = derived_norm_number(type_of_derived_norms, derived_norm_id)
+        if derived_norm_id in derived_norm_ids_seen:
+            problems.append((derived_norm_id, "the list holds this derived norm ID twice"))
+        elif number_of_derived_norm_id < previous_number:
+            problems.append((derived_norm_id, "the lines are not in the ascending order of the numbers of their derived norm IDs"))
+        derived_norm_ids_seen.add(derived_norm_id)
+        previous_number = max(previous_number, number_of_derived_norm_id)
+        taken = lines_taken.setdefault(path, {})
+        span = range(entry["first_line"], entry["last_line"] + 1)
+        shared = sorted({taken[n] for n in span if n in taken})
+        if shared:
+            problems.append((derived_norm_id, f"has a line in common with {', '.join(shared)} in {path}"))
+        for n in span:
+            taken.setdefault(n, derived_norm_id)
+        entries.append(entry)
+    by_place = {(d.name, d.path, d.first_line, d.last_line): d for d in found}
+    listed = set()
+    for entry in entries:
+        place = (entry["name"], entry["path"], entry["first_line"], entry["last_line"])
+        derived_norm_id = entry["derived_norm_id"]
+        item = by_place.get(place)
+        if item is None:
+            problems.append((derived_norm_id, f"names {json.dumps(entry['name'], ensure_ascii=False)} at {entry['path']} lines {entry['first_line']} to {entry['last_line']}, which is no derived norm of the output"))
+            continue
+        listed.add(place)
+        cited = entry["cited_norms"]
+        cited = [(c.get("norm_id"), c.get("norm_hash")) for c in cited if isinstance(c, dict)] if isinstance(cited, list) else []
+        if cited != item.cited_norms:
+            problems.append((derived_norm_id, "cited_norms are not the norms that its citation lines cite: "
+                             + (", ".join(f"{i}@{h}" for i, h in item.cited_norms) or "none")))
+        elif entry["derived_norm_fingerprint"] != item.derived_norm_fingerprint:
+            problems.append((derived_norm_id, f"the derived norm fingerprint {entry['derived_norm_fingerprint']} is not the one that NRM-14 computes, {item.derived_norm_fingerprint}"))
+    for place, item in by_place.items():
+        if place not in listed:
+            problems.append((item.name, f"a derived norm of {item.path} lines {item.first_line} to {item.last_line} that the list does not hold"))
+    problems += check_against_the_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms, last_derived_norm_number, line_number_of_meta_line, entries)
+    return [("derived-norms", s, m) for s, m in problems]
+
+
+def check_against_the_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms, last_derived_norm_number, line_number_of_meta_line, entries):
+    """No derived norm ID given again or moved to another derived norm, compared with the list before the run.
+
+    Nothing to check when there is no list before the run; a list before
+    the run that cannot be read is the one problem reported.
+
+    Spec: CDN-9, DGR-20 (The check of the list, NRM-13).
+    """
+    try:
+        list_before_the_run = read_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms)
+    except InputError as error:
+        return [(LIST_OF_DERIVED_NORMS_FILE_NAME, f"the list before the run cannot be read: {error}; the derived norm IDs are not checked against it (NRM-13)")]
+    if list_before_the_run is None:
+        return []
+    last_derived_norm_number_before_the_run, derived_norms_before_the_run = list_before_the_run
+    problems = []
+    if last_derived_norm_number < last_derived_norm_number_before_the_run:
+        problems.append((f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{line_number_of_meta_line}", f"last_derived_norm_number {last_derived_norm_number} is lower than {last_derived_norm_number_before_the_run}, the one of the list before the run"))
+    name_before_the_run = {}
+    for entry in derived_norms_before_the_run:
+        if derived_norm_number(type_of_derived_norms, entry.get("derived_norm_id")) is not None:
+            name_before_the_run[entry["derived_norm_id"]] = entry.get("name")
+    entries_of_name = {}
+    for entry in entries:
+        derived_norm_id = entry["derived_norm_id"]
+        entries_of_name.setdefault(entry["name"], []).append(entry)
+        if derived_norm_id in name_before_the_run:
+            if name_before_the_run[derived_norm_id] != entry["name"]:
+                problems.append((derived_norm_id, f"names {json.dumps(entry['name'], ensure_ascii=False)}; the list before the run gives it to {json.dumps(name_before_the_run[derived_norm_id], ensure_ascii=False)}: a derived norm ID never moves to another derived norm"))
+        elif derived_norm_number(type_of_derived_norms, derived_norm_id) <= last_derived_norm_number_before_the_run:
+            problems.append((derived_norm_id, f"is not in the list before the run, and its number is not greater than {last_derived_norm_number_before_the_run}, its last_derived_norm_number: a derived norm ID is never given again"))
+    for name, numbers_before_the_run in numbers_of_derived_norm_ids_by_name(type_of_derived_norms, derived_norms_before_the_run).items():
+        if name not in entries_of_name:
+            continue
+        derived_norm_ids_in_order = [e["derived_norm_id"] for e in sorted(entries_of_name[name], key=lambda e: (e["path"], e["first_line"]))]
+        derived_norm_ids_before_the_run = [f"{type_of_derived_norms}:{n}" for n in numbers_before_the_run]
+        paired = min(len(derived_norm_ids_in_order), len(derived_norm_ids_before_the_run))
+        if derived_norm_ids_in_order[:paired] != derived_norm_ids_before_the_run[:paired]:
+            problems.append((name, f"had the derived norm IDs {', '.join(derived_norm_ids_before_the_run)} before the run, and the list gives {', '.join(derived_norm_ids_in_order)} to its derived norms in the order of NRM-13: the k-th derived norm of a name keeps the k-th derived norm ID of that name (CDN-8)"))
+    return problems
+

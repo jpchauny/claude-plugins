@@ -1,6 +1,6 @@
 {
   "name": "code-implementation",
-  "description": "Module code-implementation, layer 4: code built from the norms and the derived norms, within the acceptance units of layer 3, and its traceability to norm IDs",
+  "description": "Module code-implementation, layer 4: code built from the norms and the derived norms, within the acceptance units of layer 3, and its traceability to the acceptance units it implements and the derived norms it is built from, each cited with its hash",
   "author": {
     "name": "Jean Pierre Chauny"
   }

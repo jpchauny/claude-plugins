@@ -62,12 +62,15 @@ class Base(unittest.TestCase):
     def expected(self, layer_lines, module_lines):
         r = self.root
         return ("Development methodology of Indra Software Factory (plugin development-methodology).\n"
-                "This repository is one repository of a project, in one of five layers:\n"
+                "This repository is one repository of a project: of one of its five layers, or its orchestration "
+                "repository, which is no layer.\n"
+                "The five layers:\n"
                 + "".join(line + "\n" for line in layer_lines)
                 + "The modules of the app, each one a plugin, and where each is installed:\n"
                 + "".join(line + "\n" for line in module_lines)
                 + "Read for detail, before answering about the process:\n"
-                "- The five layers, their rules, their terms, and where each module is installed: %s/specs/layers.md\n"
+                "- The five layers, the orchestration repository, their rules, their terms, and where each module is "
+                "installed: %s/specs/layers.md\n"
                 "- The flow across the layers (a run, its steps and hand-offs): %s/specs/flow.md\n"
                 "- What carries the methodology to every repository: %s/specs/module.md\n"
                 "- What each module of the app does: %s\n" % (r, r, r, APP_URL)).encode("utf-8")
@@ -120,14 +123,14 @@ class Index(Base):
                       .encode("utf-8"), out)
 
     def test_binding_example(self):
-        """MTH-6: with the real layers.md, the third line and the line after the layers are the binding example."""
+        """MTH-6: with the real layers.md, the fourth line and the line after the layers are the binding example."""
         shutil.copy(LAYERS, os.path.join(self.root, "specs", "layers.md"))
         status, out, _ = run(self.script)
         self.assertEqual(status, 0)
         lines = out.decode("utf-8").split("\n")
-        self.assertEqual(lines[2], "- 0. Drafts: The draft specs, in plain prose; written by: People; "
+        self.assertEqual(lines[3], "- 0. Drafts: The draft specs, in plain prose; written by: People; "
                                    "repository: `<project>-drafts`")
-        self.assertEqual(lines[7], "The modules of the app, each one a plugin, and where each is installed:")
+        self.assertEqual(lines[8], "The modules of the app, each one a plugin, and where each is installed:")
 
     def test_no_rule_restated(self):
         """MTH-7: besides the rows of the two tables, only the fixed lines, the paths and the URL."""
@@ -135,8 +138,13 @@ class Index(Base):
         _, out, _ = run(self.script)
         lines = out.decode("utf-8").split("\n")
         self.assertEqual(lines[-1], "")
-        self.assertEqual(len(lines) - 1, 2 + 5 + 1 + 8 + 5)  # header, five layers, the eight rows of APP-6, the documents
-        self.assertNotRegex(out.decode("utf-8"), r"(LAY|ORC|MTH|FLW)-\d")
+        with open(LAYERS, encoding="utf-8") as f:
+            modules = len(re.findall(r"^  \| `[a-z-]+` \|", f.read(), re.M))
+        self.assertEqual(modules, 9)  # the rows of APP-6
+        self.assertEqual(len(lines) - 1, 3 + 5 + 1 + modules + 5)  # header, five layers, the rows of APP-6, the documents
+        # MTH-7: a row of a table is copied as it is (MTH-6), so only the other lines are checked.
+        others = [line for line in lines if not line.startswith("- ")]
+        self.assertNotRegex("\n".join(others), r"(LAY|ORC|MTH|FLW)-\d")
 
 
 class Failure(Base):

@@ -41,8 +41,8 @@ every repository of a project.
 | `specs-management` | Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write, and moves specs between the two layers | [module.md](../modules/specs-management/specs/module.md) |
 | `norms-management` | Layer 2: the norms and the derived norms | [module.md](../modules/norms-management/specs/module.md) |
 | `acceptance-management` | Layer 3: the acceptance areas and the acceptance units, the increments and the order in which the units are implemented, their acceptance tests, and when a unit, an area and an increment are done | [module.md](../modules/acceptance-management/specs/module.md) |
-| `code-implementation` | Layer 4: code built from the norms and the derived norms, and its traceability to the acceptance units it implements, and through them to the norms | [module.md](../modules/code-implementation/specs/module.md) |
-| `drift-management` | A drift found while defining acceptance in layer 3 or implementing in layer 4, sent back to layer 1 | [module.md](../modules/drift-management/specs/module.md) |
+| `code-implementation` | Layer 4: code built from the norms and the derived norms, and its traceability to the acceptance units it implements and to the derived norms it is built from, and through them to their norms | [module.md](../modules/code-implementation/specs/module.md) |
+| `drift-management` | A drift found while defining acceptance in layer 3 or implementing in layer 4, sent back to where it is fixed: layer 1, or the plugin of the derived-norms generator that made a defect of a derived-norms generator | [module.md](../modules/drift-management/specs/module.md) |
 | `workflow-orchestration` | Runs the flow across the modules from the orchestration repository: a person starts and controls a run there; each step runs as a headless session in the repository of its layer; the evidence run of the acceptance tests; the queue of the requester | [module.md](../modules/workflow-orchestration/specs/module.md) |
 | `utilities` | Tools usable in any layer: exploring, the issue tree, explanations, a recap of the session | not yet specified |
 

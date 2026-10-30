@@ -2,9 +2,9 @@
 
 **Audience:** The requesters of a project, who approve its acceptance areas and acceptance units; whoever builds the skill `define` of the plugin `acceptance-management`
 
-**Scope:** The use case in which the acceptance architect analyses every norm of layer 2 against every acceptance area and every acceptance unit of the acceptance repository, and creates, changes and deletes acceptance areas and acceptance units, with their scenarios, and fills `test_command` and `product` of `acceptance.json` while they are empty, in changes that the requester approves. A script, with no model, computes the inventory that the analysis starts from and checks every file before it is committed
+**Scope:** The use case in which the acceptance architect analyses every norm of layer 2 against every acceptance area and every acceptance unit of the acceptance repository, and creates, changes and deletes acceptance areas and acceptance units, with their scenarios, and fills `test_command` and `product` of `acceptance.json` while they are empty, in changes that the requester approves. A script, with no model, computes the inventory that the analysis starts from and checks every file before it is committed. Systems it works with (complete list): git and the remote `origin` of the acceptance repository, which it reads and pushes to, and of the norms repository, which it only fetches and reads; the records of the installed plugins of Claude Code, `~/.claude/plugins/installed_plugins.json` and `~/.claude/plugins/known_marketplaces.json`, which it only reads, to find the marketplace repository (ACU-79); GitHub, through `gh`, only to open the issues of a gap of layer 1 in the specs repository (ACU-68) and of a defect of a derived-norms generator in the marketplace repository (ACU-79)
 
-A use case of the module `acceptance-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). Out of scope: the increments and `plan.json`, which the implementation planner decides ([ACU-44](../../../specs/module.md#the-plan-of-implementation)); the acceptance tests, which the test agent writes ([ACU-11](../../../specs/module.md#acceptance-tests-and-independent-evidence)); the record of the evidence ([ACU-35](../../../specs/module.md#done-is-a-state-not-an-event)); the field `default_done_profile` of `acceptance.json`, and a `test_command` or a `product` that is not empty ([ACU-43](../../../specs/module.md#the-files-of-the-acceptance-repository)); the review of the norms of [ACU-15](../../../specs/module.md#the-review-of-the-norms-selected), which is open question 1; the derived norms; layers 0, 1, 2 and 4.
+A use case of the module `acceptance-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). Out of scope: the increments and `plan.json`, which the implementation planner decides ([ACU-44](../../../specs/module.md#the-plan-of-implementation)); the acceptance tests, which the test agent writes ([ACU-11](../../../specs/module.md#acceptance-tests-and-independent-evidence)); the record of the evidence ([ACU-35](../../../specs/module.md#done-is-a-state-not-an-event)); the field `default_done_profile` of `acceptance.json`, and a `test_command` or a `product` that is not empty ([ACU-43](../../../specs/module.md#the-files-of-the-acceptance-repository)); the review of the norms of [ACU-15](../../../specs/module.md#the-review-of-the-norms-selected), which is open question 1; what a derived norm is, its derived norm ID, its derived norm fingerprint and its list of derived norms, which layer 2 writes ([NRM-12 to NRM-15](../../../../norms-management/specs/module.md#the-list-of-derived-norms)), and the types of derived norms of a commit ([NRM-16](../../../../norms-management/specs/module.md#derive-the-derived-norms)); the files of the specs repository and of the marketplace repository, of which define reads none and only opens issues; the plugins installed, which define does not change; layers 0, 1, 2 and 4.
 
 ## Terms
 
@@ -14,13 +14,15 @@ A use case of the module `acceptance-management`, specified in [module.md](../..
 | Default branch | Of a repository: the branch that `git ls-remote --symref origin HEAD`, run in that repository, names. |
 | Norms commit | The head of the default branch of the remote `origin` of the norms repository, after the fetch of [ACU-74](../../../specs/module.md#the-files-of-the-acceptance-repository). |
 | Inventory | The JSON object that the script of ACU-60 prints. |
-| Citation status | What the norms commit says of one norm citation of `## Norms` of an acceptance unit: `current`, `changed` or `retired` (ACU-62). |
+| Citation status | What the norms commit says of one norm citation of `## Norms`, or of one derived norm citation of `## Derived norms`, of an acceptance unit: `current`, `changed` or `retired` (ACU-62). |
+| Order of ACU-78 | The order of the derived norm citations of `## Derived norms`: by the place of the type of the derived norm ID in the types of derived norms of the norms commit, a type that they do not hold coming after every type they hold, in the order of the types compared code point by code point; then by the number of the derived norm ID (ACU-61, ACU-78). |
 | Change | One item of the proposal: to add, change or delete one acceptance area or one acceptance unit, with every other file that ACU-10 and ACU-70 make it touch, and the file of each acceptance unit out of which it moves a scenario or a norm citation (ACU-67); or to fill `test_command` and `product` of `acceptance.json` (ACU-77). |
 | Proposal | The numbered list of changes that the skill shows to the requester (ACU-64). |
+| Marketplace repository | Of a defect of a derived-norms generator: the GitHub repository, `<owner>/<name>`, of the marketplace that holds the plugin that `generator` of the status file of the type of the derived norm names, as the script finds it (ACU-79). |
 | Acceptance unit with evidence | An acceptance unit whose record holds at least one line. |
 | Expected head | Of a command of ACU-71: the commit from which the requester saw the acceptance repository, which the command must find at `HEAD`: `acceptance_commit` of the inventory for the first command of the invocation, and for each later one the commit that the command before it pushed, whose 40 hex digits that command prints as its last line. |
 
-The terms norm, norm ID, norm hash, derived norm, specs repository, norms repository, acceptance repository and code repository are those of [layers.md](../../../../development-methodology/specs/layers.md#terms); a norm, its norm ID and its norm hash are those of the norms commit. The form of a norm ID is that of [ACU-56](../../../specs/module.md#hashes-and-citations). The terms requester, acceptance area, acceptance unit, work item, increment, unit ID, area ID, scenario ID, title, fingerprint, unit hash, area hash, scenario hash, citation, norm citation, scenario, external interface, gap of layer 1, acceptance test, acceptance architect, implementation planner, test agent, evidence, record, done profile, default done profile, state and stale are those of [module.md](../../../specs/module.md#terms). The terms run and step are those of [flow.md](../../../../development-methodology/specs/flow.md#terms). The fingerprints are computed as [ACU-51 to ACU-54](../../../specs/module.md#hashes-and-citations) say. A commit of layer 3 follows [LAY-9](../../../../development-methodology/specs/layers.md#rules).
+The terms norm, norm ID, norm hash, derived norm, derived norm ID, derived norm fingerprint, specs repository, norms repository, acceptance repository and code repository are those of [layers.md](../../../../development-methodology/specs/layers.md#terms); a norm, its norm ID and its norm hash are those of the norms commit, and so are a derived norm, its derived norm ID, its derived norm fingerprint and a derived norm not cited. The terms list of derived norms, lines of a derived norm, derived-norms generator, status file, record of the types of derived norms and types of derived norms of a commit are those of [norms-management](../../../../norms-management/specs/module.md#terms); the term defect of a derived-norms generator is that of [drift-management](../../../../drift-management/specs/module.md#terms). The forms of a norm ID and of a derived norm ID are those of [ACU-56](../../../specs/module.md#hashes-and-citations). The terms requester, acceptance area, acceptance unit, work item, increment, unit ID, area ID, scenario ID, title, fingerprint, unit hash, area hash, scenario hash, citation, norm citation, derived norm citation, derived norms of a commit, scope of an acceptance unit, derived norm not cited, acceptance unit behind layer 2, scenario, external interface, gap of layer 1, acceptance test, acceptance architect, implementation planner, test agent, evidence, record, done profile, default done profile, state and stale are those of [module.md](../../../specs/module.md#terms). The terms run and step are those of [flow.md](../../../../development-methodology/specs/flow.md#terms). The fingerprints are computed as [ACU-51 to ACU-54](../../../specs/module.md#hashes-and-citations) say. A commit of layer 3 follows [LAY-9](../../../../development-methodology/specs/layers.md#rules).
 
 ## Define the acceptance areas and acceptance units
 
@@ -49,7 +51,7 @@ Feature: Define the acceptance areas and acceptance units
       Then an argument, and a repository other than the acceptance repository, end the skill as ACU-74 says
 
   Rule: ACU-58 Before it reads anything else, the skill makes the checks of ACU-74, and then a script with no model makes these checks, in this order, and the first that fails ends the skill with its message (complete list)
-    Rationale: the files that define writes must start from what "HEAD" holds, so an uncommitted or untracked file of an acceptance area or an acceptance unit, which the skill would overwrite or commit by mistake, stops it; an "acceptance.json" it cannot read gives no next IDs (ACU-55). The checks that every use case of the module shares are written once, in ACU-74.
+    Rationale: the files that define writes must start from what "HEAD" holds, so an uncommitted or untracked file of an acceptance area or an acceptance unit, which the skill would overwrite or commit by mistake, stops it; an "acceptance.json" it cannot read gives no next IDs (ACU-55); and a list of derived norms that is missing or that does not meet NRM-12 gives no scope of an acceptance unit, so the skill could write no "## Derived norms" that layer 4 can trust (ACU-78). The checks that every use case of the module shares are written once, in ACU-74.
 
     Scenario: The checks of the module
       When the skill starts
@@ -61,7 +63,7 @@ Feature: Define the acceptance areas and acceptance units
       When the skill starts
       Then the skill writes nothing
       And it says "acceptance-management:define: <message>"
-      And the message binds byte for byte once filled, where "units/AU-3.md" and "units/AU-4.md" stand for the path found
+      And the message binds byte for byte once filled, where "units/AU-3.md" and "units/AU-4.md" stand for the path found, "acme/billing-norms" for "<owner>/<name>" of the norms repository in "project.json", "grammar" for the type found and "9fceb02" for the first 7 hex digits of the norms commit
       And a path is printed as it is when it holds no control character (Unicode category Cc), no line separator (U+2028), no paragraph separator (U+2029) and no byte that is not UTF-8; otherwise it is printed as its JSON text, between double quotes, where a double quote and a backslash are escaped as \" and \\, the line feed, the carriage return, the tab, the backspace and the form feed as \n, \r, \t, \b and \f, and every other such character, and each byte that is not UTF-8 as the code point U+DC00 plus that byte, as \u followed by 4 lower-case hex digits; so no path forges a line of the output (ACU-8); an untracked file "units/a", a line feed and "b.md" gives "untracked file \"units/a\\nb.md\""
 
       Examples:
@@ -69,6 +71,25 @@ Feature: Define the acceptance areas and acceptance units
         | "units/AU-3.md" is the first path, in sorted order, with an uncommitted change among "acceptance.json" and the files of "areas/" and "units/" | uncommitted change in units/AU-3.md |
         | "units/AU-4.md" is the first path, in sorted order, of an untracked file under "areas/" or "units/", a file that a ".gitignore" names included | untracked file units/AU-4.md |
         | "acceptance.json" does not meet ACU-6, as the paragraph "acceptance.json meets ACU-6" of ACU-6 says | acceptance.json does not meet ACU-6 |
+        | the types of derived norms of the norms commit cannot be read (see "The types of derived norms read") | acme/billing-norms: the types of derived norms at 9fceb02 cannot be read (NRM-16) |
+        | "grammar" is the first type, in the order of the types of derived norms of the norms commit, whose list of derived norms cannot be read, and the norms commit holds no file "specs-derived/grammar/derived-norms.jsonl" | acme/billing-norms has no specs-derived/grammar/derived-norms.jsonl at 9fceb02 |
+        | "grammar" is that first type, and its list of derived norms at the norms commit does not meet NRM-12 (see "The list of derived norms read") | acme/billing-norms: specs-derived/grammar/derived-norms.jsonl does not meet NRM-12 |
+
+    Scenario: The types of derived norms read
+      Then the script reads the types of derived norms of the norms commit, with "git show" of that commit: those of "specs-derived/types-of-derived-norms.json" when it meets NRM-16; otherwise those of "derived_norms" of "project.json" at the root of the norms repository at that commit, read as NRM-1 says, so that an entry without a "use_case" of the form of ORC-20 makes them unreadable too
+      And they cannot be read when that commit holds no record that meets NRM-16 and its "project.json" cannot be read, or its "derived_norms" does not meet ORC-20, both as NRM-1 says (ACU-78)
+      And the script never takes them from "derived_norms" of "project.json" of the acceptance repository, which may name other types than those by which the step of layer 2 ran (ACU-78, NRM-16)
+
+    Scenario: The list of derived norms read
+      Then the script reads, for each of the types of derived norms of the norms commit, in their order, the list of derived norms "specs-derived/<type>/derived-norms.jsonl" at the norms commit, with "git show" of that commit, never from the working tree of the norms repository
+      And whether the list meets NRM-12 is what NRM-12 says of a list read alone, with no other file of the output, which states it once for every script of layer 3 or 4 and for the orchestrator (ACU-78); define checks no other condition of the list
+      And the script computes no derived norm fingerprint, and does not read the files that "path" names to check the list (ACU-78, NRM-15)
+      And the lists read are those of ACU-60 and of every later command of the invocation, against the same norms commit
+
+    Scenario: A project without derived norms
+      Given the types of derived norms of the norms commit are none: its record of the types of derived norms holds "[]", or it holds no record that meets NRM-16 and its "project.json" holds no "derived_norms", or holds an empty list
+      Then no list of derived norms is read, and no check of a list fails
+      And the norms commit has no derived norm, the scope of every acceptance unit is empty, and every derived norm citation that an acceptance unit holds is "retired" (ACU-62)
 
     Scenario: Other uncommitted changes
       Given the acceptance repository has an uncommitted change in "tests/AU-3/test_export.py" or in "records/AU-3.jsonl"
@@ -81,7 +102,7 @@ Feature: Define the acceptance areas and acceptance units
 
     Scenario: The commits read
       Given every check of ACU-58 passed
-      Then the skill reads the norms repository only at the norms commit, with "git show" and "git ls-tree" of that commit
+      Then the skill reads the norms repository only at the norms commit, with "git show" and "git ls-tree" of that commit, the lists of derived norms and the lines of a derived norm included
       And it reads the acceptance repository at its "HEAD", which ACU-74 made equal to "origin/main"
       And in a run it reads the same commits
 
@@ -92,7 +113,7 @@ Feature: Define the acceptance areas and acceptance units
       And no file of its working tree is read
 
   Rule: ACU-60 The script prints the inventory: one JSON object on its standard output, computed with no model (complete list of fields)
-    Rationale: the facts that the analysis starts from (the norms, the files, their hashes, their errors, their evidence and the next IDs) must be exact and the same on every run; a script with no model computes them, and only the judgement of ACU-63 is left to the model.
+    Rationale: the facts that the analysis starts from (the norms, the derived norms, the files, their hashes, their errors, their evidence and the next IDs) must be exact and the same on every run; a script with no model computes them, and only the judgement of ACU-63 is left to the model.
 
     Scenario: The fields of the inventory (complete list)
       Then the inventory holds these fields:
@@ -102,12 +123,15 @@ Feature: Define the acceptance areas and acceptance units
         | default_done_profile   | "default_done_profile" of "acceptance.json": the default done profile                                                                                      |
         | next_ids          | an object: "acceptance_area", "acceptance_unit" and "scenario", the next area ID, unit ID and scenario ID (ACU-55): its prefix and the highest of its field of "acceptance.json" and the numbers of the IDs of its kind in the files read, plus 1; for the inventory of the working tree, the highest also counts the IDs at "HEAD" |
         | norms             | one object per norm, in the order of "data/tree.jsonl": "norm_id", "file" (its path under "specs-repo-annotated/"), "kind", "parent_norm_id" (the norm ID of its "parent" in "data/tree.jsonl", or null), "norm_hash" and "own_text" (its "own_text" of R61: the text of the node in its file of "specs-repo-annotated/", without the text of its children and without the markers of the IDs) |
+        | derived_norms     | one object per derived norm of the norms commit (ACU-78), in the order of the types of derived norms of the norms commit and, in each type, of the numbers of the derived norm IDs: "derived_norm_id", "derived_norm_fingerprint", "name", "path", "first_line", "last_line" and "cited_norms" (each an object "norm_id" and "norm_hash"), as its line of the list of derived norms gives them; an empty list when the norms commit has no types of derived norms |
         | acceptance_areas  | one object per file "areas/<area ID>.md", in the order of the numbers of the area IDs                                                                 |
         | acceptance_units  | one object per file "units/<unit ID>.md", in the order of the numbers of the unit IDs                                                                 |
         | errors            | the errors of the repository that are not of one file (ACU-61), each an object "path", "line" and "message"                                           |
       And each acceptance area holds "area_id", "path", "title" (or null when its heading does not meet ACU-7), "area_hash" (or null), "acceptance_units" (the unit IDs whose line "Area:" names it), "scenarios", "evidence" and "errors"
-      And each acceptance unit holds "unit_id", "path", "title" (or null when its heading does not meet ACU-8), "area_id" (the area ID of its line "Area:", or null when no line "Area:" meets ACU-8), "done_profile" (that of its line "Profile:", or else the default done profile), "unit_hash" (or null), "norm_citations", "scenarios", "evidence" and "errors"
+      And each acceptance unit holds "unit_id", "path", "title" (or null when its heading does not meet ACU-8), "area_id" (the area ID of its line "Area:", or null when no line "Area:" meets ACU-8), "done_profile" (that of its line "Profile:", or else the default done profile), "unit_hash" (or null), "norm_citations", "derived_norm_citations", "derived_norms_not_cited", "scenarios", "evidence" and "errors"
       And each norm citation holds "norm_id", "hash_in_acceptance_unit" (the norm hash that the norm citation holds), "citation_status" (ACU-62) and "hash_in_norms_repository" (the norm hash of its norm at the norms commit, or null)
+      And "derived_norm_citations" holds the derived norm citations of "## Derived norms", in the order of the file, each with "derived_norm_id", "derived_norm_fingerprint_in_acceptance_unit" (the derived norm fingerprint that the derived norm citation holds), "citation_status" (ACU-62) and "derived_norm_fingerprint_in_norms_repository" (the derived norm fingerprint of its derived norm at the norms commit, or null)
+      And "derived_norms_not_cited" holds each derived norm not cited of the acceptance unit, in the order of ACU-78, each with "derived_norm_id" and "derived_norm_fingerprint" (that of the norms commit)
       And each scenario holds "scenario_id" (or null when it has not exactly one tag "@SC-<n>"), "name", "scenario_hash", "norms" (the norm IDs of its tags "@<norm ID>"), and, in an acceptance area, "acceptance_units" (the unit IDs of its tags "@unit:<unit ID>")
       And "evidence" holds the count of the lines of the record of the acceptance area or the acceptance unit of each kind of ACU-35: "test", "demo", "validation", "deviation" and "event", 0 for a kind with no line
       And each error of a file holds "line" (the number of the line that holds it, or null when no single line holds it) and "message"
@@ -123,6 +147,7 @@ Feature: Define the acceptance areas and acceptance units
          "norms": [{"norm_id": "INV-7", "file": "billing/invoices.md", "kind": "item", "parent_norm_id": "INV-3", "norm_hash": "5a627175", "own_text": "- Each invoice is one row of the CSV."},
                    {"norm_id": "INV-12", "file": "billing/invoices.md", "kind": "item", "parent_norm_id": "INV-3", "norm_hash": "7d6e5f40", "own_text": "- Every amount has two decimals, with a point."},
                    {"norm_id": "INV-15", "file": "billing/invoices.md", "kind": "item", "parent_norm_id": "INV-3", "norm_hash": "9e8d7c6b", "own_text": "- A cancelled invoice is not exported."}],
+         "derived_norms": [],
          "acceptance_areas": [{"area_id": "AA-1", "path": "areas/AA-1.md", "title": "Billing", "area_hash": "3b0900fb", "acceptance_units": ["AU-1", "AU-2", "AU-3"],
                     "scenarios": [{"scenario_id": "SC-9", "name": "A cancelled invoice is not exported", "scenario_hash": "1bd67ec5", "norms": ["INV-15"], "acceptance_units": ["AU-1", "AU-2", "AU-3"]}],
                     "evidence": {"test": 1, "demo": 0, "validation": 0, "deviation": 0, "event": 0}, "errors": []}],
@@ -130,10 +155,23 @@ Feature: Define the acceptance areas and acceptance units
                     "norm_citations": [{"norm_id": "INV-7", "hash_in_acceptance_unit": "5a627175", "citation_status": "current", "hash_in_norms_repository": "5a627175"},
                                        {"norm_id": "INV-12", "hash_in_acceptance_unit": "0c1d2e3f", "citation_status": "changed", "hash_in_norms_repository": "7d6e5f40"},
                                        {"norm_id": "INV-15", "hash_in_acceptance_unit": "9e8d7c6b", "citation_status": "current", "hash_in_norms_repository": "9e8d7c6b"}],
+                    "derived_norm_citations": [], "derived_norms_not_cited": [],
                     "scenarios": [{"scenario_id": "SC-5", "name": "Three invoices give three rows", "scenario_hash": "147d88d2", "norms": ["INV-7", "INV-12"]},
                                   {"scenario_id": "SC-6", "name": "A cancelled invoice gives no row", "scenario_hash": "a67eb609", "norms": ["INV-15"]}],
                     "evidence": {"test": 2, "demo": 0, "validation": 1, "deviation": 0, "event": 0}, "errors": []}],
          "errors": []}
+        """
+
+    Scenario: The binding example of the derived norms in the inventory
+      Then the inventory of a repository with AU-11 of ACU-78, whose "## Derived norms" cites "grammar:7@3a4b5c6d" and "semantics:31@5e6f7a8b", where the norms commit holds "grammar:7" with that derived norm fingerprint, "semantics:31" with another, and "semantics:32" in the scope of AU-11, holds these fields, where the lists and the values are abridged to what is shown, and what binds is the keys, their nesting and the types of the values, not the values:
+        """
+        {"derived_norms": [{"derived_norm_id": "grammar:7", "derived_norm_fingerprint": "3a4b5c6d", "name": "mul_expr", "path": "specs-derived/grammar/clean.lark", "first_line": 18, "last_line": 20, "cited_norms": [{"norm_id": "SYN-3", "norm_hash": "1f2e3d4c"}]},
+                           {"derived_norm_id": "semantics:31", "derived_norm_fingerprint": "6a7b8c9d", "name": "E-Mul", "path": "specs-derived/semantics/eval.md", "first_line": 40, "last_line": 47, "cited_norms": [{"norm_id": "SEM-8", "norm_hash": "2b3c4d5e"}, {"norm_id": "TYP-2", "norm_hash": "3c4d5e6f"}]},
+                           {"derived_norm_id": "semantics:32", "derived_norm_fingerprint": "9c0d1e2f", "name": "E-Mul-Overflow", "path": "specs-derived/semantics/eval.md", "first_line": 49, "last_line": 55, "cited_norms": [{"norm_id": "SEM-9", "norm_hash": "4d5e6f7a"}]}],
+         "acceptance_units": [{"unit_id": "AU-11",
+                    "derived_norm_citations": [{"derived_norm_id": "grammar:7", "derived_norm_fingerprint_in_acceptance_unit": "3a4b5c6d", "citation_status": "current", "derived_norm_fingerprint_in_norms_repository": "3a4b5c6d"},
+                                               {"derived_norm_id": "semantics:31", "derived_norm_fingerprint_in_acceptance_unit": "5e6f7a8b", "citation_status": "changed", "derived_norm_fingerprint_in_norms_repository": "6a7b8c9d"}],
+                    "derived_norms_not_cited": [{"derived_norm_id": "semantics:32", "derived_norm_fingerprint": "9c0d1e2f"}]}]}
         """
 
     Scenario: The inventory of the working tree
@@ -141,8 +179,8 @@ Feature: Define the acceptance areas and acceptance units
       Then the same script prints the inventory of the files of "areas/", "units/" and "acceptance.json" as they are in the working tree, against the same norms commit
       And it adds the errors of ACU-61 that compare the working tree with "HEAD"
 
-  Rule: ACU-61 The script reports each format error of ACU-6, ACU-7, ACU-8, ACU-50, ACU-54, ACU-55 and ACU-56 (complete list)
-    Rationale: a file that breaks the format of the module gives the scripts that read it, and layer 4, no single reading; reported by a script, with its path and line, every format error is found on every run, and the proposal can fix it (ACU-63).
+  Rule: ACU-61 The script reports each format error of ACU-6, ACU-7, ACU-8, ACU-50, ACU-54, ACU-55, ACU-56 and ACU-78 (complete list)
+    Rationale: a file that breaks the format of the module gives the scripts that read it, and layer 4, no single reading; reported by a script, with its path and line, every format error is found on every run, and the proposal can fix it (ACU-63). A derived norm citation that cites the derived norm fingerprint of the norms commit for a derived norm outside the scope is no change of layer 2 but a citation that ACU-78 never allows; a derived norm citation whose derived norm fingerprint changed gets the citation status "changed" instead (ACU-62), since layer 2, not the file, moved.
 
     Scenario Outline: A format error
       Given <file> where <condition>
@@ -157,11 +195,17 @@ Feature: Define the acceptance areas and acceptance units
         | "units/AU-3.md"      | its line "Area:" names "AA-7", which has no file                                                     | acceptance area AA-7 has no file                                                       |
         | "units/AU-3.md"      | its line "Profile:" is "Profile: gold"                                                               | done profile gold is not prototype, product or critical                          |
         | "units/AU-3.md"      | its line "Profile:" names the default done profile                                                   | done profile product is the default done profile                                      |
-        | "units/AU-3.md"      | its parts are not those of ACU-8 in their order, or a line that is not empty stands between them, "Increment:" included | parts are not those of ACU-8                                           |
+        | "units/AU-3.md"      | its parts are not those of ACU-8 in their order, part 5 "## Derived norms" being the only one that may be absent, or a line that is not empty stands between them, "Increment:" included | parts are not those of ACU-8                                           |
+        | "units/AU-3.md"      | "## Derived norms" stands elsewhere than between "## Norms" and "## Scenarios", or more than once | parts are not those of ACU-8                                           |
         | "units/AU-3.md"      | "## Narrative" is not the lines "In order to ", "As a " or "As an ", and "I want ", each followed by text | narrative is not In order to, As a, I want                             |
         | "units/AU-3.md"      | "## Norms" has no list item                                                                          | no norm citation in ## Norms                                                |
         | "units/AU-3.md"      | a list item of "## Norms" is not "<norm ID>@<8 lower-case hex digits>: <reason>" (ACU-56)            | not a norm citation                                                         |
         | "units/AU-3.md"      | "## Norms" cites "INV-7" twice                                                                       | INV-7 is cited twice                                                        |
+        | "units/AU-3.md"      | "## Derived norms" has no list item                                                                  | no derived norm citation in ## Derived norms                                |
+        | "units/AU-3.md"      | a list item of "## Derived norms" is not "<derived norm ID>@<8 lower-case hex digits>: <reason>" (ACU-56) | not a derived norm citation                                            |
+        | "units/AU-3.md"      | "## Derived norms" cites "grammar:7" twice                                                           | grammar:7 is cited twice                                                    |
+        | "units/AU-3.md"      | "## Derived norms" cites "grammar:9" with its derived norm fingerprint at the norms commit, and "grammar:9" is not in the scope of AU-3 at the norms commit (ACU-78) | grammar:9 is not in the scope of AU-3 (ACU-78) |
+        | "units/AU-3.md"      | a derived norm citation of "## Derived norms", "grammar:7", comes after one that the order of ACU-78 puts after it; the error is on the first such citation | grammar:7 is not in the order of ACU-78 |
         | "units/AU-3.md"      | "## Norms" cites "INV-15", and no scenario has the tag "@INV-15"                                     | INV-15 is checked by no scenario                                            |
         | "units/AU-3.md"      | a scenario has the tag "@INV-99", which "## Norms" does not cite                                     | tag @INV-99 is not in ## Norms                                              |
         | "units/AU-3.md"      | "## Non-goals" or "## Assumptions" is neither a list nor the line "None."                            | ## Non-goals is not a list or None.                                         |
@@ -197,10 +241,13 @@ Feature: Define the acceptance areas and acceptance units
 
     Scenario: A file that is not UTF-8
       Given "units/AU-3.md" is not UTF-8
-      Then its "errors" hold only "not UTF-8", and its "title", "area_id" and "unit_hash" are null, and it has no norm citation and no scenario
+      Then its "errors" hold only "not UTF-8", and its "title", "area_id" and "unit_hash" are null, and it has no norm citation, no derived norm citation, no derived norm not cited and no scenario
 
-  Rule: ACU-62 Each norm citation of "## Norms" gets one citation status, from the norms commit, where a retired node of "data/tree.jsonl" is not a norm (complete list)
-    Rationale: an acceptance unit that cites a norm hash that layer 2 no longer holds is behind layer 2, and layer 4 does not implement it (ACU-41); a status computed from the norms commit tells the skill exactly which norm citations to review, and a retired node counts as no norm, since layer 2 no longer states it.
+    Scenario: The one format error that reads the derived norms
+      Then "grammar:9 is not in the scope of AU-3 (ACU-78)" is the only error of the table above that reads the derived norms of the norms commit; the order of ACU-78 reads only the types of derived norms of the norms commit
+
+  Rule: ACU-62 Each norm citation of "## Norms" and each derived norm citation of "## Derived norms" gets one citation status, from the norms commit, where a retired node of "data/tree.jsonl" is not a norm (complete list); and each derived norm of the scope that "## Derived norms" does not cite is a derived norm not cited
+    Rationale: an acceptance unit that cites a norm hash or a derived norm fingerprint that layer 2 no longer holds, or that does not cite a derived norm of its scope, is behind layer 2, and layer 4 does not implement it (ACU-41); a status computed from the norms commit tells the skill exactly which citations to review, and a retired node counts as no norm, since layer 2 no longer states it.
 
     Scenario Outline: The citation status of a norm citation
       Given "units/AU-3.md" cites "INV-12@0c1d2e3f: amounts with two decimals"
@@ -213,6 +260,26 @@ Feature: Define the acceptance areas and acceptance units
         | "INV-12" is a norm with the norm hash "7d6e5f40"           | changed         |
         | "INV-12" is a retired node of "data/tree.jsonl"            | retired         |
         | "data/tree.jsonl" has no node "INV-12"                     | retired         |
+
+    Scenario Outline: The citation status of a derived norm citation
+      Given "units/AU-11.md" cites "grammar:7@3a4b5c6d: the rule of the binary operators" in "## Derived norms"
+      And <norms commit>
+      Then the citation status of the derived norm citation is "<citation status>"
+
+      Examples:
+        | norms commit                                                                                   | citation status |
+        | the derived norms of the norms commit hold "grammar:7" with the derived norm fingerprint "3a4b5c6d" | current    |
+        | they hold "grammar:7" with the derived norm fingerprint "4b5c6d7e"                             | changed         |
+        | they hold no "grammar:7": the list of "grammar" no longer holds it, or the types of derived norms of the norms commit do not hold "grammar" | retired |
+
+    Scenario: A derived norm not cited
+      Given the scope of AU-11 at the norms commit holds "semantics:32", with the derived norm fingerprint "9c0d1e2f", and "## Derived norms" of AU-11 does not cite "semantics:32", or AU-11 has no "## Derived norms"
+      Then "derived_norms_not_cited" of AU-11 holds "semantics:32" with "9c0d1e2f"
+      And a derived norm that "## Derived norms" cites with another derived norm fingerprint is no derived norm not cited: its derived norm citation is "changed"
+
+    Scenario: The scope is that of "## Norms" as the file holds it
+      Then the scope of an acceptance unit is computed from the norm IDs of the norm citations of its "## Norms", whatever their citation status, as ACU-78 says
+      And a file whose "## Norms" holds no norm citation has an empty scope
 
   Rule: ACU-63 Each time the skill runs, it analyses every norm against every acceptance area and every acceptance unit, and is not bound to group every norm (ACU-2, ACU-32)
     Rationale: a norm of layer 2 can touch any acceptance area or acceptance unit, and an analysis that reads only what changed misses the acceptance units that a new norm should change; a norm that fits no acceptance unit yet is left out, since grouping it by force would make an acceptance unit that no requester can accept as one thing (ACU-2, ACU-32).
@@ -227,6 +294,15 @@ Feature: Define the acceptance areas and acceptance units
       Given the inventory shows the norm citation of "INV-12" in AU-3 as "changed"
       Then the proposal holds a change of AU-3 that cites "INV-12" with its norm hash at the norms commit, and reviews each scenario of AU-3 and of its acceptance area that has the tag "@INV-12" (ACU-28)
       And for a norm citation "retired", the change removes the norm citation and each tag "@INV-12", and proposes to delete AU-3 when no norm citation is left
+
+    Scenario: A changed or retired derived norm citation, or a derived norm not cited
+      Given the inventory shows a derived norm citation of AU-11 "changed" or "retired", or a derived norm not cited of AU-11
+      Then the proposal holds a change of AU-11 whose "## Derived norms" cites the scope of its "## Norms" at the norms commit, as ACU-67 says (ACU-28, ACU-78)
+      And the skill reads, at the norms commit, the lines of each derived norm that changed or entered the scope, and reviews each scenario of AU-11, and of each acceptance area with a scenario that crosses AU-11, against them and against the norms of their tags
+      And it changes a scenario only where those lines show that the scenario no longer states what the norms of its tags state
+
+    Scenario: The derived norms are not grouped (must not)
+      Then the skill never proposes a derived norm citation that the scope does not call for, nor leaves out one that it calls for, nor adds a norm to "## Norms" because a derived norm of the scope cites it (ACU-4, ACU-78)
 
     Scenario: A format error of a file at HEAD
       Given the inventory shows an error in "units/AU-3.md"
@@ -257,8 +333,15 @@ Feature: Define the acceptance areas and acceptance units
       And <c> and <r> count the norm citations of every acceptance unit with the citation status "changed" and "retired", and <e> counts every entry of "errors" of the inventory: of the repository, of each acceptance area and of each acceptance unit
       And an example is "Layer 2 at 9fceb02: 240 norms. Layer 3 at 1a410ef: 2 acceptance areas, 5 acceptance units; 1 norm citation changed, 0 retired; 0 format errors."
 
+    Scenario: The summary of a project with derived norms
+      Given the types of derived norms of the norms commit hold at least one type
+      Then the line of the summary holds ", <d> derived norms" after "<n> norms", and "; <dc> derived norm citations changed, <dr> retired, <dm> not cited" before "; <e> format errors", and is otherwise the same
+      And <d> counts the objects of "derived_norms" of the inventory, <dc> and <dr> the derived norm citations of every acceptance unit with the citation status "changed" and "retired", and <dm> the derived norms not cited of every acceptance unit
+      And "derived norms" and "derived norm citations" are singular when their count is 1, and plural otherwise
+      And an example, which binds byte for byte once filled, is "Layer 2 at 9fceb02: 240 norms, 31 derived norms. Layer 3 at 1a410ef: 2 acceptance areas, 5 acceptance units; 1 norm citation changed, 0 retired; 2 derived norm citations changed, 0 retired, 1 not cited; 0 format errors."
+
     Scenario: The form of the proposal
-      Then the skill shows the proposal as below, where what binds is one numbered line per change, in the order fill acceptance.json, add acceptance area, add acceptance unit, change acceptance unit, change acceptance area, delete acceptance unit, delete acceptance area, and in the order of the IDs within each, starting with "fill acceptance.json" (ACU-77), or with "add", "change" or "delete", then "acceptance area" or "acceptance unit", its ID and its title in quotes, and the lines of ACU-66, ACU-68 and ACU-77; not the rest of the wording:
+      Then the skill shows the proposal as below, where what binds is one numbered line per change, in the order fill acceptance.json, add acceptance area, add acceptance unit, change acceptance unit, change acceptance area, delete acceptance unit, delete acceptance area, and in the order of the IDs within each, starting with "fill acceptance.json" (ACU-77), or with "add", "change" or "delete", then "acceptance area" or "acceptance unit", its ID and its title in quotes, and the lines of ACU-66, ACU-68, ACU-77 and ACU-79; not the rest of the wording:
         """
         1. fill acceptance.json: test_command, product
            test_command: pytest "$ACCEPTANCE_TARGET" --junitxml "$ACCEPTANCE_REPORT"
@@ -273,6 +356,7 @@ Feature: Define the acceptance areas and acceptance units
         Gaps of layer 1, one issue each after your yes:
           a. AU-4: no norm states what is shown when the email is already registered
         """
+      And a change of "## Derived norms" is shown after the changes of "## Norms" of its line, as "<derived norm ID> <old derived norm fingerprint> -> <new derived norm fingerprint>", "<derived norm ID> added" or "<derived norm ID> removed", such as "change acceptance unit AU-11 \"Multiply two integers\": semantics:31 5e6f7a8b -> 6a7b8c9d; semantics:32 added", whose wording does not bind either
 
     Scenario: The requester proposes
       Given the requester says "put CUS-3 and CUS-4 in a new acceptance unit of AA-2"
@@ -405,6 +489,11 @@ Feature: Define the acceptance areas and acceptance units
       Given two changes reach the same grouping of the norms, and only one of them changes the unit hash of an acceptance unit with evidence
       Then the skill proposes the other one
 
+    Scenario: An update of "## Derived norms" is never left out to spare evidence (must not)
+      Given AU-11 has evidence, and a derived norm citation of AU-11 that is "changed" or "retired", or a derived norm not cited of AU-11
+      Then the skill proposes the change of AU-11 of ACU-63 all the same, with the lines of ACU-66 that its new unit hash calls for
+      And that evidence is already stale, since AU-11 is behind layer 2 at the head of the norms repository (ACU-26)
+
     Scenario Outline: An acceptance unit with evidence is deleted or split only with its own yes
       Given AU-2 has evidence (test 3, validation 1)
       And the final proposal holds a change that <change>
@@ -416,13 +505,23 @@ Feature: Define the acceptance areas and acceptance units
         | deletes AU-2                                               | Delete it?     |
         | moves a scenario or a norm citation of AU-2 to another acceptance unit | Split it?      |
 
-  Rule: ACU-67 The skill writes the scenarios of each acceptance unit and the scenarios that cross the acceptance units of an acceptance area, as ACU-7, ACU-8 and ACU-50 say
-    Rationale: the scenarios are what the acceptance tests check and what the requester accepts (ACU-11); each norm of an acceptance unit needs a scenario that shows it from outside, and a norm seen only when several acceptance units work together needs a scenario of their acceptance area, or no test ever checks it.
+  Rule: ACU-67 The skill writes the scenarios of each acceptance unit and the scenarios that cross the acceptance units of an acceptance area, as ACU-7, ACU-8 and ACU-50 say, and the "## Derived norms" of each acceptance unit, as ACU-78 says
+    Rationale: the scenarios are what the acceptance tests check and what the requester accepts (ACU-11); each norm of an acceptance unit needs a scenario that shows it from outside, and a norm seen only when several acceptance units work together needs a scenario of their acceptance area, or no test ever checks it. The derived norms that an acceptance unit cites follow from its norms (ACU-78): a script that gives them leaves the model only the reasons, so that every acceptance unit cites the same derived norms with the same derived norm fingerprints that layer 4 reads.
 
     Scenario: The scenarios of an acceptance unit
       Given a change adds or changes an acceptance unit
       Then each norm of its "## Norms" has at least one scenario with its tag
       And each step acts through the external interface or states a result seen from outside, as the norms state them
+
+    Scenario: The derived norms of an acceptance unit
+      Given a change adds or changes an acceptance unit, and the skill has written its "## Norms"
+      When the skill runs the command "derived-norms" of the script with the norms commit and the unit ID of the acceptance unit
+      Then the script prints, for the file of the acceptance unit as the working tree holds it, one JSON list of the derived norms of its scope at the norms commit, in the order of ACU-78, one object per derived norm with exactly these fields, in this order: "derived_norm_id", "derived_norm_fingerprint", "name", "path", "first_line" and "last_line", as the list of derived norms of the norms commit gives them; "lines_of_derived_norm", the lines of a derived norm, from "first_line" to "last_line" of its file at the norms commit, as steps 1 and 2 of NRM-14 give them, joined by line feeds, or null when that commit holds no such lines; "reason_in_acceptance_unit", the reason that the file already gives for that derived norm ID in "## Derived norms", or null; and "derived_norm_citation_without_reason", "- <derived norm ID>@<derived norm fingerprint>: ", the list item of the derived norm citation that the reason completes
+      And the skill reads the lines of a derived norm only through that output (ACU-59, ACU-63)
+      And when that list is not empty, the skill writes "## Derived norms" between "## Norms" and "## Scenarios": one list item "- <derived norm ID>@<derived norm fingerprint>: <reason>" per derived norm of the list, in its order, with the reason that the file already gives, or a reason of its own that says in a few words what of the derived norm the acceptance unit needs (ACU-56)
+      And when that list is empty, the file holds no "## Derived norms"
+      And the set of derived norms, their order and their derived norm fingerprints are those of the script, never of the model; only the reasons are the skill's
+      And no scenario has the tag of a derived norm (ACU-8)
 
     Scenario: The scenarios of an acceptance area
       Given an acceptance area has two acceptance units, and a norm of one of them is seen only when both work together
@@ -466,18 +565,101 @@ Feature: Define the acceptance areas and acceptance units
     Scenario: The issue cannot be opened
       Given "gh issue create" fails for the issue of a gap of layer 1
       Then the skill says "acceptance-management:define: cannot open the issue in acme/billing-specs", and goes on with the next gap of layer 1
+      And the message binds byte for byte once filled, where "acme/billing-specs" stands for "<owner>/<name>" of the specs repository in "project.json"
       And the changes and their commits are not affected
 
     Scenario: No issue without a yes (must not)
       Given the requester says anything but yes to the gap of layer 1
       Then the skill opens no issue
 
+  Rule: ACU-79 A derived norm that does not follow from right norms becomes, after the requester's yes, an issue of the marketplace repository of its derived-norms generator, and no scenario is built from what it adds (ACU-4, LAY-5, ORC-14)
+    Rationale: a derived norm that says what its norms do not say would make layers 3 and 4 build what nobody specified; when its norms are right the fault is in its derived-norms generator, which is fixed where it is built (ORC-14), and an issue in the specs repository would ask to change norms that are already right. The facts of the issue come from a script, so that the issue names the derived norm, its norms and the generator exactly as layer 2 recorded them.
+
+    Scenario: A defect of a derived-norms generator
+      Given the skill reads, in the output of the command "derived-norms" for AU-11 (ACU-67), that "grammar:7" says what "SYN-3", the only norm it cites, does not say, and "SYN-3" is right
+      Then the proposal lists the defect after the gaps of layer 1, under "Defects of derived-norms generators, one issue each after your yes:", one line per derived norm, such as "a. grammar:7 (AU-11): makes * right-associative, which SYN-3 does not say", whose wording does not bind
+      And the changes of the final proposal hold no scenario that checks what "grammar:7" adds to "SYN-3"
+      And "## Derived norms" of AU-11 still cites "grammar:7", as ACU-78 says
+
+    Scenario: What the script prints for the issue
+      When the skill runs the command "derived-norms-generator" of the script with the norms commit and "grammar:7"
+      Then the script prints one JSON object with exactly these fields: "derived_norm_id", "derived_norm_fingerprint", "type", "name", "path", "first_line", "last_line" and "cited_norms", as the list of derived norms of its type, "grammar", at the norms commit gives them; "status_file", the path of the status file of the type at the norms commit, or null; "generator", the object "generator" of its first line, or null; "marketplace_repository", or null; "issue_body_start"; and "no_issue_message", null or the line that says why no issue can be opened
+      And the status file of the type is the one file under "specs-derived/<type>/" at the norms commit, other than its list of derived norms, whose first line is a JSON object with "type" "meta" and with "generator" an object of exactly "plugin", "version" and "marketplace_commit", each a string (NRM-5); when no file, or more than one, is such a file, "status_file", "generator" and "marketplace_repository" are null
+      And "issue_body_start" is these four lines, each ended by a line feed, which bind byte for byte once filled, the cited norms in the order of "cited_norms", joined by ", ":
+        """
+        Derived norm: <derived norm ID>@<derived norm fingerprint>, of the type <type>, lines <first_line> to <last_line> of <path>
+        Cited norms: <norm ID>@<norm hash>, <norm ID>@<norm hash>
+        Generator: <plugin> <version>, marketplace commit <marketplace_commit>
+        Norms commit: <norms commit, 40 hex digits>
+        """
+      And when "generator" is null, its third line is "Generator: no status file with a generator (NRM-5)"
+      And the script reads nothing else of the norms repository than, at the norms commit, with "git ls-tree" and "git show" (ACU-59), what gives the types of derived norms of the norms commit and the files of "specs-derived/<type>/": of the lists of derived norms, only that of the type of the derived norm ID, so a list of another type that cannot be read changes nothing of the output
+
+    Scenario Outline: The derived norm ID cannot be looked up
+      Given <case>
+      When the skill runs the command "derived-norms-generator" of the script with the norms commit and "grammar:7"
+      Then the script prints "acceptance-management:define: <message>" and exits 1
+      And the message binds byte for byte once filled, where "grammar:7" stands for the derived norm ID given, "grammar" for its type, "acme/billing-norms" for "<owner>/<name>" of the norms repository in "project.json" and "9fceb02" for the first 7 hex digits of the norms commit
+
+      Examples:
+        | case | message |
+        | the types of derived norms of the norms commit cannot be read, as the scenario "The types of derived norms read" of ACU-58 says | acme/billing-norms: the types of derived norms at 9fceb02 cannot be read (NRM-16) |
+        | the types of derived norms of the norms commit do not hold "grammar" | grammar:7 is not a derived norm of the norms commit |
+        | the norms commit holds no file "specs-derived/grammar/derived-norms.jsonl" | acme/billing-norms has no specs-derived/grammar/derived-norms.jsonl at 9fceb02 |
+        | "specs-derived/grammar/derived-norms.jsonl" at the norms commit does not meet NRM-12, as the scenario "The list of derived norms read" of ACU-58 says | acme/billing-norms: specs-derived/grammar/derived-norms.jsonl does not meet NRM-12 |
+        | that list holds no line with "derived_norm_id" "grammar:7" | grammar:7 is not a derived norm of the norms commit |
+
+    Scenario Outline: The marketplace repository
+      Given "generator" names the plugin "clean-derived-norms" with the marketplace commit "<sha>"
+      And <installed>
+      Then "marketplace_repository" is <result>
+
+      Examples:
+        | installed | result |
+        | "plugins" of "~/.claude/plugins/installed_plugins.json" holds the key "clean-derived-norms@jpchauny-plugins", and "~/.claude/plugins/known_marketplaces.json" holds "jpchauny-plugins" with "source" {"source": "github", "repo": "jpchauny/claude-plugins"} | "jpchauny/claude-plugins" |
+        | "plugins" holds the keys "clean-derived-norms@a" and "clean-derived-norms@b", and only an entry of "clean-derived-norms@a" has "gitCommitSha" "<sha>" | the "repo" of "a" |
+        | "plugins" holds the keys "clean-derived-norms@a" and "clean-derived-norms@b", and an entry of each, or of neither, has "gitCommitSha" "<sha>" | null |
+        | "plugins" holds no key "clean-derived-norms@<marketplace>" | null |
+        | the "source" of the marketplace is not "github", or its "repo" is not "<owner>/<name>" | null |
+        | either file is missing or is not a JSON object | null |
+
+    Scenario Outline: Why no issue can be opened
+      Given <case>
+      Then "no_issue_message" is "<message>"
+      And the message binds byte for byte once filled, where "grammar:7" stands for the derived norm ID given, "grammar" for its type and "clean-derived-norms" for "plugin" of "generator", printed as ACU-58 says for a path, so that no name of a plugin forges a line
+
+      Examples:
+        | case | message |
+        | "generator" is null | acceptance-management:define: the output of grammar has no status file with a generator (NRM-5); no issue is opened for grammar:7 |
+        | "generator" is not null and "marketplace_repository" is null | acceptance-management:define: no installed marketplace on GitHub holds the plugin clean-derived-norms; no issue is opened for grammar:7 |
+
+    Scenario: The issue
+      When the requester has said that the proposal is final
+      Then after the questions of ACU-68, and before the choice of ACU-71, for each defect of a derived-norms generator whose "no_issue_message" is null, in the order of the proposal, the skill shows the title and the body of its issue and asks "Open the issue '<title>' in <marketplace_repository>? (yes/no)"
+      And "<title>" is "Defect of a derived-norms generator: <derived norm ID>: <what does not follow>", here "Defect of a derived-norms generator: grammar:7: makes * right-associative, which SYN-3 does not say"
+      And the body is "issue_body_start", one empty line, and what of the derived norm does not follow from which of its cited norms
+      And on yes it opens it at once with "gh issue create -R <marketplace_repository> --title <title> --body <body>", and reads no file of the marketplace repository
+
+    Scenario: No issue can be opened
+      Given "no_issue_message" of a defect is not null
+      Then the proposal still lists the defect, the skill asks no question of it, and before the choice of ACU-71 it says "no_issue_message" as it is
+
+    Scenario: The issue cannot be opened
+      Given "gh issue create" fails for the issue of a defect of a derived-norms generator
+      Then the skill says "acceptance-management:define: cannot open the issue in jpchauny/claude-plugins", and goes on with the next defect
+      And the message binds byte for byte once filled, where "jpchauny/claude-plugins" stands for "marketplace_repository" of the defect
+      And the changes and their commits are not affected
+
+    Scenario: No issue without a yes (must not)
+      Given the requester says anything but yes to the defect
+      Then the skill opens no issue
+
   Rule: ACU-69 Every file that a commit writes passes the checks of the script before the commit
-    Rationale: every reader of the acceptance repository, the scripts of the module and layer 4 among them, must be able to read every committed file; checked by the script before the commit, no commit of define adds a format error or a norm citation that is not current, while an error already at HEAD that the commit does not touch does not block it.
+    Rationale: every reader of the acceptance repository, the scripts of the module and layer 4 among them, must be able to read every committed file; checked by the script before the commit, no commit of define adds a format error, a norm citation or a derived norm citation that is not current, or a derived norm not cited, while an error already at HEAD that the commit does not touch does not block it.
 
     Scenario: The files written
       When the skill has written the files of a commit
-      Then every norm citation in the file of an acceptance unit that it wrote has the citation status "current"
+      Then every norm citation and every derived norm citation in the file of an acceptance unit that it wrote has the citation status "current", and that file has no derived norm not cited (ACU-62)
       And the inventory of the working tree (ACU-60) shows no error in a file that the commit writes, and no other error that the inventory at "HEAD" does not hold with the same path and message
       And "acceptance.json" differs from "HEAD" only in the fields that ACU-73 lets the skill write, and each value of "test_command" and "product" that differs from "HEAD" is one that ACU-77 does not refuse
 
@@ -511,7 +693,7 @@ Feature: Define the acceptance areas and acceptance units
     Rationale: the requester approves each commit (LAY-9), and may want one commit to review or one per change to keep each apart; a command that stages only the files of its changes keeps the work of other sessions out of the commit, and the checks that the repository did not move since the start keep the command from publishing what the requester never saw.
 
     Scenario: The choice
-      Given the requester has said that the proposal is final, and answered every question of ACU-66 and ACU-68
+      Given the requester has said that the proposal is final, and answered every question of ACU-66, ACU-68 and ACU-79
       Then the skill asks "1. one commit with every change; 2. one commit per change", and writes nothing until the requester answers
 
     Scenario: One commit with every change
@@ -615,7 +797,7 @@ Feature: Define the acceptance areas and acceptance units
 
     Scenario: In a run
       Given the skill runs as the step of layer 3 of a run
-      Then it does as ACU-64 to ACU-71 and ACU-77 say, and the step goes on only once the requester has decided on every change (ACU-37, ACU-41)
+      Then it does as ACU-64 to ACU-71, ACU-77 and ACU-79 say, and the step goes on only once the requester has decided on every change (ACU-37, ACU-41)
       And when its line "Next:" holds the part of the implementation planner, the step goes on with /acceptance-management:plan (ACU-37, PLN-1)
       And then, whatever its line "Next:" holds, when neither "test_command" nor "product" of "acceptance.json" is empty at "HEAD", the step goes on with /acceptance-management:write-acceptance-tests, which proposes every acceptance test that is missing or stale, also those that no commit of this step changed (ACU-37, WAT-1)
 
@@ -630,7 +812,7 @@ Feature: Define the acceptance areas and acceptance units
       Then the skill names no increment, writes no line "Increment:", and decides nothing of "plan.json" (ACU-9, ACU-44)
 
     Scenario: Other layers
-      Then the skill writes nothing in the repositories of layers 0, 1, 2 and 4, other than the issues of ACU-68
+      Then the skill writes nothing in the repositories of layers 0, 1, 2 and 4, other than the issues of ACU-68, and nothing in any other repository, other than the issues of ACU-79
       And it never reads the specs repository or a code repository (LAY-8)
 
     Scenario: The work of other sessions

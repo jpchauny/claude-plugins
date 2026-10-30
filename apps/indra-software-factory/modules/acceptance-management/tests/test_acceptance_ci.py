@@ -151,6 +151,28 @@ class AcceptanceCI(unittest.TestCase):
         self.assertEqual(line["for"]["norm_hashes"]["INV-7"], "")
         self.assertEqual(line["for"]["norm_hashes"]["INV-9"], "11112222")
 
+    def test_acu35_derived_norm_fingerprints(self):
+        """ACU-35: "derived_norm_fingerprints" of "for" holds the derived norm citations of "## Derived norms" of the
+        acceptance unit, or of the acceptance units that the scenarios of the acceptance area cross, at
+        acceptance_commit; a derived norm cited with two derived norm fingerprints maps to the empty string."""
+        r = self.run_ci()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.records("AU-1")[0]["for"]["derived_norm_fingerprints"], {})
+        self.assertEqual(list(self.records("AU-1")[0]["for"]),
+                         ["hashes", "norm_hashes", "derived_norm_fingerprints", "files", "reference_commits"])
+        write(os.path.join(self.acc, "units", "AU-1.md"),
+              AU1 + "\n## Derived norms\n\n- grammar:7@3a4b5c6d: the sum\n- semantics:2@1a2b3c4d: the overflow\n")
+        write(os.path.join(self.acc, "units", "AU-2.md"),
+              AU2 + "\n## Derived norms\n\n- grammar:7@99998888: the difference\n")
+        git(self.acc, "add", "-A")
+        git(self.acc, "commit", "-q", "-m", "derived norms")
+        r = self.run_ci(date="2026-10-28T00:00:00+00:00")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.records("AU-1")[-1]["for"]["derived_norm_fingerprints"],
+                         {"grammar:7": "3a4b5c6d", "semantics:2": "1a2b3c4d"})
+        self.assertEqual(self.records("AA-1")[-1]["for"]["derived_norm_fingerprints"],
+                         {"grammar:7": "", "semantics:2": "1a2b3c4d"})
+
     def test_acu35_an_area_crosses_only_the_units_of_its_scenarios(self):
         write(os.path.join(self.acc, "areas", "AA-1.md"),
               AA1.replace("Arithmetic.", "Arithmetic, as @unit:AU-2 says.").replace("@unit:AU-2 ", "@unit:AU-4 "))

@@ -35,8 +35,9 @@ draft overwrites it.
 - Read the acceptance repository only at its `HEAD`: the inventory of step 2,
   and the files of `units/` and `areas/` with `git -C REPO show HEAD:<path>`.
   Never read the working tree of the acceptance repository, a file of the
-  norms repository, a norm text, the specs repository, a code repository or a
-  published build; answer which component implements an acceptance unit from
+  norms repository, a norm text, a derived norm, the specs repository, a code
+  repository or a published build (the script alone reads the lists of
+  derived norms, for `behind_layer_2`); answer which component implements an acceptance unit from
   its scenarios, the files of `areas/` and what the requester says (PLN-3,
   LAY-8, ACU-12).
 - Commit and push only with the command that `PLAN commit` prints, as it is,

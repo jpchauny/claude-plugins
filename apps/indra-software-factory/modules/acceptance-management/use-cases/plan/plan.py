@@ -6,8 +6,10 @@ module, with the checks before a commit and the commit command of ACU-75; the
 fingerprints (ACU-51, ACU-52, ACU-54) those of scripts/acceptance_hashes.py;
 and the forms of the paths of areas/ and units/ those of
 scripts/acceptance_repository_files.py, the reading of the files of the
-acceptance repository that define and write-acceptance-tests share. This
-script imports all three.
+acceptance repository that define and write-acceptance-tests share, with
+the reading of the lists of derived norms (ACU-58, ACU-78), from which
+PLN-6 tells whether an acceptance unit is behind layer 2; it reads no line of
+a derived norm (PLN-3). This script imports all three.
 
 Usage (REPO is the working directory of the skill; DRAFT is a file in the
 form of plan.json, outside every repository of the project; every command
@@ -87,7 +89,8 @@ sys.dont_write_bytecode = True
 import acceptance_hashes as hashes  # noqa: E402
 import acceptance_repository_checks as checks  # noqa: E402
 from acceptance_repository_checks import git, ls_tree, out, show  # noqa: E402
-from acceptance_repository_files import files_of_layer_3, number, plural  # noqa: E402
+from acceptance_repository_files import (files_of_layer_3, number, plural, read_derived_norms,  # noqa: E402
+                                         scope_of)
 
 PREFIX = "acceptance-management:plan: "
 UNIT_ID = re.compile(r"AU-[1-9][0-9]*")
@@ -354,6 +357,35 @@ def norm_hashes_at(where, norms_commit):
     return found
 
 
+def derived_norms_at(where, norms_commit):
+    """PLN-2, PLN-6: the derived norm fingerprint of each derived norm of the norms commit, and the derived norms, read
+    from the lists of derived norms as define reads them (ACU-58, ACU-78); never the lines of a derived norm (PLN-3)."""
+    try:
+        return read_derived_norms(where, norms_commit)
+    except checks.Refusal as refusal:
+        raise Stop(refusal.message)
+
+
+def behind_layer_2(data, norm_hashes, derived_norms):
+    """PLN-6, the term acceptance unit behind layer 2 of module.md: a norm citation of "## Norms" that is not current; a
+    derived norm citation of "## Derived norms" whose derived norm fingerprint is not that of the norms commit, or whose
+    derived norm the norms commit does not hold; or a derived norm of the scope that "## Derived norms" does not
+    cite (ACU-78)."""
+    norm_citations = hashes.norm_citations(data)
+    if any(norm_hashes.get(norm_id) != norm_hash for norm_id, norm_hash, _ in norm_citations):
+        return True
+    derived_norm_fingerprint_in_norms_repository = {d["derived_norm_id"]: d["derived_norm_fingerprint"]
+                                                    for d in derived_norms}
+    derived_norms_cited = set()
+    for derived_norm_id, derived_norm_fingerprint_in_acceptance_unit, _ in hashes.derived_norm_citations(data):
+        derived_norms_cited.add(derived_norm_id)
+        if (derived_norm_fingerprint_in_norms_repository.get(derived_norm_id)
+                != derived_norm_fingerprint_in_acceptance_unit):
+            return True
+    return any(d["derived_norm_id"] not in derived_norms_cited
+               for d in scope_of([norm_id for norm_id, _, _ in norm_citations], derived_norms))
+
+
 def _area_line(lines):
     """The area ID of the line "Area:" of an acceptance unit: the first line after the heading that is not empty."""
     for line in lines[1:]:
@@ -372,7 +404,7 @@ def _unit_hash(data):
         return None
 
 
-def read_acceptance_unit(unit_id, data, data_at_plan_commit, plan_commit, norm_hashes):
+def read_acceptance_unit(unit_id, data, data_at_plan_commit, plan_commit, norm_hashes, derived_norms=()):
     acceptance_unit = {"unit_id": unit_id, "title": None, "area_id": None, "unit_hash": None,
                        "since_the_plan_commit": None, "behind_layer_2": False, "increment_name": None,
                        "position_in_current_plan": None}
@@ -381,8 +413,7 @@ def read_acceptance_unit(unit_id, data, data_at_plan_commit, plan_commit, norm_h
         acceptance_unit["title"] = checks.heading_title(lines, unit_id)
         acceptance_unit["area_id"] = _area_line(lines)
         acceptance_unit["unit_hash"] = hashes.unit_hash(data)
-        acceptance_unit["behind_layer_2"] = any(norm_hashes.get(norm_id) != norm_hash
-                                                for norm_id, norm_hash, _ in hashes.norm_citations(data))
+        acceptance_unit["behind_layer_2"] = behind_layer_2(data, norm_hashes, derived_norms)
     except UnicodeDecodeError:
         pass
     if plan_commit is None or data_at_plan_commit is None:
@@ -429,6 +460,7 @@ def inventory(where, norms_commit):
     """PLN-4: the inventory of the plan, at HEAD of the acceptance repository and at the plan commit."""
     root = where["root"]
     norm_hashes = norm_hashes_at(where, norms_commit)
+    derived_norms = derived_norms_at(where, norms_commit)
     plan_bytes = show(root, "HEAD", "plan.json")
     # The plan commit (Terms): none when HEAD holds no plan.json, even when a commit deleted it.
     plan_commit = (out(root, "log", "-1", "--format=%H", "HEAD", "--", "plan.json") or None
@@ -438,7 +470,7 @@ def inventory(where, norms_commit):
     for unit_id, path in sorted(acceptance_unit_files.items(), key=lambda kv: number(kv[0])):
         at_plan_commit = show(root, plan_commit, path) if plan_commit else None
         acceptance_units.append(read_acceptance_unit(unit_id, show(root, "HEAD", path) or b"", at_plan_commit,
-                                                     plan_commit, norm_hashes))
+                                                     plan_commit, norm_hashes, derived_norms))
     if plan_bytes is None:
         errors, error_of_reading, value = [], False, None
     else:
@@ -524,6 +556,8 @@ def start(cwd, arguments):
     message = plan_json_status(context["root"])
     if message is not None:
         raise Stop(message)
+    # PLN-2, last row: derived_norms of project.json and the lists of derived norms, as ACU-58 of define.md reads them.
+    derived_norms_at(context, context["norms_commit"])
     inventory_of_the_plan = inventory(context, context["norms_commit"])
     return {"acceptance_repository": context["acceptance_repository"],
             "norms_repository": context["norms_repository"],

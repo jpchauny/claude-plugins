@@ -170,6 +170,7 @@ class Fixture(unittest.TestCase):
         self.project = json.dumps({"project": "billing", "repositories": repos}, indent=2) + "\n"
         self.norms = self.clone("billing-norms", {
             "data/tree.jsonl": tree_jsonl(),
+            "project.json": self.project,
             "specs-repo-annotated/project.json": self.project,
             "specs-repo-annotated/billing/invoices.md": "# Invoices\n"})
         self.acc = self.clone("billing-acceptance", {
@@ -517,7 +518,8 @@ class Inventory(Fixture):
     def test_acu60_binding_example(self):
         inv = self.inventory()
         self.assertEqual(list(inv), ["norms_commit", "acceptance_commit", "default_done_profile", "next_ids", "norms",
-                                     "acceptance_areas", "acceptance_units", "errors"])
+                                     "derived_norms", "acceptance_areas", "acceptance_units", "errors"])
+        self.assertEqual(inv["derived_norms"], [])
         self.assertEqual(inv["norms_commit"], self.norms_commit())
         self.assertEqual(inv["default_done_profile"], "product")
         self.assertEqual(inv["next_ids"], {"acceptance_area": "AA-2", "acceptance_unit": "AU-4", "scenario": "SC-10"})
@@ -542,6 +544,7 @@ class Inventory(Fixture):
                  "hash_in_norms_repository": "7d6e5f40"},
                 {"norm_id": "INV-15", "hash_in_acceptance_unit": "9e8d7c6b", "citation_status": "current",
                  "hash_in_norms_repository": "9e8d7c6b"}],
+            "derived_norm_citations": [], "derived_norms_not_cited": [],
             "scenarios": [{"scenario_id": "SC-5", "name": "Three invoices give three rows", "scenario_hash": "147d88d2",
                            "norms": ["INV-7", "INV-12"]},
                           {"scenario_id": "SC-6", "name": "A cancelled invoice gives no row",
@@ -1571,6 +1574,598 @@ class Fill(WritingFixture):
         self.assertEqual(json.loads(self.script("rollback", self.acc, "--change", "fill acceptance.json")),
                          ["acceptance.json"])
         self.assertEqual(read(os.path.join(self.acc, "acceptance.json")), before)
+
+
+# ---------------------------------------------------------------- the derived norms (ACU-58, ACU-60 to ACU-62, ACU-78)
+
+def derived_norm_line(type_of_derived_norms, derived_norm_number, derived_norm_fingerprint, name, path, first, last,
+                      cited):
+    return json.dumps({"kind": "derived_norm", "derived_norm_id": f"{type_of_derived_norms}:{derived_norm_number}",
+                       "derived_norm_fingerprint": derived_norm_fingerprint, "name": name, "path": path, "first_line": first,
+                       "last_line": last, "cited_norms": [{"norm_id": n, "norm_hash": h} for n, h in cited]})
+
+
+def list_of_derived_norms(type_of_derived_norms, last, *lines):
+    """NRM-12: a list of derived norms, its meta line first."""
+    meta = json.dumps({"kind": "meta", "type": type_of_derived_norms, "last_derived_norm_number": last})
+    return "".join(line + "\n" for line in (meta,) + lines)
+
+
+GRAMMAR = list_of_derived_norms(
+    "grammar", 7,
+    derived_norm_line("grammar", 2, "2b2b2b2b", "customer", "specs-derived/grammar/billing.lark", 1, 2,
+                      [("CUS-1", "c0c0c0c0")]),
+    derived_norm_line("grammar", 7, "3a4b5c6d", "row", "specs-derived/grammar/billing.lark", 4, 6,
+                      [("INV-7", "5a627175")]))
+SEMANTICS = list_of_derived_norms(
+    "semantics", 32,
+    derived_norm_line("semantics", 31, "6a7b8c9d", "E-Export", "specs-derived/semantics/eval.md", 10, 15,
+                      [("INV-12", "7d6e5f40"), ("INV-15", "9e8d7c6b")]),
+    derived_norm_line("semantics", 32, "9c0d1e2f", "E-Row", "specs-derived/semantics/eval.md", 17, 20,
+                      [("INV-7", "5a627175")]))
+
+DERIVED_NORMS_OF_AU3 = """
+## Derived norms
+
+- grammar:7@3a4b5c6d: the rule of a row
+- semantics:31@5e6f7a8b: the export
+"""
+
+
+def with_derived_norms(text, part=DERIVED_NORMS_OF_AU3):
+    """The file of an acceptance unit with `part` between "## Norms" and "## Scenarios" (ACU-8)."""
+    return text.replace("\n## Scenarios\n", part + "\n## Scenarios\n", 1)
+
+
+class DerivedNormsFixture(Fixture):
+    """A project whose project.json names the types "grammar" and "semantics" of derived_norms, with their lists."""
+
+    types_of_derived_norms = ("grammar", "semantics")
+
+    def setUp(self):
+        super().setUp()
+        project = json.loads(self.project)
+        project["derived_norms"] = [{"type": t, "use_case": f"/clean-derived-norms:derive-{t}"}
+                                    for t in self.types_of_derived_norms]
+        self.set_project(json.dumps(project, indent=2) + "\n")
+        self.set_lists({"grammar": GRAMMAR, "semantics": SEMANTICS})
+
+    def set_project(self, text):
+        self.project = text
+        write(os.path.join(self.norms, "project.json"), text)
+        write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), text)
+        self.commit_all(self.norms)
+        write(os.path.join(self.acc, "project.json"), text)
+        self.commit_all(self.acc)
+
+    def set_lists(self, lists):
+        for type_of_derived_norms, text in lists.items():
+            path = os.path.join(self.norms, "specs-derived", type_of_derived_norms, "derived-norms.jsonl")
+            if text is None:
+                if os.path.exists(path):
+                    os.remove(path)
+            else:
+                write(path, text, "wb" if isinstance(text, bytes) else "w")
+        self.commit_all(self.norms)
+        git(self.norms, "fetch", "-q", "origin")
+
+
+class DerivedNorms(DerivedNormsFixture):
+    """ACU-58, ACU-60, ACU-61, ACU-62, ACU-64, ACU-78 of define.md."""
+
+    def test_acu60_acu62_binding_example_of_the_derived_norms(self):
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(AU3))
+        self.commit_all(self.acc)
+        inv = self.inventory()
+        self.assertEqual([d["derived_norm_id"] for d in inv["derived_norms"]],
+                         ["grammar:2", "grammar:7", "semantics:31", "semantics:32"])
+        self.assertEqual(inv["derived_norms"][1], {
+            "derived_norm_id": "grammar:7", "derived_norm_fingerprint": "3a4b5c6d", "name": "row",
+            "path": "specs-derived/grammar/billing.lark", "first_line": 4, "last_line": 6,
+            "cited_norms": [{"norm_id": "INV-7", "norm_hash": "5a627175"}]})
+        au3 = self.unit_of(inv, "AU-3")
+        self.assertEqual(au3["derived_norm_citations"], [
+            {"derived_norm_id": "grammar:7", "derived_norm_fingerprint_in_acceptance_unit": "3a4b5c6d", "citation_status": "current",
+             "derived_norm_fingerprint_in_norms_repository": "3a4b5c6d"},
+            {"derived_norm_id": "semantics:31", "derived_norm_fingerprint_in_acceptance_unit": "5e6f7a8b",
+             "citation_status": "changed", "derived_norm_fingerprint_in_norms_repository": "6a7b8c9d"}])
+        self.assertEqual(au3["derived_norms_not_cited"],
+                         [{"derived_norm_id": "semantics:32", "derived_norm_fingerprint": "9c0d1e2f"}])
+        self.assertEqual(au3["errors"], [])
+        # AU-1 cites only INV-1, which no derived norm cites: its scope is empty.
+        au1 = self.unit_of(inv, "AU-1")
+        self.assertEqual((au1["derived_norm_citations"], au1["derived_norms_not_cited"]), ([], []))
+
+    def test_acu62_retired_derived_norm_citation(self):
+        part = DERIVED_NORMS_OF_AU3.replace("semantics:31@5e6f7a8b", "semantics:99@5e6f7a8b")
+        au3 = self.unit_errors(with_derived_norms(AU3, part))
+        self.assertEqual([(c["derived_norm_id"], c["citation_status"], c["derived_norm_fingerprint_in_norms_repository"])
+                          for c in au3["derived_norm_citations"]],
+                         [("grammar:7", "current", "3a4b5c6d"), ("semantics:99", "retired", None)])
+        self.assertEqual([d["derived_norm_id"] for d in au3["derived_norms_not_cited"]], ["semantics:31", "semantics:32"])
+
+    def test_acu62_a_type_that_project_json_does_not_name_is_retired(self):
+        part = DERIVED_NORMS_OF_AU3 + "- zzz:1@5e6f7a8b: none\n"
+        au3 = self.unit_errors(with_derived_norms(AU3, part))
+        self.assertEqual(au3["derived_norm_citations"][-1]["citation_status"], "retired")
+
+    def unit_errors(self, text, uid="AU-3"):
+        write(os.path.join(self.acc, "units", f"{uid}.md"), text)
+        self.commit_all(self.acc)
+        return self.unit_of(self.inventory(), uid)
+
+    def test_acu61_format_errors_of_derived_norms(self):
+        current = "\n## Derived norms\n\n- grammar:7@3a4b5c6d: a row\n- semantics:31@6a7b8c9d: the export\n"
+        cases = [
+            (with_derived_norms(AU3, "\n## Derived norms\n\nNone.\n"), "no derived norm citation in ## Derived norms", 17),
+            (with_derived_norms(AU3, current + "- grammar:7: no fingerprint\n"), "not a derived norm citation", 21),
+            (with_derived_norms(AU3, current + "- INV-7@5a627175: a norm\n"), "not a derived norm citation", 21),
+            (with_derived_norms(AU3, current + "- grammar:7@3a4b5c6d: again\n"), "grammar:7 is cited twice", 21),
+            (with_derived_norms(AU3, current + "- grammar:2@2b2b2b2b: a customer\n"),
+             "grammar:2 is not in the scope of AU-3 (ACU-78)", 21),
+            (with_derived_norms(AU3, "\n## Derived norms\n\n- semantics:31@6a7b8c9d: the export\n"
+                                     "- grammar:7@3a4b5c6d: a row\n- semantics:32@9c0d1e2f: a row\n"),
+             "grammar:7 is not in the order of ACU-78", 20),
+            (with_derived_norms(AU3, "\n## Derived norms\n\n- zzz:1@3a4b5c6d: x\n- grammar:7@3a4b5c6d: a row\n"),
+             "grammar:7 is not in the order of ACU-78", 20),
+            (AU3.replace("\n## Non-goals\n", "\n## Derived norms\n\n- grammar:7@3a4b5c6d: a row\n\n## Non-goals\n"),
+             "parts are not those of ACU-8", 17),
+            (with_derived_norms(AU3, current + "\n## Derived norms\n\n- semantics:32@9c0d1e2f: a row\n"),
+             "parts are not those of ACU-8", 22),
+        ]
+        for text, message, line in cases:
+            with self.subTest(message=message, line=line):
+                au3 = self.unit_errors(text)
+                self.assertIn(message, self.messages(au3))
+                found = next(e for e in au3["errors"] if e["message"] == message)
+                self.assertEqual(found["line"], line)
+        # A changed citation out of the scope is no error of ACU-61: its citation status says it (ACU-62).
+        au3 = self.unit_errors(with_derived_norms(AU3, current.replace(
+            "\n- grammar:7", "\n- grammar:2@00000000: a customer\n- grammar:7")))
+        self.assertEqual(au3["errors"], [])
+        self.assertEqual(au3["derived_norm_citations"][0]["citation_status"], "changed")
+        # The scope and the order hold: no error.
+        self.assertEqual(self.unit_errors(with_derived_norms(
+            AU3, current + "- semantics:32@9c0d1e2f: a row\n"))["errors"], [])
+
+    def test_acu61_only_one_order_error(self):
+        part = ("\n## Derived norms\n\n- semantics:32@9c0d1e2f: a row\n- semantics:31@6a7b8c9d: the export\n"
+                "- grammar:7@3a4b5c6d: a row\n")
+        au3 = self.unit_errors(with_derived_norms(AU3, part))
+        self.assertEqual(self.messages(au3), ["semantics:31 is not in the order of ACU-78"])
+
+    def test_acu61_a_title_or_a_name_that_holds_a_derived_norm_citation(self):
+        au3 = self.unit_errors(AU3.replace("# AU-3 Export the invoices to CSV", "# AU-3 Export grammar:7@3a4b5c6d"))
+        self.assertIn("title holds a citation", self.messages(au3))
+        au3 = self.unit_errors(AU3.replace("Scenario: Three invoices give three rows",
+                                           "Scenario: Three rows (xgrammar:12@0ced57c3)"))
+        self.assertIn('scenario "Three rows (xgrammar:12@0ced57c3)" holds a citation', self.messages(au3))
+
+    def test_acu8_a_scenario_never_tags_a_derived_norm(self):
+        au3 = self.unit_errors(AU3.replace("@SC-6 @INV-15", "@SC-6 @INV-15 @grammar:7"))
+        self.assertIn("tag @grammar:7 is not @SC-<n> or @<norm ID>", self.messages(au3))
+
+    def test_acu61_not_utf8(self):
+        write(os.path.join(self.acc, "units", "AU-3.md"), b"\xff" + with_derived_norms(AU3).encode(), "wb")
+        self.commit_all(self.acc)
+        au3 = self.unit_of(self.inventory(), "AU-3")
+        self.assertEqual((au3["derived_norm_citations"], au3["derived_norms_not_cited"]), ([], []))
+
+    def test_acu64_the_summary_with_derived_norms(self):
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(AU3))
+        self.commit_all(self.acc)
+        out = self.started()
+        head = git(self.acc, "rev-parse", "HEAD").stdout.strip()
+        self.assertEqual(out["summary"],
+                         f"Layer 2 at {self.norms_commit()[:7]}: 10 norms, 4 derived norms. Layer 3 at {head[:7]}: "
+                         "1 acceptance area, 3 acceptance units; 1 norm citation changed, 0 retired; "
+                         "1 derived norm citation changed, 0 retired, 1 not cited; 0 format errors.")
+
+    def test_acu64_the_example_of_the_summary(self):
+        sys.path.insert(0, os.path.dirname(SCRIPT))
+        try:
+            import define
+        finally:
+            sys.path.pop(0)
+        units = [{"norm_citations": [{"citation_status": "changed"}],
+                  "derived_norm_citations": [{"citation_status": "changed"}, {"citation_status": "changed"}],
+                  "derived_norms_not_cited": [{}], "errors": []}] + [
+            {"norm_citations": [], "derived_norm_citations": [], "derived_norms_not_cited": [], "errors": []}] * 4
+        inv = {"norms_commit": "9fceb02d0", "acceptance_commit": "1a410efbd", "norms": [{}] * 240,
+               "derived_norms": [{}] * 31, "acceptance_areas": [{"errors": []}] * 2, "acceptance_units": units,
+               "errors": []}
+        self.assertEqual(define.summary(inv, True),
+                         "Layer 2 at 9fceb02: 240 norms, 31 derived norms. Layer 3 at 1a410ef: 2 acceptance areas, "
+                         "5 acceptance units; 1 norm citation changed, 0 retired; 2 derived norm citations changed, "
+                         "0 retired, 1 not cited; 0 format errors.")
+
+    def refused(self, message):
+        r = self.start()
+        self.assertEqual((r.returncode, r.stdout.strip()), (1, PREFIX + message), r.stderr)
+
+    def types_cannot_be_read(self):
+        return f"acme/billing-norms: the types of derived norms at {self.norms_commit()[:7]} cannot be read (NRM-16)"
+
+    def set_record(self, data):
+        """The record of the types of derived norms of the norms repository (NRM-16), or none when `data` is None."""
+        path = os.path.join(self.norms, "specs-derived", "types-of-derived-norms.json")
+        if data is None:
+            if os.path.exists(path):
+                os.remove(path)
+        else:
+            write(path, data, "wb" if isinstance(data, bytes) else "w")
+        self.commit_all(self.norms)
+        git(self.norms, "fetch", "-q", "origin")
+
+    def test_acu58_derived_norms_of_project_json_does_not_meet_orc20(self):
+        """ACU-58, ACU-78: with no record of the types of derived norms, the types come from project.json of the norms
+        commit, read as NRM-1 says, use_case included."""
+        for value in ("grammar", [{"type": "Grammar"}], [{"type": "grammar"}, {"type": "grammar"}], [{"use_case": "x"}],
+                      [{"type": "grammar\n"}], ["grammar"], [{"type": "grammar"}],
+                      [{"type": "grammar", "use_case": "not a use case"}], [{"type": "grammar", "use_case": 7}]):
+            with self.subTest(value=value):
+                project = json.loads(self.project)
+                project["derived_norms"] = value
+                self.set_project(json.dumps(project, indent=2) + "\n")
+                self.refused(self.types_cannot_be_read())
+
+    def test_acu58_project_json_of_the_norms_commit_cannot_be_read(self):
+        """ACU-58, NRM-1: no record, and a project.json at the root of the norms commit that cannot be read."""
+        for data in (None, b"\xff", b"not json", b"[]"):
+            with self.subTest(data=data):
+                path = os.path.join(self.norms, "project.json")
+                if data is None:
+                    os.remove(path)
+                else:
+                    write(path, data, "wb")
+                self.commit_all(self.norms)
+                git(self.norms, "fetch", "-q", "origin")
+                self.refused(self.types_cannot_be_read())
+
+    def test_acu78_the_record_gives_the_types_before_project_json(self):
+        """ACU-78, NRM-16: a record that meets NRM-16 gives the types of derived norms and their order, whatever
+        derived_norms of project.json, of the norms commit or of the acceptance repository, names."""
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(AU3))
+        self.commit_all(self.acc)
+        self.set_record('{"types_of_derived_norms": ["semantics", "grammar"]}\n')
+        self.assertEqual([d["derived_norm_id"] for d in self.inventory()["derived_norms"]],
+                         ["semantics:31", "semantics:32", "grammar:2", "grammar:7"])
+        au3 = self.unit_of(self.inventory(), "AU-3")
+        self.assertIn("semantics:31 is not in the order of ACU-78", [e["message"] for e in au3["errors"]])
+        self.set_record('{"types_of_derived_norms": ["grammar"]}\n')
+        self.assertEqual([d["derived_norm_id"] for d in self.inventory()["derived_norms"]], ["grammar:2", "grammar:7"])
+        au3 = self.unit_of(self.inventory(), "AU-3")
+        self.assertEqual([c["citation_status"] for c in au3["derived_norm_citations"]], ["current", "retired"])
+        # The record holds no type: the norms commit has no derived norm, and no list is read.
+        self.set_lists({"semantics": "not a list\n"})
+        self.set_record('{"types_of_derived_norms": []}\n')
+        self.assertEqual(self.inventory()["derived_norms"], [])
+        self.assertNotIn("derived norm", self.started()["summary"])
+
+    def test_acu78_a_record_that_does_not_meet_nrm16_leaves_project_json(self):
+        """ACU-78, NRM-16: a record that does not meet NRM-16 gives no type; project.json of the norms commit does."""
+        for data in ('{"types_of_derived_norms": ["semantics"]}', '{"types_of_derived_norms": ["semantics"]}\n\n',
+                     '\ufeff{"types_of_derived_norms": ["semantics"]}\n', b'{"types_of_derived_norms": ["\xff"]}\n',
+                     '{"types_of_derived_norms": ["semantics"], "x": 1}\n', '{"types_of_derived_norms": ["Semantics"]}\n',
+                     '{"types_of_derived_norms": ["semantics", "semantics"]}\n', '{"types_of_derived_norms": "x"}\n',
+                     '["semantics"]\n', '{"types_of_derived_norms": [NaN]}\n'):
+            with self.subTest(data=data):
+                self.set_record(data)
+                self.assertEqual([d["derived_norm_id"] for d in self.inventory()["derived_norms"]],
+                                 ["grammar:2", "grammar:7", "semantics:31", "semantics:32"])
+        # Neither the record nor project.json of the norms commit can be read.
+        project = json.loads(self.project)
+        project["derived_norms"] = [{"type": "Grammar"}]
+        self.set_project(json.dumps(project, indent=2) + "\n")
+        self.refused(self.types_cannot_be_read())
+
+    def test_acu78_never_the_project_json_of_the_acceptance_repository(self):
+        """ACU-78: the types come from the norms commit, never from project.json of the acceptance repository."""
+        project = json.loads(self.project)
+        project["derived_norms"] = [{"type": "Grammar"}]
+        text = json.dumps(project, indent=2) + "\n"
+        write(os.path.join(self.acc, "project.json"), text)
+        self.commit_all(self.acc)
+        write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), text)
+        self.commit_all(self.norms)
+        git(self.norms, "fetch", "-q", "origin")
+        self.assertEqual([d["derived_norm_id"] for d in self.inventory()["derived_norms"]],
+                         ["grammar:2", "grammar:7", "semantics:31", "semantics:32"])
+        self.started()
+
+    def test_acu58_a_list_of_derived_norms_is_missing(self):
+        self.set_lists({"grammar": None})
+        self.refused(f"acme/billing-norms has no specs-derived/grammar/derived-norms.jsonl at {self.norms_commit()[:7]}")
+
+    def test_acu58_the_first_type_in_the_order_of_derived_norms(self):
+        self.set_lists({"grammar": GRAMMAR.replace('"grammar:7"', '"grammar:9"'), "semantics": None})
+        self.refused(f"acme/billing-norms: specs-derived/grammar/derived-norms.jsonl does not meet NRM-12")
+
+    def test_acu58_a_list_that_does_not_meet_nrm12(self):
+        good = derived_norm_line("grammar", 2, "2b2b2b2b", "customer", "specs-derived/grammar/billing.lark", 1, 2,
+                                 [("CUS-1", "c0c0c0c0")])
+        meta = '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 7}'
+        bad_lists = {
+            "a byte order mark": "﻿" + GRAMMAR,
+            "not UTF-8": GRAMMAR.encode() + b"\xff\n",
+            "no line feed at the end": GRAMMAR[:-1],
+            "an empty line": GRAMMAR + "\n",
+            "a carriage return": GRAMMAR.replace("\n", "\r\n"),
+            "empty": "",
+            "the meta line of another type": GRAMMAR.replace('"type": "grammar"', '"type": "semantics"'),
+            "the fields of the meta line in another order":
+                '{"type": "grammar", "kind": "meta", "last_derived_norm_number": 7}\n',
+            "a negative last number": GRAMMAR.replace('"last_derived_norm_number": 7', '"last_derived_norm_number": -1'),
+            "a boolean last number": GRAMMAR.replace('"last_derived_norm_number": 7',
+                                                     '"last_derived_norm_number": true'),
+            "an ID above the last number": GRAMMAR.replace('"last_derived_norm_number": 7',
+                                                          '"last_derived_norm_number": 6'),
+            "an ID of another type": GRAMMAR.replace('"grammar:7"', '"semantics:7"'),
+            "an ID with a leading zero": GRAMMAR.replace('"grammar:7"', '"grammar:07"'),
+            "the IDs not in order": list_of_derived_norms("grammar", 7, *GRAMMAR.splitlines()[:0:-1]),
+            "an ID twice": GRAMMAR + good + "\n",
+            "a fingerprint in upper case": GRAMMAR.replace("3a4b5c6d", "3A4B5C6D"),
+            "a name of blanks": GRAMMAR.replace('"name": "row"', '"name": " \\t"'),
+            "a name that breaks a line": GRAMMAR.replace('"name": "row"', '"name": "r\\u2028ow"'),
+            "a name that is not valid Unicode": GRAMMAR.replace('"name": "row"', '"name": "\\ud800"'),
+            "a path outside the output": GRAMMAR.replace("specs-derived/grammar/billing.lark",
+                                                         "specs-derived/semantics/billing.lark"),
+            "a path that is the list": GRAMMAR.replace("specs-derived/grammar/billing.lark",
+                                                       "specs-derived/grammar/derived-norms.jsonl"),
+            "a path with ..": GRAMMAR.replace("specs-derived/grammar/billing.lark", "specs-derived/grammar/../x"),
+            "a first line of 0": GRAMMAR.replace('"first_line": 1', '"first_line": 0'),
+            "a first line after the last": GRAMMAR.replace('"first_line": 4', '"first_line": 7'),
+            "two derived norms that share a line": GRAMMAR.replace('"first_line": 4', '"first_line": 2'),
+            "no cited norm": GRAMMAR.replace('[{"norm_id": "INV-7", "norm_hash": "5a627175"}]', "[]"),
+            "cited norms not in order": GRAMMAR.replace(
+                '[{"norm_id": "INV-7", "norm_hash": "5a627175"}]',
+                '[{"norm_id": "INV-7", "norm_hash": "5a627175"}, {"norm_id": "INV-12", "norm_hash": "7d6e5f40"}]'),
+            "a cited norm that is not a norm ID": GRAMMAR.replace('"norm_id": "INV-7"', '"norm_id": "IN-7"'),
+            "a norm hash in upper case": GRAMMAR.replace('"norm_hash": "5a627175"', '"norm_hash": "5A627175"'),
+            "a norm hash of 7 digits": GRAMMAR.replace('"norm_hash": "5a627175"', '"norm_hash": "5a62717"'),
+            "a field more": GRAMMAR.replace('"kind": "derived_norm",', '"kind": "derived_norm", "x": 1,', 1),
+            "a field given twice": GRAMMAR.replace('"name": "row",', '"name": "row", "name": "row",'),
+            "a line of another kind": meta + "\n" + good.replace('"derived_norm"', '"rule"') + "\n",
+            "a constant": GRAMMAR.replace('"first_line": 4', '"first_line": NaN'),
+            "not JSON": meta + "\nnot json\n",
+        }
+        for case, text in bad_lists.items():
+            with self.subTest(case=case):
+                self.set_lists({"grammar": text})
+                self.refused("acme/billing-norms: specs-derived/grammar/derived-norms.jsonl does not meet NRM-12")
+
+    def test_acu58_a_list_with_only_its_meta_line(self):
+        self.set_lists({"grammar": list_of_derived_norms("grammar", 0), "semantics": list_of_derived_norms("semantics", 4)})
+        self.assertEqual(self.inventory()["derived_norms"], [])
+        self.started()
+
+    def test_acu78_a_project_without_derived_norms_reads_no_list(self):
+        project = json.loads(self.project)
+        del project["derived_norms"]
+        self.set_project(json.dumps(project, indent=2) + "\n")
+        self.set_lists({"grammar": "not a list\n"})
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(AU3))
+        self.commit_all(self.acc)
+        out = self.started()
+        self.assertNotIn("derived norm", out["summary"])
+        au3 = self.unit_of(self.inventory(), "AU-3")
+        self.assertEqual([c["citation_status"] for c in au3["derived_norm_citations"]], ["retired", "retired"])
+        self.assertEqual(au3["derived_norms_not_cited"], [])
+
+    def test_acu78_the_derived_norms_of_the_scope(self):
+        write(os.path.join(self.norms, "specs-derived", "grammar", "billing.lark"),
+              "// CUS-1@c0c0c0c0: x\ncustomer: NAME\n\n// INV-7@5a627175: a row \t\r\nrow: invoice\n  | x\n")
+        self.set_lists({})
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(AU3))
+        r = self.run_script("derived-norms", self.acc, "--norms-commit", self.norms_commit(), "AU-3")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        found = json.loads(r.stdout)
+        # ACU-67: exactly these fields, in this order.
+        self.assertEqual([list(d) for d in found], [["derived_norm_id", "derived_norm_fingerprint", "name", "path",
+                                                     "first_line", "last_line", "lines_of_derived_norm",
+                                                     "reason_in_acceptance_unit", "derived_norm_citation_without_reason"]] * 3)
+        self.assertEqual([(d["derived_norm_id"], d["derived_norm_fingerprint"], d["reason_in_acceptance_unit"],
+                           d["derived_norm_citation_without_reason"]) for d in found],
+                         [("grammar:7", "3a4b5c6d", "the rule of a row", "- grammar:7@3a4b5c6d: "),
+                          ("semantics:31", "6a7b8c9d", "the export", "- semantics:31@6a7b8c9d: "),
+                          ("semantics:32", "9c0d1e2f", None, "- semantics:32@9c0d1e2f: ")])
+        self.assertEqual({k: found[0][k] for k in ("name", "path", "first_line", "last_line")},
+                         {"name": "row", "path": "specs-derived/grammar/billing.lark", "first_line": 4, "last_line": 6})
+        # Its text: its lines at the norms commit, as steps 1 and 2 of NRM-14 give them (ACU-67).
+        self.assertEqual(found[0]["lines_of_derived_norm"], "// INV-7@5a627175: a row\nrow: invoice\n  | x")
+        self.assertIsNone(found[1]["lines_of_derived_norm"])  # the norms commit holds no specs-derived/semantics/eval.md
+        # The scope follows "## Norms" of the working tree: without INV-12 and INV-15, semantics:31 leaves it.
+        write(os.path.join(self.acc, "units", "AU-1.md"), AU1)
+        r = self.run_script("derived-norms", self.acc, "--norms-commit", self.norms_commit(), "AU-1")
+        self.assertEqual(json.loads(r.stdout), [])
+
+
+STATUS_LINE_OF_GRAMMAR = ('{"type":"meta","specs_commit":"' + "a" * 40 + '","generator":{"plugin":"clean-derived-norms",'
+                          '"version":"0.4.0","marketplace_commit":"' + "b" * 40 + '"},"model":"m"}\n'
+                          '{"type":"rule","name":"row"}\n')
+
+
+class DefectOfDerivedNormsGenerator(DerivedNormsFixture):
+    """ACU-79: what the script prints for the issue of a defect of a derived-norms generator."""
+
+    def setUp(self):
+        super().setUp()
+        self.home = os.path.join(self.root, "home")
+        os.makedirs(os.path.join(self.home, ".claude", "plugins"))
+        write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"), STATUS_LINE_OF_GRAMMAR)
+        write(os.path.join(self.norms, "specs-derived", "grammar", "billing.lark"), "row: invoice\n")
+        self.set_lists({})
+        self.set_plugins_of_claude_code({"clean-derived-norms@jpchauny-plugins": [{"gitCommitSha": "c" * 40}]},
+                                        {"jpchauny-plugins": {"source": {"source": "github",
+                                                                         "repo": "jpchauny/claude-plugins"}}})
+
+    def set_plugins_of_claude_code(self, plugins, marketplaces):
+        folder = os.path.join(self.home, ".claude", "plugins")
+        for name, value in (("installed_plugins.json", {"version": 2, "plugins": plugins}),
+                            ("known_marketplaces.json", marketplaces)):
+            path = os.path.join(folder, name)
+            if value is None or (name == "installed_plugins.json" and plugins is None):
+                if os.path.exists(path):
+                    os.remove(path)
+            else:
+                write(path, json.dumps(value))
+
+    def generator_of(self, derived_norm_id="grammar:7", code=0):
+        env = dict(ENV, HOME=self.home)
+        r = subprocess.run([sys.executable, "-I", SCRIPT, "derived-norms-generator", self.acc, "--norms-commit",
+                            self.norms_commit(), derived_norm_id], cwd=self.acc, env=env, capture_output=True,
+                           text=True)
+        self.assertEqual(r.returncode, code, r.stdout + r.stderr)
+        return json.loads(r.stdout) if code == 0 else r.stdout
+
+    def test_acu79_what_the_script_prints(self):
+        found = self.generator_of()
+        self.assertEqual(list(found), ["derived_norm_id", "derived_norm_fingerprint", "type", "name", "path",
+                                       "first_line", "last_line", "cited_norms", "status_file", "generator",
+                                       "marketplace_repository", "issue_body_start", "no_issue_message"])
+        self.assertEqual(found["status_file"], "specs-derived/grammar/status.jsonl")
+        self.assertEqual(found["generator"], {"plugin": "clean-derived-norms", "version": "0.4.0",
+                                              "marketplace_commit": "b" * 40})
+        self.assertEqual(found["marketplace_repository"], "jpchauny/claude-plugins")
+        self.assertIsNone(found["no_issue_message"])
+        self.assertEqual(found["issue_body_start"],
+                         "Derived norm: grammar:7@3a4b5c6d, of the type grammar, lines 4 to 6 of "
+                         "specs-derived/grammar/billing.lark\n"
+                         "Cited norms: INV-7@5a627175\n"
+                         f"Generator: clean-derived-norms 0.4.0, marketplace commit {'b' * 40}\n"
+                         f"Norms commit: {self.norms_commit()}\n")
+        self.assertEqual(self.generator_of("semantics:31")["issue_body_start"].splitlines()[1],
+                         "Cited norms: INV-12@7d6e5f40, INV-15@9e8d7c6b")
+
+    def test_acu79_no_status_file(self):
+        for files in ({"status.jsonl": None}, {"other.jsonl": STATUS_LINE_OF_GRAMMAR}):
+            with self.subTest(files=files):
+                for name, text in files.items():
+                    path = os.path.join(self.norms, "specs-derived", "grammar", name)
+                    if text is None:
+                        os.remove(path)
+                    else:
+                        write(path, text)
+                self.set_lists({})
+                found = self.generator_of()
+                self.assertEqual((found["status_file"], found["generator"], found["marketplace_repository"]),
+                                 (None, None, None))
+                self.assertEqual(found["issue_body_start"].splitlines()[2],
+                                 "Generator: no status file with a generator (NRM-5)")
+                self.assertEqual(found["no_issue_message"],
+                                 PREFIX + "the output of grammar has no status file with a generator (NRM-5); "
+                                 "no issue is opened for grammar:7")
+                write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"), STATUS_LINE_OF_GRAMMAR)
+                self.set_lists({})
+
+    def test_acu79_a_generator_that_does_not_meet_nrm5(self):
+        write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"),
+              STATUS_LINE_OF_GRAMMAR.replace('"version":"0.4.0",', ""))
+        self.set_lists({})
+        self.assertIsNone(self.generator_of()["generator"])
+
+    def test_acu79_the_marketplace_repository(self):
+        a = {"source": {"source": "github", "repo": "acme/a"}}
+        b = {"source": {"source": "github", "repo": "acme/b"}}
+        sha = "b" * 40
+        cases = [
+            ({"clean-derived-norms@a": [{"gitCommitSha": sha}], "clean-derived-norms@b": [{"gitCommitSha": "c"}]},
+             {"a": a, "b": b}, "acme/a"),
+            ({"clean-derived-norms@a": [{"gitCommitSha": sha}], "clean-derived-norms@b": [{"gitCommitSha": sha}]},
+             {"a": a, "b": b}, None),
+            ({"clean-derived-norms@a": [{"gitCommitSha": "c"}], "clean-derived-norms@b": [{"gitCommitSha": "d"}]},
+             {"a": a, "b": b}, None),
+            ({"other@a": [{"gitCommitSha": sha}]}, {"a": a}, None),
+            ({"clean-derived-norms@a": []}, {"a": {"source": {"source": "git", "url": "https://x/a.git"}}}, None),
+            ({"clean-derived-norms@a": []}, {"a": {"source": {"source": "github", "repo": "no-slash"}}}, None),
+            (None, {"a": a}, None),
+            ({"clean-derived-norms@a": []}, None, None),
+        ]
+        for plugins, marketplaces, expected in cases:
+            with self.subTest(plugins=plugins, marketplaces=marketplaces):
+                self.set_plugins_of_claude_code(plugins, marketplaces)
+                found = self.generator_of()
+                self.assertEqual(found["marketplace_repository"], expected)
+                self.assertEqual(found["no_issue_message"], None if expected else
+                                 PREFIX + "no installed marketplace on GitHub holds the plugin clean-derived-norms; "
+                                 "no issue is opened for grammar:7")
+
+    def test_acu79_a_derived_norm_id_that_the_norms_commit_does_not_hold(self):
+        self.assertEqual(self.generator_of("grammar:99", code=1).strip(),
+                         PREFIX + "grammar:99 is not a derived norm of the norms commit")
+        # A type that the types of derived norms of the norms commit do not hold has no list to read.
+        self.assertEqual(self.generator_of("zzz:1", code=1).strip(),
+                         PREFIX + "zzz:1 is not a derived norm of the norms commit")
+
+    def test_acu79_the_list_of_its_type_cannot_be_read(self):
+        commit = lambda: self.norms_commit()[:7]  # noqa: E731
+        self.set_lists({"grammar": None})
+        self.assertEqual(self.generator_of(code=1).strip(),
+                         PREFIX + f"acme/billing-norms has no specs-derived/grammar/derived-norms.jsonl at {commit()}")
+        self.set_lists({"grammar": b"x\n"})
+        self.assertEqual(self.generator_of(code=1).strip(),
+                         PREFIX + "acme/billing-norms: specs-derived/grammar/derived-norms.jsonl does not meet NRM-12")
+
+    def test_acu79_project_json_that_does_not_meet_orc20(self):
+        project = json.loads(self.project)
+        project["derived_norms"] = [{"type": "grammar"}, {"type": "grammar"}]
+        self.set_project(json.dumps(project, indent=2) + "\n")
+        self.assertEqual(self.generator_of(code=1).strip(), PREFIX + f"acme/billing-norms: the types of derived norms "
+                         f"at {self.norms_commit()[:7]} cannot be read (NRM-16)")
+
+    def test_acu79_the_types_of_the_record(self):
+        """ACU-79: a type that the record of the types of derived norms does not hold has no derived norm."""
+        write(os.path.join(self.norms, "specs-derived", "types-of-derived-norms.json"),
+              '{"types_of_derived_norms": ["semantics"]}\n')
+        self.commit_all(self.norms)
+        git(self.norms, "fetch", "-q", "origin")
+        self.assertEqual(self.generator_of(code=1).strip(), PREFIX + "grammar:7 is not a derived norm of the norms commit")
+
+    def test_acu79_reads_only_the_list_of_its_type(self):
+        """ACU-79: of the lists of derived norms, the script reads only that of the type of the derived norm ID."""
+        expected = self.generator_of()
+        for semantics in (None, b"x\n"):
+            with self.subTest(semantics=semantics):
+                self.set_lists({"semantics": semantics})
+                found = self.generator_of()
+                self.assertEqual({k: v for k, v in found.items() if k != "issue_body_start"},
+                                 {k: v for k, v in expected.items() if k != "issue_body_start"})
+                self.assertEqual(found["issue_body_start"].splitlines()[:3],
+                                 expected["issue_body_start"].splitlines()[:3])
+
+    def test_acu79_the_name_of_a_plugin_forges_no_line(self):
+        write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"),
+              STATUS_LINE_OF_GRAMMAR.replace('"clean-derived-norms"', '"clean\\nderived"'))
+        self.set_lists({})
+        self.assertEqual(self.generator_of()["no_issue_message"],
+                         PREFIX + 'no installed marketplace on GitHub holds the plugin "clean\\nderived"; '
+                         "no issue is opened for grammar:7")
+
+
+class WritingDerivedNorms(DerivedNormsFixture, WritingFixture):
+    """ACU-67, ACU-69 with derived norms."""
+
+    def test_acu69_a_written_unit_cites_its_scope(self):
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(
+            AU3.replace("INV-12@0c1d2e3f", "INV-12@7d6e5f40")))
+        problems = self.check(code=1)["problems"]
+        self.assertEqual([p["message"] for p in problems], [
+            "semantics:31@5e6f7a8b is changed; its derived norm fingerprint at the norms commit is 6a7b8c9d",
+            "semantics:32@9c0d1e2f is in the scope of AU-3 and not in ## Derived norms (ACU-78)"])
+        self.assertEqual(problems[0]["line"], 20)
+        part = ("\n## Derived norms\n\n- grammar:7@3a4b5c6d: a row\n- semantics:31@6a7b8c9d: the export\n"
+                "- semantics:32@9c0d1e2f: the row\n")
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(
+            AU3.replace("INV-12@0c1d2e3f", "INV-12@7d6e5f40"), part))
+        self.assertEqual(self.check()["problems"], [])
+
+    def test_acu69_a_retired_derived_norm_citation(self):
+        part = "\n## Derived norms\n\n- grammar:7@3a4b5c6d: a row\n- grammar:8@3a4b5c6d: gone\n"
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(
+            AU3.replace("INV-12@0c1d2e3f", "INV-12@7d6e5f40"), part))
+        messages = [p["message"] for p in self.check(code=1)["problems"]]
+        self.assertIn("grammar:8@3a4b5c6d is retired; its derived norm fingerprint at the norms commit is none: the "
+                      "derived norm is not in layer 2", messages)
 
 
 if __name__ == "__main__":

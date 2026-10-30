@@ -44,7 +44,10 @@ reads `acceptance.json` (ACU-6), builds the product of each code repository at
 its reference commit, runs the tests, and adds their results to `records/`
 ([ACU-35](specs/module.md#done-is-a-state-not-an-event)). It runs only when a
 reference commit or a file outside `records/` changed since the last recorded
-run. It takes the read-only token of the code repositories in `--token-file`,
+run. The `for` of each line it adds holds `derived_norm_fingerprints`, the
+derived norm citations of `## Derived norms` of the units that the folder
+tests; a line written before that field existed is read as holding `{}`. It
+takes the read-only token of the code repositories in `--token-file`,
 which it deletes at once, and refuses it in its environment, where a build
 could read it. Its tests run with the command above.
 
@@ -61,9 +64,16 @@ could read it. Its tests run with the command above.
   in changes that the requester approves. Its skill is
   [use-cases/define/SKILL.md](use-cases/define/SKILL.md); its script,
   `use-cases/define/define.py`, computes with no model the checks before the
-  skill starts, the inventory of the norms, the acceptance areas and the
-  acceptance units with their format
-  errors, the checks and the proposal of the values of `acceptance.json`
+  skill starts, the inventory of the norms, the derived norms, the acceptance
+  areas and the acceptance units with their format errors, the citation
+  statuses of their norm citations and derived norm citations, and the
+  derived norms not cited of each unit
+  ([ACU-78](specs/module.md#the-files-of-the-acceptance-repository)),
+  the derived norms that a unit must cite, with their text, what the issue
+  of a defect of a derived-norms generator needs, its marketplace repository
+  included
+  ([ACU-79](use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units)),
+  the checks and the proposal of the values of `acceptance.json`
   that the requester states, and the checks, the ID fields and the commit
   command of each change, with the code of `scripts/` that the use cases share (below). Its
   tests are `tests/test_define.py`, and run with the command above.
@@ -75,7 +85,9 @@ could read it. Its tests run with the command above.
   current plan as it can; it commits only `plan.json`, after the requester's
   yes. Its skill is [use-cases/plan/SKILL.md](use-cases/plan/SKILL.md); its
   script, `use-cases/plan/plan.py`, computes with no model the checks before
-  the skill starts, the inventory of the plan, the errors of a plan, the
+  the skill starts, the inventory of the plan (with whether each unit is
+  behind layer 2, from its norms and its derived norms, read from the lists
+  of derived norms only), the errors of a plan, the
   rendering of each draft and its changes of the plan, and writes and checks
   `plan.json` and builds its commit command. Its tests are
   `tests/test_plan.py`, and run with the command above.
@@ -93,7 +105,9 @@ could read it. Its tests run with the command above.
   acceptance tests that belong to no acceptance unit or acceptance area,
   checks the files written and builds the commit command of each change, and
   puts files back. It reads the format errors and the citation statuses from
-  the inventory of define, in `scripts/acceptance_repository_files.py`. Its
+  the inventory of define, in `scripts/acceptance_repository_files.py`,
+  which reads the lists of derived norms to tell which acceptance unit is
+  behind layer 2, and never the lines of a derived norm. Its
   tests are `tests/test_write_acceptance_tests.py`, and run with the command
   above.
 
@@ -112,12 +126,20 @@ use case imports the script of another:
   which define makes on the values that the requester states and
   write-acceptance-tests on those at `HEAD`.
 - `scripts/acceptance_repository_files.py`: the reading of the files of the
-  acceptance repository, the inventory of define (the norms, the acceptance
-  areas and acceptance units with their format errors, the citation statuses
-  and the ID fields) and a citation found in a line
-  ([ACU-56](specs/module.md#hashes-and-citations)), which define and
-  write-acceptance-tests read, and the
-  forms of the paths of `areas/` and `units/`, which plan reads too.
+  acceptance repository, the inventory of define (the norms, the derived
+  norms, the acceptance areas and acceptance units with their format errors,
+  the citation statuses and the ID fields) and a citation found in a line
+  ([ACU-56](specs/module.md#hashes-and-citations)), the derived norm
+  citations included, which define and write-acceptance-tests read; the
+  reading of the types of derived norms of a commit of the norms repository
+  (`specs-derived/types-of-derived-norms.json`, NRM-16, or else `derived_norms`
+  of its `project.json`), of its lists of derived norms
+  (`specs-derived/<type>/derived-norms.jsonl`, NRM-12) and the scope of a
+  unit (ACU-78), which define and plan read; and the forms of the paths of
+  `areas/` and `units/`, which plan reads too.
+- `scripts/acceptance_hashes.py`: the fingerprints of ACU-51 to ACU-54, and
+  the norm citations and derived norm citations of a unit (ACU-8, ACU-56),
+  which every script of the module reads.
 
 ## Not built yet
 

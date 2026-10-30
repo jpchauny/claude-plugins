@@ -6,8 +6,8 @@ description: Derive the semantics of Clean in Lean 4 (abstract syntax, typing, e
 # derive-semantics
 
 Implements [specs/derive-semantics.md](specs/derive-semantics.md) (DSM), with
-the rules of the module, CDN-1 to CDN-7, in [module.md](../../specs/module.md),
-and the interface of a derived-norms generator, NRM-1 to NRM-11, of the plugin
+the rules of the module, CDN-1 to CDN-10, in [module.md](../../specs/module.md),
+and the interface of a derived-norms generator, NRM-1 to NRM-15, of the plugin
 `norms-management`. Where a step does what `derive-grammar` does, it says so;
 its `SKILL.md` is `${CLAUDE_PLUGIN_ROOT}/use-cases/derive-grammar/SKILL.md`.
 
@@ -36,8 +36,8 @@ M="${CLAUDE_PLUGIN_ROOT}/scripts/derived_norms.py"
 
 What you read and write (DSM-1 (The use case reads only layer 2 and the
 grammar (NRM-3), and writes in the repository only under
-specs-derived/semantics/), DSM-3 (The output is one Lake project and one
-status file in the semantics folder)):
+specs-derived/semantics/), DSM-3 (The output is one Lake project, one list
+of derived norms and one status file in the semantics folder)):
 
 - Read `data/tree.jsonl`, `specs-repo-annotated/` for the context of a norm,
   and the grammar `specs-derived/grammar/clean.lark` (the script parses with
@@ -46,8 +46,9 @@ status file in the semantics folder)):
   (`Clean.lean`, `Clean/Ast.lean`, `Clean/Syntax.lean`, `Clean/Typing.lean`,
   `Clean/Evaluation.lean`) and the status lines of
   `clean-language-code-examples-status.jsonl`; `seal` writes the fixed files
-  (`lakefile.toml`, `lean-toolchain`, `Fragment.lean`, `Main.lean`) and the
-  meta line. Never edit them. Never run `lake` in the semantics folder: its
+  (`lakefile.toml`, `lean-toolchain`, `Fragment.lean`, `Main.lean`), the
+  list of derived norms `derived-norms.jsonl` and the meta line. Never edit
+  them. Never run `lake` in the semantics folder: its
   `.lake/` would break the layout; `check` builds in a temporary copy.
 - Outside the repository: your work files in the scratchpad, and the issues
   of steps 4 and 5.
@@ -83,6 +84,12 @@ Exit 2: show the message and stop; when it names the grammar,
 - `norm`: a declaration whose citation no longer checks, with `kind`,
   `declaration` (its key, `<path>:<name>`), `old_hash`, `new_hash` (null when
   retired or gone) and `citation`.
+- `version`: a declaration of the Lean code when this plugin is a new version
+  (the meta line of the status file names another `version` in `generator`,
+  or none), with `kind`, `declaration` (its key), `old_version` and
+  `new_version`. Then every declaration is a `version` item and every
+  semantic fragment with a status line is `changed`: a new version derives
+  the whole semantics again (NRM-7).
 
 Then, before you change anything:
 
@@ -238,7 +245,10 @@ declarations in place of statements: a `gone` fragment loses every citation
 of it and its status line; a declaration left with no prose citation goes. A
 `norm` item: read the current text of every norm the declaration cites; if
 it still follows, update only the hashes of its citations; otherwise rewrite
-or remove it, and the fragments it serves are checked again.
+or remove it, and the fragments it serves are checked again. A `version`
+item: the same, but a declaration that still follows stays exactly as it is,
+so it keeps its derived norm fingerprint; one that the new version corrects
+is rewritten or removed (DSM-12).
 
 ### Not a whole program
 
@@ -308,12 +318,28 @@ uv run --with "lark[interegular]" python3 -I -B "$S" seal --model <your model ID
 uv run --with "lark[interegular]" python3 -I -B "$S" check
 ```
 
-`seal` writes the fixed files, orders the status lines as `data/tree.jsonl`
-and writes the meta line (DSM-4 (The first line of the status file records
-the specs commit, the generator, the model and the hashes of the output
-(NRM-5))). `--model` is required: your exact model ID, from your own
-context, never a family name or a guess. Exit 2: a missing or malformed
-input; it wrote nothing.
+`seal` writes the fixed files and the list of derived norms, orders the
+status lines as `data/tree.jsonl` and writes the meta line (DSM-4 (The first
+line of the status file records the specs commit, the generator, the model
+and the hashes of the output (NRM-5))), whose `derived_norms_sha256` comes
+after `evaluation_sha256` and before `status_sha256`. `--model` is required:
+your exact model ID, from your own context, never a family name or a guess.
+Exit 2: a missing or malformed input, or a list before the run that it cannot read,
+or git that cannot give it (CDN-9); it wrote nothing.
+
+The list of derived norms (DSM-18 (Each declaration of the Lean code is one
+derived norm, which the list of derived norms names by its derived norm ID
+and its derived norm fingerprint (NRM-12 to NRM-15, CDN-8))) holds one
+derived norm per declaration, named by its key (`<path>:<name>`; a tab or
+other control character of the key becomes a space in the name, CDN-10 (The name of a derived norm in the list of derived norms is the key of
+its item, with each character that a name of NRM-12 may not hold replaced by
+one space)), from its
+first citation to its last line, with its derived norm ID (`semantics:<n>`)
+and its derived norm fingerprint. A declaration keeps its derived norm ID
+while it keeps its key; renaming it, or moving it to another file or
+namespace, makes it a new derived norm, and its old derived norm ID is gone
+for good: do it only when the norms call for it. You never give a derived
+norm ID nor compute a derived norm fingerprint: the script does.
 
 `check` copies the project to a temporary folder, runs `lake build` there
 (900 seconds at most) and runs each derived fragment (10 seconds each)
@@ -321,8 +347,9 @@ input; it wrote nothing.
 counts as a failure (NRM-6))). It prints one line per problem,
 `<check>: <ID, key or path>: <what>`, then the last line
 `fragments: <d> derived, <p> pending; run passed <r>/<R>; error passed <e>/<E>; problems: <n>`.
-Exit 0: all passes; 1: problems; 2: an input is missing, the grammar does not
-build, Lark cannot be loaded, or `lake` cannot be run.
+Exit 0: all passes; 1: problems; 2: an input is missing (the list of derived
+norms among them), the grammar does not build, Lark cannot be loaded, or
+`lake` cannot be run.
 
 Fix the problems your code or lines caused (`layout`, `comment`, `citation`,
 `declaration`, `shortcut`, `status`, `reason-citation`, `opening line`,
@@ -334,6 +361,10 @@ norm says what it should give, mark the fragment a gap.
 - `fixed` or `meta ... _sha256`: a file changed after the last `seal`: seal
   again once your change is done.
 - `meta` `generator` or `model`: seal again with your exact model ID.
+- `derived-norms`: the list of derived norms does not match the Lean code, or
+  gives a derived norm ID again or to another declaration (DSM-18). Never
+  edit the list: seal again. If it stays after a `seal`, report it in the end
+  report as a defect of the plugin.
 - `issue`: two lines hold one URL, or a fixed reason holds an issue. Fix it
   at once: the first line keeps the URL, every other gets `"issue": null`
   and, when it is a gap, its own issue now; a fixed reason gets
@@ -467,5 +498,7 @@ opened, and the result of the check)):
 - The stale citations of the script, if any, with their issues.
 - Then the output of `check` and its exit status.
 
-When `/norms-management:build` runs this use case, this report is its part
-of the build's report (NRM-11); the build commits and pushes (NRM-9).
+Do not list the derived norms new, changed and gone: the step of layer 2
+compares them for its report (NRM-11). When `/norms-management:build` runs
+this use case, this report is its part of the build's report; the build
+commits and pushes (NRM-9).

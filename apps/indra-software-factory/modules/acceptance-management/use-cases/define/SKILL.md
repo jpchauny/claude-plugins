@@ -7,8 +7,8 @@ description: Act as the acceptance architect of layer 3 - analyse every norm of 
 
 The acceptance architect: creates, changes and deletes the acceptance areas
 and the acceptance units. Implements [specs/define.md](specs/define.md)
-(ACU-57 to ACU-73 and ACU-77), with the checks of ACU-74, the files of ACU-6 to ACU-8 and
-the hashes of ACU-50 to ACU-56 of [module.md](../../specs/module.md). Never start it on your own
+(ACU-57 to ACU-73, ACU-77 and ACU-79), with the checks of ACU-74, the files of ACU-6 to ACU-8,
+the hashes of ACU-50 to ACU-56 and the derived norms of ACU-78 of [module.md](../../specs/module.md). Never start it on your own
 (ACU-57).
 
 `DEFINE` below is `python3 -I "${CLAUDE_PLUGIN_ROOT}/use-cases/define/define.py"`,
@@ -29,16 +29,18 @@ pushed (ACU-71).
   `acceptance.json` (ACU-73, ACU-77).
 - Never name an increment, never write a line `Increment:`, never decide
   anything of `plan.json` (ACU-9, ACU-44, ACU-48).
-- Read layer 2 only through the output of `DEFINE`; never read or open a file
-  of the norms repository, nor the specs repository or a code repository (ACU-59,
-  LAY-8). Write nothing in layers 0, 1, 2 and 4, other than the issues of
-  step 6.
+- Read layer 2 only through the output of `DEFINE`, the lines of a derived
+  norm included (`DEFINE derived-norms`); never read or open a file of the
+  norms repository, nor the specs repository or a code repository (ACU-59,
+  LAY-8). Write nothing in layers 0, 1, 2 and 4, nor in any other
+  repository, other than the issues of step 6.
 - Commit and push only with the command that `DEFINE commit` prints, as it is,
   in one Bash call. Never use `git stash`, `reset`, `checkout`, `restore`,
   `clean`, `git add` of a folder, `git add -A`, `git add .` or
   `git commit -a`; never retry a push, never force it (ACU-71, ACU-73).
-- Never compute a unit hash, an area hash or a scenario hash yourself: they
-  are those that `DEFINE` prints (ACU-51). To see them for a draft, write it
+- Never compute a unit hash, an area hash, a scenario hash or a derived norm
+  fingerprint yourself, and never choose which derived norms an acceptance
+  unit cites: they are those that `DEFINE` prints (ACU-51, ACU-78). To see them for a draft, write it
   outside the repository and run `DEFINE hash <file>`.
 - Write nothing in the repository before the requester says the proposal is
   final (ACU-64).
@@ -72,10 +74,13 @@ when `project.json` has not exactly one entry of layer 1),
 DEFINE inventory REPO --norms-commit <norms commit>
 ```
 
-Read the whole inventory: every norm with its `own_text`, every acceptance area and every
-acceptance unit, their norm citations with their `citation_status`, their scenarios, their `evidence`
-and their `errors`, the `errors` of the repository and `next_ids`. Then say
-`summary` of step 1, as it is (ACU-64).
+Read the whole inventory: every norm with its `own_text`, every derived norm
+of `derived_norms` (its derived norm ID, derived norm fingerprint, name, place and cited norms), every
+acceptance area and every acceptance unit, their norm citations and their
+`derived_norm_citations` with their `citation_status`, their
+`derived_norms_not_cited`, their scenarios, their `evidence` and their
+`errors`, the `errors` of the repository and `next_ids`. Then say `summary`
+of step 1, as it is (ACU-64).
 
 ## 3. Fill acceptance.json (ACU-77)
 
@@ -119,7 +124,7 @@ outside define, in a commit that the requester approves (ACU-43).
    `fill acceptance.json`, with `lines` under it, each as it is. Each time the
    requester changes a value, rewrite the file and run the dry run of item 2 again.
 
-## 4. Analyse (ACU-63, ACU-67, ACU-68, ACU-70)
+## 4. Analyse (ACU-63, ACU-67, ACU-68, ACU-70, ACU-79)
 
 Each time the skill runs, analyse every norm of the inventory against every
 acceptance area and every acceptance unit, whatever changed:
@@ -129,6 +134,17 @@ acceptance area and every acceptance unit, whatever changed:
   tag `@<norm ID>` (ACU-28); a norm citation `retired`: a change that removes it
   and each of its tags, and proposes to delete the acceptance unit when no norm citation is
   left;
+- a derived norm citation `changed` or `retired`, or a derived norm of
+  `derived_norms_not_cited`: a change of its acceptance unit whose
+  `## Derived norms` cites its scope as item 1 of step 7 writes it (ACU-28,
+  ACU-78). Run `DEFINE derived-norms REPO --norms-commit <norms commit>
+  <unit ID>` to read the `lines_of_derived_norm` of each derived norm of the
+  scope, and review each scenario of the acceptance unit, and of each
+  acceptance area with a scenario that crosses it, against the lines of each
+  derived norm that changed or entered the scope; change a scenario only where
+  those lines show
+  it no longer states what the norms of its tags state (ACU-63). Never leave
+  this change out to spare evidence (ACU-66);
 - an error of a file: a change of its acceptance area or acceptance unit that fixes it;
 - an acceptance unit is something the requester can judge alone, never a work item such
   as "write the CSV writer" (ACU-1); an acceptance area holds no other acceptance area (ACU-3);
@@ -143,6 +159,11 @@ acceptance area and every acceptance unit, whatever changed:
 - a scenario whose action or expected result no norm states is a gap of
   layer 1: list it, and leave the scenario out, and a norm that only it would
   check too (ACU-4, ACU-68);
+- a derived norm whose `lines_of_derived_norm` say what the norms it cites do not say, while
+  those norms are right, is a defect of a derived-norms generator: list it,
+  write no scenario from what it adds, and keep it in `## Derived norms`,
+  which cites the scope as it is (ACU-4, ACU-78, ACU-79). A norm that is
+  wrong, missing or contradictory is a gap of layer 1 instead;
 - between two changes that reach the same grouping, prefer the one that does
   not change the unit hash of an acceptance unit with evidence (ACU-66);
 - a deleted acceptance unit: its file, the files of `tests/<unit ID>/`, each `@unit:` of
@@ -153,7 +174,11 @@ acceptance area and every acceptance unit, whatever changed:
   for example) has no text of its own: cite its children, and cite it only in
   an acceptance unit that groups every one of its children (ACU-63);
 - a norm may stay in no acceptance unit: never show a list or a count of the norms that
-  no acceptance unit groups (ACU-63).
+  no acceptance unit groups (ACU-63);
+- the derived norms are never grouped: an acceptance unit cites exactly the
+  derived norms of its scope, which follow from its `## Norms`; never add a
+  norm to `## Norms` because a derived norm cites it, and never tag a
+  derived norm in a scenario (ACU-4, ACU-8, ACU-78).
 
 The requester may propose changes; add them, with the next IDs and a title
 that you propose, unless one breaks a clause of module.md, which you say
@@ -180,6 +205,8 @@ its ID and its title in quotes, then what it does:
    AU-2 has evidence (test 3, validation 1): it is deleted only with its own yes
 Gaps of layer 1, one issue each after your yes:
   a. AU-4: no norm states what is shown when the email is already registered
+Defects of derived-norms generators, one issue each after your yes:
+  a. grammar:7 (AU-11): makes * right-associative, which SYN-3 does not say
 ```
 
 - New IDs: from `next_ids`, in the order of the changes, so that each commit
@@ -197,6 +224,10 @@ Gaps of layer 1, one issue each after your yes:
   scenario of the acceptance area crosses, the line `<area ID>: its evidence goes stale
   (<counts>)`. `<counts>` are those of `evidence`, `<kind> <n>` joined by
   `, `, kinds with 0 left out.
+- A change of `## Derived norms` follows the changes of `## Norms` of its
+  line: `<derived norm ID> <old derived norm fingerprint> -> <new derived norm fingerprint>`,
+  `<derived norm ID> added` or `<derived norm ID> removed`, such as
+  `change acceptance unit AU-11 "Multiply two integers": semantics:31 5e6f7a8b -> 6a7b8c9d; semantics:32 added`.
 - When the proposal holds no change, `fill acceptance.json` included, say
   `acceptance-management:define: no change to propose` and stop.
 
@@ -206,7 +237,7 @@ When the rejected change is `fill acceptance.json`, rewrite the file of item 2
 of step 3 as `{}` and run its dry run again, so that `fields_left_empty` names
 every field that stays empty.
 
-## 6. Questions on the final proposal (ACU-66, ACU-68, ACU-71, ACU-77)
+## 6. Questions on the final proposal (ACU-66, ACU-68, ACU-71, ACU-77, ACU-79)
 
 First say each line of `fields_left_empty` of item 2 of step 3, as it is, from its
 last run, made with the values of the final proposal. Then, in this order, each answered before the next:
@@ -232,7 +263,30 @@ last run, made with the values of the final proposal. Then, in this order, each 
    that no norm states. When it fails, say `acceptance-management:define:
    cannot open the issue in <specs_repository>`, and go on. Never read the
    specs repository.
-3. Ask `1. one commit with every change; 2. one commit per change`, and write
+3. For each defect of a derived-norms generator, in the order of the
+   proposal, run:
+
+   ```sh
+   DEFINE derived-norms-generator REPO --norms-commit <norms commit> <derived norm ID>
+   ```
+
+   When its `no_issue_message` is not null, ask nothing of that defect and say
+   `no_issue_message` as it is. Otherwise show the title and the body, and ask
+   `Open the issue '<title>' in <marketplace_repository>? (yes/no)`, where
+   `<title>` is `Defect of a derived-norms generator: <derived norm ID>: <what
+   does not follow>`, and the body is `issue_body_start` as it is, one empty
+   line, and what of the derived norm does not follow from which of its cited
+   norms. On yes, at once:
+
+   ```sh
+   gh issue create -R <marketplace_repository> --title '<title>' --body '<body>'
+   ```
+
+   with each `'` written `'\''`. When it fails, say
+   `acceptance-management:define: cannot open the issue in
+   <marketplace_repository>`, and go on. Never read the marketplace
+   repository (ACU-79, ORC-14).
+4. Ask `1. one commit with every change; 2. one commit per change`, and write
    nothing until the requester answers.
 
 ## 7. Write and commit (ACU-65, ACU-69, ACU-70, ACU-71, ACU-77)
@@ -242,7 +296,14 @@ order of the proposal. Each round:
 
 1. Write the files of the round with the Write and Edit tools, in the form of
    ACU-7 and ACU-8, each norm citation of `## Norms` with the `norm_hash` of
-   its norm in `norms` of the inventory. To delete an acceptance unit: `rm -- REPO/units/<unit ID>.md`, then
+   its norm in `norms` of the inventory. Then, for each acceptance unit you
+   added or changed, run `DEFINE derived-norms REPO --norms-commit <norms
+   commit> <unit ID>`: when it prints an empty list, the file holds no
+   `## Derived norms`; otherwise write `## Derived norms` between `## Norms`
+   and `## Scenarios`, one line per entry, in its order: its
+   `derived_norm_citation_without_reason` followed by `reason_in_acceptance_unit` when it is not null, or by a reason
+   of your own that says in a few words what of the derived norm the
+   acceptance unit needs (ACU-56, ACU-67, ACU-78). To delete an acceptance unit: `rm -- REPO/units/<unit ID>.md`, then
    `DEFINE delete-tests REPO <unit ID>`; to delete an acceptance area: `rm --
    REPO/areas/<area ID>.md`. For the change `fill acceptance.json`:
    `DEFINE fill REPO <file>`, with the file of step 3 as the requester made

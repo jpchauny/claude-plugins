@@ -36,7 +36,8 @@ FILES = os.path.join(PLUGIN, "scripts", "acceptance_repository_files.py")
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from test_define import AA1, AU1, AU2, AU3, ENV, NORMS, git, read, tree_jsonl, unit, write  # noqa: E402
+from test_define import (AA1, AU1, AU2, AU3, ENV, NORMS, derived_norm_line, git, list_of_derived_norms,  # noqa: E402
+                         read, tree_jsonl, unit, write)
 
 NOT_REGULAR = "not a regular file (ACU-6)"
 
@@ -100,6 +101,7 @@ class Fixture(unittest.TestCase):
         self.project = json.dumps({"project": "billing", "repositories": repos}, indent=2) + "\n"
         self.norms = self.clone("billing-norms", {
             "data/tree.jsonl": tree_jsonl(NORMS_OF_WAT_5),
+            "project.json": self.project,
             "specs-repo-annotated/project.json": self.project,
             "specs-repo-annotated/billing/invoices.md": "# Invoices\n"})
         self.acc = self.clone("billing-acceptance", {
@@ -835,6 +837,115 @@ class Errors(Fixture):
         for text, messages in cases:
             with self.subTest(text=text):
                 self.assertEqual(self.errors_of(text + "\n"), [self.error(1, m) for m in messages])
+
+    def test_wat7_cites_a_derived_norm(self):
+        """WAT-7, ACU-56: a derived norm citation found in a line of an acceptance test is an error (ACU-11, LAY-8)."""
+        self.assertEqual(self.errors_of(acceptance_test(AU3_OPENING) + "// grammar:7@3a4b5c6d: the rule\n"),
+                         [self.error(7, "cites the derived norm grammar:7 (ACU-11)")])
+        cases = [("x = 'grammar:7@3a4b5c6d'", ["cites the derived norm grammar:7 (ACU-11)"]),
+                 ("xgrammar:12@0ced57c3", ["cites the derived norm xgrammar:12 (ACU-11)"]),
+                 ("Xgrammar:12@0ced57c3", []), ("grammar:07@0ced57c3", []), ("grammar:12@0ced57c3_v2", []),
+                 ("see INV-7@5a627175 and semantics:31@6a7b8c9d.",
+                  ["cites the norm INV-7 (ACU-11)", "cites the derived norm semantics:31 (ACU-11)"])]
+        for text, messages in cases:
+            with self.subTest(text=text):
+                self.assertEqual(self.errors_of(text + "\n"), [self.error(1, m) for m in messages])
+
+    def test_wat6_acu56_a_name_or_a_title_that_holds_a_derived_norm_citation_blocks(self):
+        """ACU-56, WAT-6: a title or a name of a scenario that holds a derived norm citation is a format error."""
+        self.commit_files({"units/AU-3.md": AU3.replace("Scenario: A cancelled invoice gives no row",
+                                                        "Scenario: A cancelled invoice (grammar:7@3a4b5c6d)")})
+        self.assertEqual(self.entry(self.inventory(), "AU-3")["blocked"],
+                         f"format errors in units/AU-3.md; {DEFINE_IT}")
+        self.commit_files({"units/AU-3.md": AU3.replace("# AU-3 Export the invoices to CSV",
+                                                        "# AU-3 Export semantics:31@6a7b8c9d")})
+        self.assertEqual(self.entry(self.inventory(), "AU-3")["blocked"],
+                         f"format errors in units/AU-3.md; {DEFINE_IT}")
+
+    def set_derived_norms(self, list_of_grammar):
+        """project.json names the type "grammar" of derived_norms, in both repositories, and the norms repository holds
+        `list_of_grammar` as its list of derived norms, or none when it is None."""
+        project = json.loads(read(os.path.join(self.acc, "project.json")))
+        project["derived_norms"] = [{"type": "grammar", "use_case": "/x:derive-grammar"}]
+        text = json.dumps(project, indent=2) + "\n"
+        if text != read(os.path.join(self.acc, "project.json")):
+            self.commit_files({"project.json": text})
+            write(os.path.join(self.norms, "project.json"), text)
+            write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), text)
+        path = os.path.join(self.norms, "specs-derived", "grammar", "derived-norms.jsonl")
+        if list_of_grammar is None:
+            if os.path.exists(path):
+                os.remove(path)
+        else:
+            write(path, list_of_grammar)
+        self.commit_all(self.norms)
+        git(self.norms, "fetch", "-q", "origin")
+
+    # grammar:7 cites INV-9, the norm of AU-2, so it is in the scope of AU-2; grammar:8 cites only INV-15.
+    LIST_OF_GRAMMAR = list_of_derived_norms(
+        "grammar", 8,
+        derived_norm_line("grammar", 7, "3a4b5c6d", "row", "specs-derived/grammar/billing.lark", 1, 2,
+                          [("INV-9", "22222222")]),
+        derived_norm_line("grammar", 8, "4b5c6d7e", "cancel", "specs-derived/grammar/billing.lark", 4, 5,
+                          [("INV-15", "9e8d7c6b")]))
+
+    def test_wat6_behind_layer_2_through_its_derived_norms(self):
+        """WAT-6, the term acceptance unit behind layer 2: a derived norm citation that is not "current", or a derived
+        norm not cited, blocks the acceptance unit with the reason "behind layer 2"."""
+        from test_define import with_derived_norms
+        self.set_derived_norms(self.LIST_OF_GRAMMAR)
+        cases = [("\n## Derived norms\n\n- grammar:7@3a4b5c6d: x\n", None),  # current, and the whole scope
+                 ("\n## Derived norms\n\n- grammar:7@0ced57c3: x\n", BEHIND),  # changed
+                 ("\n## Derived norms\n\n- grammar:7@3a4b5c6d: x\n- grammar:9@0ced57c3: y\n", BEHIND),  # retired
+                 ("", BEHIND)]  # grammar:7 is a derived norm not cited
+        for part, blocked in cases:
+            with self.subTest(part=part):
+                self.commit_files({"units/AU-2.md": with_derived_norms(AU2, part)})
+                self.assertEqual(self.entry(self.inventory(), "AU-2")["blocked"], blocked)
+
+    def test_wat6_a_derived_norms_part_with_a_format_error_blocks_the_file(self):
+        """WAT-6, "A format error of a file": a "## Derived norms" that does not meet ACU-56, or that cites a derived norm
+        outside the scope with its current derived norm fingerprint, is a format error of ACU-61."""
+        from test_define import with_derived_norms
+        self.set_derived_norms(self.LIST_OF_GRAMMAR)
+        for part in ("\n## Derived norms\n\n- grammar:7: x\n",
+                     "\n## Derived norms\n\n- grammar:7@3a4b5c6d: x\n- grammar:8@4b5c6d7e: y\n"):
+            with self.subTest(part=part):
+                self.commit_files({"units/AU-2.md": with_derived_norms(AU2, part)})
+                self.assertEqual(self.entry(self.inventory(), "AU-2")["blocked"],
+                                 f"format errors in units/AU-2.md; {DEFINE_IT}")
+
+    def test_wat2_a_list_of_derived_norms_that_cannot_be_read(self):
+        """WAT-2: a list of derived norms that fails a check of ACU-58 of define.md stops the skill with its message."""
+        self.set_derived_norms(None)
+        commit = git(self.norms, "rev-parse", "origin/main").stdout.strip()[:7]
+        self.refused(f"acme/billing-norms has no specs-derived/grammar/derived-norms.jsonl at {commit}")
+        self.set_derived_norms(self.LIST_OF_GRAMMAR.replace("3a4b5c6d", "3A4B5C6D"))
+        self.refused("acme/billing-norms: specs-derived/grammar/derived-norms.jsonl does not meet NRM-12")
+        project = json.loads(read(os.path.join(self.acc, "project.json")))
+        project["derived_norms"] = [{"type": "Grammar"}]
+        text = json.dumps(project, indent=2) + "\n"
+        self.commit_files({"project.json": text})
+        write(os.path.join(self.norms, "project.json"), text)
+        write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), text)
+        self.commit_all(self.norms)
+        git(self.norms, "fetch", "-q", "origin")
+        commit = git(self.norms, "rev-parse", "origin/main").stdout.strip()[:7]
+        self.refused(f"acme/billing-norms: the types of derived norms at {commit} cannot be read (NRM-16)")
+
+    def test_wat2_the_derived_norms_come_after_the_untracked_files(self):
+        self.set_derived_norms(None)
+        write(os.path.join(self.acc, "tests", "AU-4", "test_register.py"), "x")
+        self.refused("untracked file tests/AU-4/test_register.py")
+
+    def test_wat3_reads_only_the_lists_of_derived_norms(self):
+        """WAT-3: the script reads the list of derived norms, never the lines of a derived norm, so a file that the list
+        names and the norms commit does not hold changes nothing."""
+        from test_define import with_derived_norms
+        self.set_derived_norms(self.LIST_OF_GRAMMAR)
+        self.assertFalse(os.path.exists(os.path.join(self.norms, "specs-derived", "grammar", "billing.lark")))
+        self.commit_files({"units/AU-2.md": with_derived_norms(AU2, "\n## Derived norms\n\n- grammar:7@3a4b5c6d: x\n")})
+        self.assertIsNone(self.entry(self.inventory(), "AU-2")["blocked"])
 
     def test_wat7_citation_outside_the_opening(self):
         message = "citation outside the opening of an acceptance test (ACU-11)"

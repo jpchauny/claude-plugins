@@ -3,8 +3,8 @@
 
 Run from the root of the repository of layer 2, the working directory, as:
     uv run --with "lark[interegular]" python3 -I -B <this script> <command>
-Commands: worklist, seal --model <model ID>, check, stale-citations. The script
-never writes a statement of the grammar and never decides the state of a
+Commands: worklist, seal --model <model ID>, check, stale-citations. The
+script never writes a statement of the grammar and never decides the state of a
 fragment.
 
 Spec: use-cases/derive-grammar/specs/derive-grammar.md (DGR) of the plugin.
@@ -22,16 +22,20 @@ sys.path.insert(0, str(MODULE_SCRIPT_FOLDER))
 sys.dont_write_bytecode = True
 
 from derived_norms import (  # noqa: E402
-    CODE, GRAMMAR_REL, INLINE_CITATION_RE, INSTALLED_PLUGINS, ISSUE_RE, MODULE_SCRIPT, NO_FORM_REASON,
-    PLUGIN_NAME, PLUGIN_ROOT, InputError, body_bytes, bracket_pairs, build_parser, case_text, check_citation,
-    check_generator, check_model, check_script, check_unique_issues, import_lark, info_string, load_jsonl,
-    load_tree, marketplace_commit, parse_grammar, parse_program, plugin_version, read_code_of_the_script,
-    read_status, sha256, stale, stale_script_citations,
+    CODE, GRAMMAR_CITATION_RE, GRAMMAR_REL, INLINE_CITATION_RE, INSTALLED_PLUGINS, ISSUE_RE,
+    LIST_OF_DERIVED_NORMS_FILE_NAME, MODULE_SCRIPT, NO_FORM_REASON, PLUGIN_NAME, PLUGIN_ROOT, InputError, body_bytes,
+    bracket_pairs, build_parser, case_text, check_citation, check_generator, check_list_of_derived_norms, check_model,
+    check_script, check_unique_issues, derived_norm, import_lark, info_string, load_jsonl, load_tree,
+    marketplace_commit, output_file_lines, parse_grammar, parse_program, plugin_version, read_code_of_the_script,
+    read_status, seal_derived_norms, sha256, stale, stale_script_citations, version_of_generator_in_status,
 )
 
 STATUS_REL = "specs-derived/grammar/clean-language-code-examples-status.jsonl"
+# The list of derived norms of the type grammar (DGR-20, NRM-12).
+TYPE_OF_DERIVED_NORMS = "grammar"
+PATH_OF_LIST_OF_DERIVED_NORMS = "specs-derived/grammar/" + LIST_OF_DERIVED_NORMS_FILE_NAME
 
-META_KEYS = ["type", "specs_commit", "generator", "model", "grammar_sha256", "status_sha256"]
+META_KEYS = ["type", "specs_commit", "generator", "model", "grammar_sha256", "derived_norms_sha256", "status_sha256"]
 FRAGMENT_KEYS = ["type", "id", "hash", "cases", "state", "reason", "issue"]
 STATES = ("derived", "pending")
 CASES = ("accept", "reject")
@@ -188,6 +192,23 @@ def reserved_words(statement):
     return words
 
 
+def grammar_derived_norms(data):
+    """The derived norms of the grammar: one per statement, its key as its name, from its first comment line to its last line.
+
+    data: the bytes of the grammar. A line that is no statement is no derived
+    norm. InputError when the grammar is not UTF-8.
+
+    Spec: DGR-20.
+    """
+    try:
+        lines = output_file_lines(data)
+    except UnicodeDecodeError as error:
+        raise InputError(f"{GRAMMAR_REL} is not UTF-8: {error}") from error
+    statements, _ = parse_grammar("\n".join(lines))
+    return [derived_norm(lines, s.key, GRAMMAR_REL, s.derived_norm_first_line, s.derived_norm_last_line, GRAMMAR_CITATION_RE)
+            for s in statements if s.kind != "unknown"]
+
+
 # ---------------------------------------------------------------- Lark
 
 
@@ -204,7 +225,7 @@ def try_parse(parser, indenter, text):
 
 
 def previous_status(root):
-    """The fragment lines of the status file of the previous run, or None when it is taken as absent.
+    """The lines of the status file of the previous run, or None when it is taken as absent.
 
     It is absent when the file does not exist, or when its meta line has no
     field "generator", as the local skill /derive-grammar wrote it.
@@ -218,18 +239,26 @@ def previous_status(root):
     meta = next((r for r in rows if r.get("type") == "meta"), None)
     if meta is not None and "generator" not in meta:
         return None
-    return [r for r in rows if r.get("type") == "fragment"]
+    return rows
 
 
-def worklist(root):
+def worklist(root, plugin_root=None):
     """The items that a change calls for, one JSON object each.
+
+    A new version of the plugin (the meta line of the status file names
+    another version of the generator, or none) makes every fragment with a
+    status line "changed" and every statement an item "version" (NRM-7).
 
     Spec: DGR-12.
     """
     tree = load_tree(root)
-    lines = previous_status(root)
-    absent = lines is None
-    lines = lines or []
+    version_of_plugin = plugin_version(plugin_root if plugin_root is not None else PLUGIN_ROOT)
+    rows = previous_status(root)
+    absent = rows is None
+    rows = rows or []
+    version_of_generator_in_status_file = version_of_generator_in_status(rows)
+    plugin_version_changed = not absent and version_of_generator_in_status_file != version_of_plugin
+    lines = [r for r in rows if r.get("type") == "fragment"]
     by_id = {}
     for line in lines:
         if isinstance(line.get("id"), str):
@@ -247,7 +276,7 @@ def worklist(root):
             item["old_hash"] = old.get("hash")
             reason = old.get("reason") if isinstance(old.get("reason"), str) else ""
             moved = any(stale(tree, i, h) for i, h in INLINE_CITATION_RE.findall(reason))
-            if old.get("hash") != new_hash or old.get("cases") != cases or moved:
+            if plugin_version_changed or old.get("hash") != new_hash or old.get("cases") != cases or moved:
                 item["kind"] = "changed"
         if item["kind"]:
             items.append(item)
@@ -265,17 +294,20 @@ def worklist(root):
                 if change:
                     items.append({"kind": "norm", "statement": s.key, "old_hash": norm_hash, "new_hash": change[0],
                                   "citation": f"{norm_id}@{norm_hash}"})
+        if plugin_version_changed:
+            items += [{"kind": "version", "statement": s.key, "old_version": version_of_generator_in_status_file, "new_version": version_of_plugin}
+                      for s in statements if s.kind != "unknown"]
     return items
 
 
 def seal(root, model, plugin_root=None, installed=None):
-    """Order the fragment lines as data/tree.jsonl and write the meta line first.
+    """Write the list of derived norms, order the fragment lines as data/tree.jsonl and write the meta line first.
 
     model is the exact model ID the deriver runs as; seal records it as
     given, and check judges it. A missing status file is taken as one with no
     fragment line. Every input is read before anything is written.
 
-    Spec: DGR-4, DGR-5, DGR-17.
+    Spec: DGR-4, DGR-5, DGR-17, DGR-20.
     """
     tree = load_tree(root)
     plugin_root = plugin_root if plugin_root is not None else PLUGIN_ROOT
@@ -294,17 +326,21 @@ def seal(root, model, plugin_root=None, installed=None):
     end = len(tree.order)
     fragments.sort(key=lambda f: tree.order.get(f[1].get("id"), end))
     body = "".join(line + "\n" for line, _ in fragments)
+    grammar = grammar_path.read_bytes()
+    text_of_the_list_of_derived_norms = seal_derived_norms(root, PATH_OF_LIST_OF_DERIVED_NORMS, TYPE_OF_DERIVED_NORMS, grammar_derived_norms(grammar))
     meta = {
         "type": "meta",
         "specs_commit": tree.specs_commit,
         "generator": {"plugin": PLUGIN_NAME, "version": version,
                       "marketplace_commit": marketplace_commit(plugin_root, installed)},
         "model": model,
-        "grammar_sha256": sha256(grammar_path.read_bytes()),
+        "grammar_sha256": sha256(grammar),
+        "derived_norms_sha256": sha256(text_of_the_list_of_derived_norms.encode("utf-8")),
         "status_sha256": sha256(body.encode("utf-8")),
     }
     head = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
     status_path.parent.mkdir(parents=True, exist_ok=True)
+    (root / PATH_OF_LIST_OF_DERIVED_NORMS).write_bytes(text_of_the_list_of_derived_norms.encode("utf-8"))
     status_path.write_text(head + "\n" + body, encoding="utf-8")
     return head
 
@@ -397,7 +433,7 @@ def check_status(tree, status_path, rows):
 
 
 def check_meta(tree, root, status_path, rows, version):
-    """The meta line: first, its six fields, the specs commit, the generator, the model and the hashes.
+    """The meta line: first, its seven fields, the specs commit, the generator, the model and the hashes.
 
     Spec: DGR-4, DGR-13, DGR-17.
     """
@@ -418,18 +454,20 @@ def check_meta(tree, root, status_path, rows, version):
     problems += check_model(meta)
     if meta.get("grammar_sha256") != sha256((root / GRAMMAR_REL).read_bytes()):
         problems.append(("meta", "grammar_sha256", "the grammar does not match the hash of its meta line: changed after the last seal"))
+    if meta.get("derived_norms_sha256") != sha256((root / PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()):
+        problems.append(("meta", "derived_norms_sha256", "the list of derived norms does not match the hash of its meta line: changed after the last seal"))
     if meta.get("status_sha256") != sha256(body_bytes(status_path.read_text(encoding="utf-8"))):
         problems.append(("meta", "status_sha256", "the status file does not match the hash of its meta line: changed after the last seal"))
     return problems
 
 
 def check_layout(folder):
-    """specs-derived/grammar/ holds exactly the grammar and the status file.
+    """specs-derived/grammar/ holds exactly the grammar, the list of derived norms and the status file.
 
     Spec: DGR-3.
     """
-    expected = {Path(GRAMMAR_REL).name, Path(STATUS_REL).name}
-    return [("layout", str(folder / p.name), "a file that is not the grammar or the status file")
+    expected = {Path(GRAMMAR_REL).name, LIST_OF_DERIVED_NORMS_FILE_NAME, Path(STATUS_REL).name}
+    return [("layout", str(folder / p.name), "a file that is not the grammar, the list of derived norms or the status file")
             for p in sorted(folder.iterdir()) if p.name not in expected]
 
 
@@ -458,18 +496,20 @@ def check(root, code_of_the_script, plugin_root=None):
     """
     tree = load_tree(root)
     grammar_path, status_path = root / GRAMMAR_REL, root / STATUS_REL
-    for path in (grammar_path, status_path):
+    for path in (grammar_path, status_path, root / PATH_OF_LIST_OF_DERIVED_NORMS):
         if not path.is_file():
             raise InputError(f"{path} does not exist")
     import_lark()
     version = plugin_version(plugin_root if plugin_root is not None else PLUGIN_ROOT)
     rows = read_status(status_path)
     script_problems = check_script(tree, code_of_the_script)
+    list_problems = check_list_of_derived_norms(root, PATH_OF_LIST_OF_DERIVED_NORMS, TYPE_OF_DERIVED_NORMS,
+                                             grammar_derived_norms(grammar_path.read_bytes()))
     counts = {state: 0 for state in STATES}
     parsed = {"accept": [0, 0], "reject": [0, 0]}
     if not tree.fragments:
         problems = [("status", f"{status_path}:{n}", e) for n, _, v, e in rows[:1] if v is None]
-        problems += check_meta(tree, root, status_path, rows, version) + script_problems
+        problems += check_meta(tree, root, status_path, rows, version) + list_problems + script_problems
         return problems, {"states": counts, "parsed": parsed}
     grammar = grammar_path.read_text(encoding="utf-8")
     problems = check_layout(grammar_path.parent)
@@ -479,6 +519,7 @@ def check(root, code_of_the_script, plugin_root=None):
     statements, grammar_problems = parse_grammar(grammar)
     problems += grammar_problems
     problems += check_statements(tree, statements, by_id)
+    problems += list_problems
     problems += script_problems
     cited = {norm_id for s in statements for _, norm_id, _ in s.citations}
     for norm_id, line in by_id.items():
@@ -524,7 +565,7 @@ def main(argv=None):
     The root of the repository of layer 2 is the working directory. seal
     without --model exits with 2 and writes nothing.
 
-    Spec: DGR-4, DGR-12, DGR-13, DGR-17, DGR-18.
+    Spec: DGR-4, DGR-12, DGR-13, DGR-17, DGR-18, DGR-20.
     """
     parser = argparse.ArgumentParser(prog="derive_grammar.py", description="The deterministic part of /clean-derived-norms:derive-grammar.")
     parser.add_argument("command", choices=["worklist", "seal", "check", "stale-citations"])

@@ -5,11 +5,13 @@ the module. The checks of ACU-74 and ACU-75 and the diff of a file of a
 commit (ACU-75) are those of scripts/acceptance_repository_checks.py of the
 module, and the fingerprints (ACU-51 to ACU-54) those of
 scripts/acceptance_hashes.py. The format errors of a file of an acceptance
-unit or an acceptance area, the citation status of a norm citation and the
-"own_text" of a norm are those of the inventory of define (ACU-60 to
-ACU-62), and a citation found in a line (ACU-56) is that of define too, which
-this script reads by importing scripts/acceptance_repository_files.py of the
-module, as define does.
+unit or an acceptance area, the citation status of a norm citation and of a
+derived norm citation, the derived norms not cited and the "own_text" of a
+norm are those of the inventory of define (ACU-60 to ACU-62), which reads the
+lists of derived norms of the norms commit and never the lines of a derived
+norm (WAT-2, WAT-3, WAT-6), and a citation found in a line (ACU-56) is that of
+define too, which this script reads by importing
+scripts/acceptance_repository_files.py of the module, as define does.
 
 Usage (REPO is the working directory of the skill; ID is a unit ID or an area
 ID; SC is a scenario ID; every command reads, and only `delete` and `rollback`
@@ -85,15 +87,16 @@ import acceptance_hashes as hashes  # noqa: E402
 import acceptance_repository_checks as checks  # noqa: E402
 from acceptance_repository_checks import git, ls_tree, out, show, text_of  # noqa: E402
 import acceptance_repository_files as files_of_the_acceptance_repository  # noqa: E402
-from acceptance_repository_files import (CITATION_IN_LINE, NORM_CITATION_IN_LINE, SC_LIKE, number,  # noqa: E402
-                                         plural, public)
+from acceptance_repository_files import (CITATION_IN_LINE, DERIVED_NORM_CITATION_IN_LINE,  # noqa: E402
+                                         NORM_CITATION_IN_LINE, SC_LIKE, number, plural, public)
 
 PREFIX = "acceptance-management:write-acceptance-tests: "
 NEXT = "Next: the implementing agents implement the plan with /code-implementation:implement."  # WAT-13
 FOLDER_ID = re.compile(r"(?:AU|AA)-[1-9][0-9]*")
 SCENARIO_ID = re.compile(r"SC-[1-9][0-9]*")
 CITATION = re.compile(r"((?:AU|AA|SC)-[1-9][0-9]*)@([0-9a-f]{8}): (.+)")  # ACU-56, after the comment mark
-# WAT-7: a citation found in a line is that of ACU-56, CITATION_IN_LINE and NORM_CITATION_IN_LINE of
+# WAT-7: a citation found in a line is that of ACU-56, CITATION_IN_LINE, NORM_CITATION_IN_LINE and
+# DERIVED_NORM_CITATION_IN_LINE of
 # scripts/acceptance_repository_files.py, which define reads too for the titles and the names of the scenarios.
 STATUSES = ("missing", "duplicated", "scenario_changed", "citation_changed", "current")  # WAT-6
 OPTIONS = {"--norms-commit": 1, "--expected-head": 1, "--change": 1, "--reported-wrong": 1, "--reject": 1,
@@ -363,9 +366,11 @@ def read_folder(folder_id, paths, source, code_repositories):
                     found_errors.append((i + 1, 2, f"cites {cited}, which is not the acceptance unit or the "
                                                    "acceptance area of this folder (ACU-11)"))
                 elif i not in of_an_opening:
-                    found_errors.append((i + 1, 4, "citation outside the opening of an acceptance test (ACU-11)"))
+                    found_errors.append((i + 1, 5, "citation outside the opening of an acceptance test (ACU-11)"))
             for found in NORM_CITATION_IN_LINE.finditer(line):
                 found_errors.append((i + 1, 3, f"cites the norm {found.group(1)} (ACU-11)"))
+            for found in DERIVED_NORM_CITATION_IN_LINE.finditer(line):
+                found_errors.append((i + 1, 4, f"cites the derived norm {found.group(1)} (ACU-11)"))
         # The offset of the start of each line, so that the line of a name found is a search, not a count from the
         # start of the file for each name found.
         starts_of_lines = [0] + [k + 1 for k, character in enumerate(normalised) if character == "\n"]
@@ -376,7 +381,7 @@ def read_folder(folder_id, paths, source, code_repositories):
                 for found in pattern.finditer(normalised):
                     line = bisect.bisect_right(starts_of_lines, found.start())
                     if line - 1 not in of_an_opening_of_the_folder:
-                        found_errors.append((line, 5, f"names the code repository {text_of(owner_name)} (ACU-11)"))
+                        found_errors.append((line, 6, f"names the code repository {text_of(owner_name)} (ACU-11)"))
         seen = set()
         for line, row, message in sorted(found_errors, key=lambda e: (e[0], e[1])):
             if (line, message) not in seen:
@@ -462,7 +467,11 @@ def inventory(where, norms_commit, worktree=False):
     norm_of = {}
     for norm in norms:
         norm_of.setdefault(norm["norm_id"], norm)
-    inventory_of_define = files_of_the_acceptance_repository.inventory(where, norms_commit, "HEAD", norms)
+    # WAT-2, WAT-6: the inventory of define reads the lists of derived norms of the norms commit, as ACU-58 checks them.
+    try:
+        inventory_of_define = files_of_the_acceptance_repository.inventory(where, norms_commit, "HEAD", norms)
+    except checks.Refusal as refusal:
+        raise Stop(refusal.message)
     # WAT-6: a file has a format error when its own errors hold one, when an error of the repository names it by its
     # path, or when another file of areas/ or units/ holds one of its scenario IDs.
     paths_with_format_errors = {error.get("path") for error in inventory_of_define["errors"]}
@@ -539,8 +548,11 @@ def inventory(where, norms_commit, worktree=False):
                      if o["scenario_id"] not in held],
                  "errors": sorted(folder_errors, key=lambda e: (e["path"], e["line"] or 0)),
                  "_format_errors": path in paths_with_format_errors,
-                 "_behind_layer_2": any(c["citation_status"] != "current"
-                                        for c in item_of_define.get("norm_citations", [])),
+                 # The term acceptance unit behind layer 2 of module.md, at the norms commit.
+                 "_behind_layer_2": (any(c["citation_status"] != "current"
+                                         for c in item_of_define.get("norm_citations", [])
+                                         + item_of_define.get("derived_norm_citations", []))
+                                     or bool(item_of_define.get("derived_norms_not_cited"))),
                  "_crossed": [u for s in item_of_define["scenarios"] for u in s.get("acceptance_units", [])]}
         return entry
 

@@ -34,8 +34,8 @@ The terms repository of a layer and orchestration repository are those of [layer
     - `role`: `orchestration`, only in the entry of the orchestration repository ([LAY-11](../../development-methodology/specs/layers.md#the-orchestration-repository));
     - `component`: the component of a repository of layer 4, only when layer 4 has one repository per component;
     - `path`: where the repository is, relative to the project folder, its parts separated by `/`, none of them empty, `.` or `..`;
-  - `derived_norms`: optional; the derived norms of the project, in the order they are generated, one entry per type, with
-    - `type`: the name of the folder of its output under `specs-derived/`, lower-case letters, digits and `-`, unique in the list;
+  - `derived_norms`: optional; the types of derived norms of the project, in the order they are generated, one entry per type, with
+    - `type`: the name of the folder of its output under `specs-derived/`, one or more lower-case ASCII letters, digits and `-`, unique in the list;
     - `use_case`: the use case that generates it, `/<module>:<use case>`, a use case of a module of some app of the marketplace ([NRM-1](../../norms-management/specs/module.md#derive-the-derived-norms)).
 
   The list holds exactly one entry of each of the layers 0, 1, 2 and 3, none of them with `component`. Layer 4 is either one entry without `component`, or one or more entries each with a different `component` ([LAY-1](../../development-methodology/specs/layers.md#rules)). The list holds exactly one entry with `role`, the orchestration repository, with no `layer` and no `component`, except a `project.json` written before the orchestration repository existed, which holds none (PRJ-2). Every other entry has `layer` and no `role`. For example:

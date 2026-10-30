@@ -115,6 +115,7 @@ class Fixture(unittest.TestCase):
         self.project = json.dumps({"project": "billing", "repositories": repos + self.layer_4}, indent=2) + "\n"
         self.norms = self.clone("billing-norms", {
             "data/tree.jsonl": tree_jsonl(),
+            "project.json": self.project,
             "specs-repo-annotated/project.json": self.project,
             "specs-repo-annotated/billing/invoices.md": "# Invoices\n"})
         files = {"project.json": self.project, "acceptance.json": json.dumps(
@@ -1586,6 +1587,105 @@ class Writing(Fixture):
         for path in (SCRIPT, CHECKS, FILES):
             tree = ast.parse(read(path), feature_version=(3, 9))
             self.assertTrue(tree.body)
+
+
+class DerivedNorms(Fixture):
+    """PLN-2, PLN-3, PLN-6 with the derived norms: behind layer 2 reads the lists of derived norms as define does."""
+
+    def setUp(self):
+        super().setUp()
+        from test_define import GRAMMAR, SEMANTICS
+        project = json.loads(self.project)
+        project["derived_norms"] = [{"type": "grammar", "use_case": "/x:derive-grammar"},
+                                    {"type": "semantics", "use_case": "/x:derive-semantics"}]
+        self.project = json.dumps(project, indent=2) + "\n"
+        write(os.path.join(self.acc, "project.json"), self.project)
+        self.commit_all(self.acc)
+        write(os.path.join(self.norms, "project.json"), self.project)
+        write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), self.project)
+        write(os.path.join(self.norms, "specs-derived", "grammar", "derived-norms.jsonl"), GRAMMAR)
+        write(os.path.join(self.norms, "specs-derived", "semantics", "derived-norms.jsonl"), SEMANTICS)
+        self.commit_all(self.norms)
+        git(self.norms, "fetch", "-q", "origin")
+
+    def au3_is(self, part):
+        from test_define import with_derived_norms
+        text = AU3.replace("INV-12@0c1d2e3f", "INV-12@7d6e5f40")
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(text, part) if part else text)
+        self.commit_all(self.acc)
+        return self.unit_of(self.inventory(), "AU-3")["behind_layer_2"]
+
+    def test_pln6_behind_layer_2_with_derived_norms(self):
+        whole = ("\n## Derived norms\n\n- grammar:7@3a4b5c6d: a row\n- semantics:31@6a7b8c9d: the export\n"
+                 "- semantics:32@9c0d1e2f: a row\n")
+        self.assertFalse(self.au3_is(whole))
+        # A derived norm of the scope that "## Derived norms" does not cite.
+        self.assertTrue(self.au3_is(whole.replace("- semantics:32@9c0d1e2f: a row\n", "")))
+        self.assertTrue(self.au3_is(None))
+        # A derived norm fingerprint other than that of the norms commit.
+        self.assertTrue(self.au3_is(whole.replace("6a7b8c9d", "00000000")))
+        # A derived norm that the norms commit does not hold.
+        self.assertTrue(self.au3_is(whole + "- semantics:99@9c0d1e2f: gone\n"))
+        # AU-1 cites INV-1, which no derived norm cites: its scope is empty.
+        self.assertFalse(self.unit_of(self.inventory(), "AU-1")["behind_layer_2"])
+
+    def test_pln2_a_list_of_derived_norms_that_cannot_be_read(self):
+        write(os.path.join(self.norms, "specs-derived", "semantics", "derived-norms.jsonl"), "not a list\n")
+        self.commit_all(self.norms)
+        self.refused("acme/billing-norms: specs-derived/semantics/derived-norms.jsonl does not meet NRM-12")
+        git(self.norms, "rm", "-q", "specs-derived/semantics/derived-norms.jsonl")
+        self.commit_all(self.norms)
+        self.refused(f"acme/billing-norms has no specs-derived/semantics/derived-norms.jsonl at "
+                     f"{self.norms_commit()[:7]}")
+
+    def test_pln2_derived_norms_of_project_json_does_not_meet_orc20(self):
+        project = json.loads(self.project)
+        project["derived_norms"] = [{"type": "Grammar"}]
+        self.project = json.dumps(project, indent=2) + "\n"
+        write(os.path.join(self.acc, "project.json"), self.project)
+        self.commit_all(self.acc)
+        write(os.path.join(self.norms, "project.json"), self.project)
+        write(os.path.join(self.norms, "specs-repo-annotated", "project.json"), self.project)
+        self.commit_all(self.norms)
+        self.refused(f"acme/billing-norms: the types of derived norms at {self.norms_commit()[:7]} cannot be read "
+                     f"(NRM-16)")
+
+    def test_pln3_reads_no_line_of_a_derived_norm(self):
+        """PLN-3: of specs-derived/ the script reads only the record of the types of derived norms and the lists of
+        derived norms; of the root, project.json only when that record does not meet NRM-16."""
+        sys.path.insert(0, os.path.dirname(SCRIPT))
+        try:
+            import plan
+        finally:
+            sys.path.pop(0)
+        shown = []
+        original = plan.show
+
+        def recording_show(cwd, revision, path):
+            shown.append(path)
+            return original(cwd, revision, path)
+        import acceptance_repository_files
+        original_files_show = acceptance_repository_files.show
+        acceptance_repository_files.show = recording_show
+        try:
+            plan.inventory(plan.locate(self.acc), self.norms_commit())
+        finally:
+            acceptance_repository_files.show = original_files_show
+        self.assertEqual(sorted(set(p for p in shown if p.startswith("specs-derived/"))),
+                         ["specs-derived/grammar/derived-norms.jsonl", "specs-derived/semantics/derived-norms.jsonl",
+                          "specs-derived/types-of-derived-norms.json"])
+        self.assertIn("project.json", shown)
+        write(os.path.join(self.norms, "specs-derived", "types-of-derived-norms.json"),
+              '{"types_of_derived_norms": ["grammar", "semantics"]}\n')
+        self.commit_all(self.norms)
+        git(self.norms, "fetch", "-q", "origin")
+        shown.clear()
+        acceptance_repository_files.show = recording_show
+        try:
+            plan.inventory(plan.locate(self.acc), self.norms_commit())
+        finally:
+            acceptance_repository_files.show = original_files_show
+        self.assertNotIn("project.json", shown)
 
 
 class Skill(unittest.TestCase):

@@ -28,16 +28,21 @@ sys.path.insert(0, str(MODULE_SCRIPT_FOLDER))
 sys.dont_write_bytecode = True
 
 from derived_norms import (  # noqa: E402
-    CODE, GRAMMAR_REL, INLINE_CITATION_RE, INSTALLED_PLUGINS, ISSUE_RE, NO_FORM_REASON, NORM_ID, PLUGIN_NAME,
-    PLUGIN_ROOT, InputError, body_bytes, build_parser, case_text, check_citation, check_generator, check_model,
-    check_script, check_unique_issues, fence_indent, fragment_lines, info_string, is_fragment, load_jsonl, load_tree,
-    marketplace_commit, opening_match, parse_grammar, parse_program, plugin_version, read_code_of_the_script,
-    read_status, sha256, stale, stale_script_citations, strip_columns,
+    CODE, GRAMMAR_REL, INLINE_CITATION_RE, INSTALLED_PLUGINS, ISSUE_RE, LIST_OF_DERIVED_NORMS_FILE_NAME, NO_FORM_REASON,
+    NORM_ID, PLUGIN_NAME, PLUGIN_ROOT, InputError, body_bytes, build_parser, case_text, check_citation,
+    check_generator, check_list_of_derived_norms, check_model, check_script, check_unique_issues, derived_norm,
+    fence_indent, fragment_lines, info_string, is_fragment, load_jsonl, load_tree,
+    marketplace_commit, opening_match, output_file_lines, parse_grammar, parse_program, plugin_version,
+    read_code_of_the_script, read_status, seal_derived_norms, sha256, stale, stale_script_citations, strip_columns,
+    version_of_generator_in_status,
 )
 
 FOLDER_REL = "specs-derived/semantics"
 STATUS_NAME = "clean-language-code-examples-status.jsonl"
 STATUS_REL = FOLDER_REL + "/" + STATUS_NAME
+# The list of derived norms of the type semantics (DSM-18, NRM-12).
+TYPE_OF_DERIVED_NORMS = "semantics"
+PATH_OF_LIST_OF_DERIVED_NORMS = FOLDER_REL + "/" + LIST_OF_DERIVED_NORMS_FILE_NAME
 LEAN_CODE = ["Clean.lean", "Clean/Ast.lean", "Clean/Syntax.lean", "Clean/Typing.lean", "Clean/Evaluation.lean"]
 
 NOT_PARSED_REASON = "the grammar does not parse it"
@@ -152,10 +157,11 @@ FIXED = {"lakefile.toml": LAKEFILE, "lean-toolchain": TOOLCHAIN, "Fragment.lean"
 HASHED = [("lakefile_sha256", "lakefile.toml"), ("lean_toolchain_sha256", "lean-toolchain"),
           ("fragment_sha256", "Fragment.lean"), ("main_sha256", "Main.lean"), ("clean_sha256", "Clean.lean"),
           ("ast_sha256", "Clean/Ast.lean"), ("syntax_sha256", "Clean/Syntax.lean"),
-          ("typing_sha256", "Clean/Typing.lean"), ("evaluation_sha256", "Clean/Evaluation.lean")]
+          ("typing_sha256", "Clean/Typing.lean"), ("evaluation_sha256", "Clean/Evaluation.lean"),
+          ("derived_norms_sha256", LIST_OF_DERIVED_NORMS_FILE_NAME)]
 META_KEYS = ["type", "specs_commit", "generator", "model"] + [k for k, _ in HASHED] + ["status_sha256"]
 FRAGMENT_KEYS = ["type", "id", "hash", "cases", "expected_output", "parse_tree_hash", "state", "reason", "issue"]
-LAYOUT = set(FIXED) | set(LEAN_CODE) | {STATUS_NAME}
+LAYOUT = set(FIXED) | set(LEAN_CODE) | {LIST_OF_DERIVED_NORMS_FILE_NAME, STATUS_NAME}
 IMPORTS = {"Fragment"} | {p[:-len(".lean")].replace("/", ".") for p in LEAN_CODE if "/" in p}
 
 # ---------------------------------------------------------------- fragments (DSM-2, DSM-6)
@@ -442,6 +448,10 @@ class Declaration:
         self.line = line
         self.key = key
         self.citations = citations
+        # The lines of the derived norm that the declaration is (DSM-18): from the
+        # first citation just above it, set by parse_lean, to its last line that is not blank.
+        self.derived_norm_first_line = line
+        self.derived_norm_last_line = line
 
 
 def lean_scan(text):
@@ -560,11 +570,15 @@ def parse_lean(path, text):
             pending.append((number, *citation_lines[number]))
             continue
         if not line.strip():
+            if current is not None and raw_lines[number - 1].strip():
+                current.derived_norm_last_line = number  # a line of a literal or a comment inside it
             flush("")
             continue
         if line[0] in " \t":
             if current is None:
                 problems.append(("declaration", f"{path}:{number}", "an indented line outside a declaration"))
+            else:
+                current.derived_norm_last_line = number
             flush(", inside a declaration")
             continue
         declaration = DECLARATION_RE.match(line)
@@ -581,6 +595,8 @@ def parse_lean(path, text):
                     qualified = ".".join([s for s in spaces if s] + [qualified])
             key = f"{path}:{qualified}" if qualified else f"{path}:{raw_lines[number - 1].rstrip()}"
             current = Declaration(path, number, key, list(pending))
+            if pending:
+                current.derived_norm_first_line = pending[0][0]
             pending.clear()
             if not current.citations:
                 problems.append(("citation", key, "a declaration with no citation just above it"))
@@ -600,8 +616,11 @@ def parse_lean(path, text):
                     if module not in IMPORTS:
                         problems.append(("shortcut", f"{path}:{number}", f"imports {module}; only Fragment and the files of Clean/"))
         elif CONTINUATION_RE.match(line) and current is not None:
+            current.derived_norm_last_line = number
             flush(", inside a declaration")
         else:
+            if current is not None:
+                current.derived_norm_last_line = number
             problems.append(("declaration", f"{path}:{number}", "a line at column 1 that is no citation, no declaration, no structural line, and continues no declaration"))
     flush("")
     for match in SHORTCUT_RE.finditer(code):
@@ -624,6 +643,28 @@ def read_lean(folder):
             problems += issues
             literals += [(rel, number, text) for number, text in strings]
     return declarations, problems, literals
+
+
+def semantics_derived_norms(folder):
+    """The derived norms of the Lean code: one per declaration, its key as its name, from its first citation to its last line.
+
+    InputError when a file of the Lean code is not UTF-8.
+
+    Spec: DSM-18.
+    """
+    found = []
+    for rel in LEAN_CODE:
+        path = folder / rel
+        if not path.is_file():
+            continue
+        try:
+            lines = output_file_lines(path.read_bytes())
+        except UnicodeDecodeError as error:
+            raise InputError(f"{path} is not UTF-8: {error}") from error
+        declarations, _, _ = parse_lean(rel, "\n".join(lines))
+        found += [derived_norm(lines, d.key, f"{FOLDER_REL}/{rel}", d.derived_norm_first_line, d.derived_norm_last_line,
+                               LEAN_CITATION_RE) for d in declarations]
+    return found
 
 
 def check_root_imports(folder):
@@ -689,14 +730,14 @@ def check_literals(tree, literals, outputs):
 
 
 def previous_status(root):
-    """The fragment lines of the status file of the previous run, or None when it does not exist.
+    """The lines of the status file of the previous run, or None when it does not exist.
 
     Spec: DSM-12.
     """
     path = root / STATUS_REL
     if not path.is_file():
         return None
-    return [r for r in load_jsonl(path, "status") if r.get("type") == "fragment"]
+    return load_jsonl(path, "status")
 
 
 def check_status(tree, status_path, rows, current):
@@ -908,16 +949,25 @@ def judge(case, expected_text, code, output):
 # ---------------------------------------------------------------- commands
 
 
-def worklist(root):
+def worklist(root, plugin_root=None):
     """The items that a change calls for, one JSON object each.
+
+    A new version of the plugin (the meta line of the status file names
+    another version of the generator, or none) makes every semantic fragment
+    with a status line "changed" and every declaration an item "version"
+    (NRM-7).
 
     Spec: DSM-12.
     """
     tree = load_tree(root)
     grammar = load_grammar(root)
-    lines = previous_status(root)
-    absent = lines is None
-    lines = lines or []
+    version_of_plugin = plugin_version(plugin_root if plugin_root is not None else PLUGIN_ROOT)
+    rows = previous_status(root)
+    absent = rows is None
+    rows = rows or []
+    version_of_generator_in_status_file = version_of_generator_in_status(rows)
+    plugin_version_changed = not absent and version_of_generator_in_status_file != version_of_plugin
+    lines = [r for r in rows if r.get("type") == "fragment"]
     by_id = {}
     for line in lines:
         if isinstance(line.get("id"), str):
@@ -937,7 +987,7 @@ def worklist(root):
             item["old_hash"] = old.get("hash")
             reason = old.get("reason") if isinstance(old.get("reason"), str) else ""
             moved = any(stale(tree, i, h) for i, h in INLINE_CITATION_RE.findall(reason))
-            if moved or old.get("hash") != item["new_hash"] or any(old.get(f) != fact[f] for f in ("cases", "expected_output", "parse_tree_hash")):
+            if plugin_version_changed or moved or old.get("hash") != item["new_hash"] or any(old.get(f) != fact[f] for f in ("cases", "expected_output", "parse_tree_hash")):
                 item["kind"] = "changed"
         if item["kind"]:
             items.append(item)
@@ -956,6 +1006,9 @@ def worklist(root):
                 if change:
                     items.append({"kind": "norm", "declaration": d.key, "old_hash": norm_hash, "new_hash": change[0],
                                   "citation": f"{norm_id}@{norm_hash}"})
+        if plugin_version_changed:
+            items += [{"kind": "version", "declaration": d.key, "old_version": version_of_generator_in_status_file, "new_version": version_of_plugin}
+                      for d in declarations]
     return items
 
 
@@ -991,11 +1044,11 @@ def tree_report(root, ids):
 
 
 def seal(root, model, plugin_root=None, installed=None):
-    """Write the fixed files, order the fragment lines as data/tree.jsonl and write the meta line first.
+    """Write the fixed files and the list of derived norms, order the fragment lines as data/tree.jsonl and write the meta line first.
 
     Every input is read before anything is written.
 
-    Spec: DSM-3, DSM-4, DSM-5, DSM-16.
+    Spec: DSM-3, DSM-4, DSM-5, DSM-16, DSM-18.
     """
     tree = load_tree(root)
     folder, status_path = root / FOLDER_REL, root / STATUS_REL
@@ -1015,8 +1068,10 @@ def seal(root, model, plugin_root=None, installed=None):
     body = "".join(line + "\n" for line, _ in fragments)
     commit = marketplace_commit(plugin_root if plugin_root is not None else PLUGIN_ROOT,
                                    installed if installed is not None else INSTALLED_PLUGINS)
+    text_of_the_list_of_derived_norms = seal_derived_norms(root, PATH_OF_LIST_OF_DERIVED_NORMS, TYPE_OF_DERIVED_NORMS, semantics_derived_norms(folder))
     for rel, text in FIXED.items():
         (folder / rel).write_text(text, encoding="utf-8")
+    (root / PATH_OF_LIST_OF_DERIVED_NORMS).write_bytes(text_of_the_list_of_derived_norms.encode("utf-8"))
     meta = {"type": "meta", "specs_commit": tree.specs_commit,
             "generator": {"plugin": PLUGIN_NAME, "version": version, "marketplace_commit": commit},
             "model": model}
@@ -1038,20 +1093,21 @@ def check(root, code_of_the_script, plugin_root=None):
     """
     tree = load_tree(root)
     folder, status_path = root / FOLDER_REL, root / STATUS_REL
-    for path in [status_path] + [folder / rel for rel in LEAN_CODE]:
+    for path in [status_path, root / PATH_OF_LIST_OF_DERIVED_NORMS] + [folder / rel for rel in LEAN_CODE]:
         if not path.is_file():
             raise InputError(f"{path} does not exist")
     grammar = load_grammar(root)
     version = plugin_version(plugin_root if plugin_root is not None else PLUGIN_ROOT)
     rows = read_status(status_path)
     script_problems = check_script(tree, code_of_the_script)
+    list_problems = check_list_of_derived_norms(root, PATH_OF_LIST_OF_DERIVED_NORMS, TYPE_OF_DERIVED_NORMS, semantics_derived_norms(folder))
     counts = {state: 0 for state in STATES}
     passed = {"run": [0, 0], "error": [0, 0]}
     fragments = semantic_fragments(tree)
     if not fragments:
         problems = [p for p in check_layout(folder) if p[0] == "fixed"]
         problems += [("status", f"{status_path}:{n}", e) for n, _, v, e in rows[:1] if v is None]
-        problems += check_meta(tree, folder, status_path, rows, version) + script_problems
+        problems += check_meta(tree, folder, status_path, rows, version) + list_problems + script_problems
         return problems, {"states": counts, "passed": passed}
     lake = lake_command()
     current = {n["id"]: facts(tree, grammar, n) for n in fragments}
@@ -1064,6 +1120,7 @@ def check(root, code_of_the_script, plugin_root=None):
     problems += check_declarations(tree, declarations, by_id)
     outputs = {i: f["expected_output_text"] for i, f in current.items()}
     problems += check_literals(tree, literals, outputs)
+    problems += list_problems
     problems += script_problems
     for norm_id, line in by_id.items():
         if norm_id in current and isinstance(line.get("state"), str) and line["state"] in counts:
@@ -1093,7 +1150,7 @@ def check(root, code_of_the_script, plugin_root=None):
 def main(argv=None):
     """The command line: worklist, tree <norm ID>..., seal --model <model ID>, check, stale-citations.
 
-    Spec: DSM-4, DSM-7, DSM-12, DSM-13, DSM-17.
+    Spec: DSM-4, DSM-7, DSM-12, DSM-13, DSM-17, DSM-18.
     """
     parser = argparse.ArgumentParser(prog="derive_semantics.py", description="The deterministic part of /clean-derived-norms:derive-semantics.")
     parser.add_argument("command", choices=["worklist", "tree", "seal", "check", "stale-citations"])

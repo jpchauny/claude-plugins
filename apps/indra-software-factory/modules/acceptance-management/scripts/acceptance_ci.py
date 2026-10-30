@@ -44,7 +44,9 @@ are those of ACU-34, in its order:
    acceptance area each acceptance unit that a scenario of the acceptance area
    crosses, with its unit hash (ACU-52); "norm_hashes", the norm citations of
    "## Norms" of the acceptance unit or of the acceptance units crossed (ACU-8);
-   "files", each file of the folder with its git blob hash; and
+   "derived_norm_fingerprints", likewise, the derived norm citations of their
+   "## Derived norms" (ACU-8, ACU-78), a derived norm cited with two
+   different derived norm fingerprints mapping to ""; "files", each file of the folder with its git blob hash; and
    "reference_commits". The hashes, the scenarios and the citations are read
    with acceptance_hashes.py (ACU-51 to ACU-56). Every "for" is read from the
    files of "acceptance_commit" with git ls-tree and git show, before any
@@ -203,9 +205,10 @@ def read_utf8(repo: Path, commit: str, path: str) -> str | None:
         return None
 
 
-def produced_for(repo: Path, commit: str, target: str) -> tuple[dict, dict, dict]:
-    """The "hashes", "norm_hashes" and "files" of the "for" of the lines of one folder, at `commit` (ACU-35)."""
-    hashes, norm_hashes = {}, {}
+def produced_for(repo: Path, commit: str, target: str) -> tuple[dict, dict, dict, dict]:
+    """The "hashes", "norm_hashes", "derived_norm_fingerprints" and "files" of the "for" of the lines of one folder, at
+    `commit` (ACU-35)."""
+    hashes, norm_hashes, derived_norm_fingerprints = {}, {}, {}
     files = tracked(repo, commit, f"tests/{target}")
     for sha in files.values():
         data = git_bytes(repo, "cat-file", "blob", sha) or b""
@@ -225,8 +228,11 @@ def produced_for(repo: Path, commit: str, target: str) -> tuple[dict, dict, dict
             put(hashes, unit_id, (acceptance_hashes.unit_hash(data) or "") if data is not None else "")
         for norm_id, norm_hash, _ in acceptance_hashes.norm_citations(data) if data is not None else []:
             put(norm_hashes, norm_id, norm_hash)
+        for derived_norm_id, derived_norm_fingerprint, _ in (
+                acceptance_hashes.derived_norm_citations(data) if data is not None else []):
+            put(derived_norm_fingerprints, derived_norm_id, derived_norm_fingerprint)
     return (dict(sorted(hashes.items(), key=lambda kv: id_order(kv[0]))),
-            dict(sorted(norm_hashes.items())), files)
+            dict(sorted(norm_hashes.items())), dict(sorted(derived_norm_fingerprints.items())), files)
 
 
 def config_of(repo: Path) -> dict | None:
@@ -373,13 +379,15 @@ def main(argv: list[str]) -> int:
         report.unlink(missing_ok=True)
         out = subprocess.run(command, shell=True, cwd=repo,
                              env=env | {"ACCEPTANCE_TARGET": f"tests/{target}", "ACCEPTANCE_REPORT": str(report)})
-        hashes, norm_hashes, files = fors[target]
+        hashes, norm_hashes, derived_norm_fingerprints, files = fors[target]
         found = results(report, f"tests/{target}", out.returncode)
         lines = []
         for name, result in found:
             lines.append(json.dumps({
                 "kind": "test", "test": name, "result": result,
-                "for": {"hashes": hashes, "norm_hashes": norm_hashes, "files": files, "reference_commits": commits},
+                "for": {"hashes": hashes, "norm_hashes": norm_hashes,
+                        "derived_norm_fingerprints": derived_norm_fingerprints, "files": files,
+                        "reference_commits": commits},
                 "acceptance_commit": acceptance_commit, "date": date, "produced_by": args.produced_by,
             }))
         with open(repo / "records" / f"{target}.jsonl", "a", encoding="utf-8") as f:

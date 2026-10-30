@@ -6,12 +6,12 @@ description: Derive the Lark grammar of Clean in specs-derived/grammar/ of the r
 # derive-grammar
 
 Implements [specs/derive-grammar.md](specs/derive-grammar.md) (DGR), with the
-rules of the module, CDN-1 to CDN-7, in [module.md](../../specs/module.md),
-and the interface of a derived-norms generator, NRM-1 to NRM-11, of the plugin
+rules of the module, CDN-1 to CDN-10, in [module.md](../../specs/module.md),
+and the interface of a derived-norms generator, NRM-1 to NRM-15, of the plugin
 `norms-management`. Each step below names the rule it follows.
 
 Two parts. The script does what is deterministic: the work list, the case of
-each fragment, the meta line and the checks. You, the deriver, write the
+each fragment, the list of derived norms, the meta line and the checks. You, the deriver, write the
 statements of the grammar and the status lines. The script never writes a
 statement and never decides a state.
 
@@ -34,7 +34,8 @@ M="${CLAUDE_PLUGIN_ROOT}/scripts/derived_norms.py"
 
 What you read and write (DGR-1 (The use case reads only layer 2 (NRM-3), and
 writes in the repository only under specs-derived/grammar/), DGR-3 (The output
-is one grammar and one status file under specs-derived/grammar/)):
+is one grammar, one status file and one list of derived norms under
+specs-derived/grammar/)):
 
 - Read `data/tree.jsonl` and, when you need the context of a norm,
   `specs-repo-annotated/`. Never read a file of the foundation. For the old
@@ -49,9 +50,14 @@ is one grammar and one status file under specs-derived/grammar/)):
   a comment on an open duplicate, the labels it lacks, and the edit that
   writes each issue's number in its body (DGR-14); in
   `jpchauny/claude-plugins`, the same for each stale cited norm of the script
-  (DGR-18). Nothing else goes in `specs-derived/grammar/`.
+  (DGR-18). Nothing else goes in `specs-derived/grammar/`, besides the list
+  of derived norms that `seal` writes.
 - Never write `data/` or `specs-repo-annotated/`. Never edit the meta line
-  of the status file: `seal` writes it.
+  of the status file, nor `specs-derived/grammar/derived-norms.jsonl` (the
+  list of derived norms): `seal` writes both (DGR-20 (Each statement of the
+  grammar is one derived norm, which the list of derived norms names by its
+  derived norm ID and its derived norm fingerprint (NRM-12 to NRM-15,
+  CDN-8))).
 - Commit nothing and push nothing: the step of layer 2 commits and pushes
   the output after the last generator (NRM-9).
 
@@ -63,7 +69,8 @@ derivation goes on)):
 
 1. The work list (`worklist`).
 2. Derive, file by file.
-3. Seal and check (`seal`, `check`).
+3. Seal and check (`seal`, which also writes the list of derived norms;
+   `check`).
 4. The issue of each pending fragment, opened at once while you derive
    (step 2 sends you there).
 5. The issue of each stale citation of the script, after the last check.
@@ -87,6 +94,12 @@ Exit 2: show the message and stop. Otherwise one JSON line per item
 - `norm`: a statement whose citation no longer checks, with exactly `kind`,
   `statement` (its key), `old_hash`, `new_hash` (null when the norm is
   retired or gone) and `citation` (`<norm ID>@<norm hash>`).
+- `version`: a statement of the grammar when this plugin is a new version
+  (the meta line of the status file names another `version` in `generator`,
+  or none), with exactly `kind`, `statement` (its key), `old_version` and
+  `new_version`. Then every statement is a `version` item and every fragment
+  with a status line is `changed`: a new version derives the whole grammar
+  again, since any statement may be one that it fixes (NRM-7).
 
 Then, before you change anything:
 
@@ -266,6 +279,16 @@ still follows from them, update only the norm hashes of its citations.
 Otherwise rewrite it or remove it, and the fragments it serves are
 evaluated again. Change nothing that no item reaches (DGR-12).
 
+### version
+
+As `norm`, for a statement whose citations may all still check: read the
+current text of every norm it cites. If the statement still follows from
+them, leave it exactly as it is, so it keeps its derived norm fingerprint.
+Otherwise rewrite it or remove it: that is what the new version corrects,
+and its derived norm gets another derived norm fingerprint or is gone, which
+makes the acceptance units and the code that cite it stale (DGR-12, "A new
+version of the plugin derives the whole grammar again").
+
 ### A gap
 
 You never decide what the norms do not decide, and never fill a gap
@@ -311,12 +334,28 @@ uv run --with "lark[interegular]" python3 -I -B "$S" check
 `seal` orders the status lines as `data/tree.jsonl` and writes the meta
 line (DGR-4 (The first line of the status file records the specs commit, the
 generator, the model and the hashes of the output (NRM-5)), DGR-17 (The
-grammar and the status file change only through a run of the use case)),
+grammar, the list of derived norms and the status file change only through a
+run of the use case)),
 such as
 
 ```
-{"type":"meta","specs_commit":"3a4ba07351c7f3f0f5f7e9a86e583263191ba15e","generator":{"plugin":"clean-derived-norms","version":"0.1.0","marketplace_commit":"<sha>"},"model":"claude-opus-5-5","grammar_sha256":"<sha256>","status_sha256":"<sha256>"}
+{"type":"meta","specs_commit":"3a4ba07351c7f3f0f5f7e9a86e583263191ba15e","generator":{"plugin":"clean-derived-norms","version":"0.1.0","marketplace_commit":"<sha>"},"model":"claude-opus-5-5","grammar_sha256":"<sha256>","derived_norms_sha256":"<sha256>","status_sha256":"<sha256>"}
 ```
+
+Before the meta line, `seal` writes the list of derived norms (DGR-20): one
+derived norm per statement of the grammar, named by its key (a tab or other
+control character of the key becomes a space in the name, CDN-10 (The name of a derived norm in the list of derived norms is the key of
+its item, with each character that a name of NRM-12 may not hold replaced by
+one space)), from its first citation line to its last
+line, with its derived norm ID (`grammar:<n>`) and
+its derived norm fingerprint. A statement keeps its derived norm ID while it
+keeps its key, whatever you change in it or in its citations; a renamed
+statement, or a directive with another first line, is a new derived norm, and
+its old derived norm ID is gone for good. So rename a statement only when the
+norms call for it. You never give a derived norm ID nor compute a
+derived norm fingerprint: the script does, from the grammar and the list before the run
+(read with git at the head of the default branch, CDN-9) alone. Each `seal` gives the derived norm IDs
+again, so a new statement may get another ID from a later `seal` of the run.
 
 `--model` is required: pass the exact model ID you run as, from your own
 context, such as `--model claude-opus-5-5`; never a family name such as
@@ -325,8 +364,9 @@ writes nothing. The script computes every other value itself: the specs
 commit from `data/tree.jsonl`, the version from the plugin's
 `.claude-plugin/plugin.json`, the marketplace commit from
 `~/.claude/plugins/installed_plugins.json` or the checkout that holds the
-plugin, or `none`. Exit 2 (a missing or malformed input, or a plugin with no
-version): show the message, it wrote nothing.
+plugin, or `none`. Exit 2 (a missing or malformed input, a list before the
+run that it cannot read, or git that cannot give it (CDN-9), or a plugin with no version): show the message, it
+wrote nothing.
 
 `check` prints one line per problem, `<check>: <ID or key>: <what>`; for a
 program of several files, the message of a failure names the line of the
@@ -336,9 +376,9 @@ the last line
 `fragments: <d> derived, <p> pending; accept parsed <a>/<A>; reject rejected <r>/<R>; problems: <n>`
 (DGR-13 (The script checks the grammar and the status file, and pending
 counts as a failure (NRM-6))). Exit 0: all passes; 1: problems; 2: an input
-is missing or Lark cannot be loaded. With no fragment in the tree, it does
-not build the grammar and checks only the meta line and the citations of the
-script.
+is missing (the list of derived norms among them) or Lark cannot be loaded.
+With no fragment in the tree, it does not build the grammar and checks only
+the meta line, the list of derived norms and the citations of the script.
 
 Fix the problems your statements caused (`build`, `citation`, `usage`,
 `source`, `brackets`, `names`, `accept`, `reject`, `cited`, `statement`,
@@ -351,8 +391,12 @@ and seal again.
   version, or by the local skill (no `generator`): seal again.
 - `meta` `model`: no model, or one not of the form of a model ID: seal
   again with your exact model ID. `check` judges only the form.
-- `meta` `grammar_sha256` or `status_sha256`: a file changed after the last
-  `seal`: seal again once your change is done.
+- `meta` `grammar_sha256`, `derived_norms_sha256` or `status_sha256`: a file
+  changed after the last `seal`: seal again once your change is done.
+- `derived-norms`: the list of derived norms does not match the grammar, or
+  gives a derived norm ID again or to another statement (DGR-20). Never edit
+  the list: seal again. If it stays after a `seal`, report it in the end
+  report as a defect of the plugin; never work around it.
 - `issue`: two status lines hold the same issue URL. Fix it at once, with
   no question: the first of those lines in the order of the status file
   keeps the URL; every other one gets `"issue": null` and, when it is
@@ -821,5 +865,7 @@ opened, and the result of the check)):
   error, or that its body still holds `#<N>`.
 - Then the output of `check` and its exit status.
 
-When `/norms-management:build` runs this use case, this report is its part of
-the build's report (NRM-11); the build commits and pushes (NRM-9).
+Do not list the derived norms new, changed and gone: the step of layer 2
+compares them for its report (NRM-11). When `/norms-management:build` runs
+this use case, this report is its part of the build's report; the build
+commits and pushes (NRM-9).

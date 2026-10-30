@@ -11,6 +11,7 @@ import hashlib
 import importlib.util
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -215,8 +216,10 @@ def plugin(tmp_path, monkeypatch):
 
 @pytest.fixture
 def repo(tmp_path):
+    """A repository of layer 2 with no commit yet, so with no list before the run (CDN-9)."""
     root = tmp_path / "repo"
     root.mkdir()
+    git(root, "init", "-q")
     nodes = base_nodes()
     write_tree(root, nodes)
     (root / "specs-derived" / "grammar").mkdir(parents=True)
@@ -264,6 +267,21 @@ def reseal(root, nodes, code=None, lines=None):
     write_lean(root, code if code is not None else lean_code(nodes))
     write_status(root, lines if lines is not None else good_status(root, nodes))
     ds.seal(root, MODEL)
+
+
+def git(root, *args):
+    """Run git in a temporary repository of a test, never in a real repository."""
+    return subprocess.run(["git", "-C", str(root), "-c", "user.email=t@example.com", "-c", "user.name=t",
+                           "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args],
+                          check=True, capture_output=True, text=True).stdout
+
+
+def commit_the_list(root):
+    """Commit the list of derived norms, as the step of layer 2 does at the end of a run (NRM-9): the list before the next run."""
+    if not (root / ".git").exists():
+        git(root, "init", "-q")
+    git(root, "add", "--", ds.PATH_OF_LIST_OF_DERIVED_NORMS)
+    git(root, "commit", "-q", "-m", "layer 2")
 
 
 # ------------------------------------------------------------------ DSM-1
@@ -420,11 +438,12 @@ def test_dsm4_the_meta_line(repo):
     meta = json.loads(lines[0])
     assert list(meta) == ["type", "specs_commit", "generator", "model", "lakefile_sha256", "lean_toolchain_sha256",
                           "fragment_sha256", "main_sha256", "clean_sha256", "ast_sha256", "syntax_sha256",
-                          "typing_sha256", "evaluation_sha256", "status_sha256"]
+                          "typing_sha256", "evaluation_sha256", "derived_norms_sha256", "status_sha256"]
     assert meta["specs_commit"] == SPECS and meta["model"] == MODEL
     assert meta["generator"] == {"plugin": "clean-derived-norms", "version": VERSION, "marketplace_commit": "none"}
     folder = root / ds.FOLDER_REL
     assert meta["typing_sha256"] == hashlib.sha256((folder / "Clean/Typing.lean").read_bytes()).hexdigest()
+    assert meta["derived_norms_sha256"] == hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
     assert meta["status_sha256"] == hashlib.sha256("\n".join(lines[1:]).encode()).hexdigest()
     assert lines[0] == json.dumps(meta, separators=(",", ":"))
 
@@ -783,6 +802,57 @@ def test_dsm12_exit_status_2(tmp_path, monkeypatch):
     assert main_in(tmp_path, monkeypatch, "worklist") == 2
 
 
+def set_version_in_status(root, version):
+    """Write another version of the generator in the meta line of the status file, or none when version is None."""
+    path = root / ds.STATUS_REL
+    head, _, body = path.read_text().partition("\n")
+    meta = json.loads(head)
+    if version is None:
+        meta["generator"].pop("version")
+    else:
+        meta["generator"]["version"] = version
+    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+
+
+def declaration_keys(root):
+    declarations, _, _ = ds.read_lean(root / ds.FOLDER_REL)
+    return [d.key for d in declarations]
+
+
+@pytest.mark.parametrize("old_version", ["0.0.9", None])
+def test_dsm12_a_new_version_of_the_plugin_derives_every_fragment_and_declaration_again(repo, old_version):
+    root, nodes = repo
+    write_tree(root, [n for n in nodes if n["id"] != "TST-2"])
+    set_version_in_status(root, old_version)
+    items = ds.worklist(root)
+    assert [(i["kind"], i["id"]) for i in items if "id" in i] == [("changed", i) for i in SEMANTIC if i != "TST-2"] + [("gone", "TST-2")]
+    version = [i for i in items if i["kind"] == "version"]
+    assert [i["declaration"] for i in version] == declaration_keys(root) and version
+    assert version[0] == {"kind": "version", "declaration": declaration_keys(root)[0], "old_version": old_version, "new_version": VERSION}
+    assert list(version[0]) == ["kind", "declaration", "old_version", "new_version"]
+    assert items[-len(version):] == version
+
+
+def test_dsm12_a_declaration_that_a_new_version_leaves_as_it_is_keeps_its_derived_norm_fingerprint(repo):
+    root, _ = repo
+    list_before = (root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_text()
+    set_version_in_status(root, "0.0.9")
+    assert ds.worklist(root)
+    ds.seal(root, MODEL)
+    assert (root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_text() == list_before
+    assert ds.worklist(root) == []
+
+
+def test_dsm12_worklist_exits_2_when_the_plugin_has_no_version(tmp_path, repo, monkeypatch, capsys):
+    root, _ = repo
+    other = tmp_path / "another-plugin"
+    (other / ".claude-plugin").mkdir(parents=True)
+    (other / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "clean-derived-norms"}))
+    monkeypatch.setattr(ds, "PLUGIN_ROOT", other)
+    assert main_in(root, monkeypatch, "worklist") == 2
+    assert "no version" in capsys.readouterr().err
+
+
 # ------------------------------------------------------------------ DSM-13
 
 
@@ -850,6 +920,18 @@ def test_dsm13_missing_inputs_exit_2(repo, monkeypatch, missing):
     path = {"status": root / ds.STATUS_REL, "lean": root / ds.FOLDER_REL / "Clean.lean", "tree": root / derived_norms.TREE_REL}[missing]
     path.unlink()
     assert main_in(root, monkeypatch, "check") == 2
+
+
+@pytest.mark.parametrize("command", [["seal", "--model", MODEL], ["check"]])
+def test_dsm4_dsm13_a_lean_file_that_is_not_utf8_exits_2_and_writes_nothing(repo, monkeypatch, capsys, command):
+    root, _ = repo
+    FakeLean(monkeypatch)
+    typing_file = root / ds.FOLDER_REL / "Clean/Typing.lean"
+    typing_file.write_bytes(typing_file.read_bytes() + b"-- \xff\n")
+    before = (root / ds.STATUS_REL).read_bytes()
+    assert main_in(root, monkeypatch, *command) == 2
+    assert "is not UTF-8" in capsys.readouterr().err
+    assert (root / ds.STATUS_REL).read_bytes() == before
 
 
 def test_dsm13_lake_that_cannot_be_run_exits_2(repo, monkeypatch, capsys):
@@ -1108,3 +1190,156 @@ def test_dsm7_the_reader_takes_the_tree_of_a_program_of_several_files(tmp_path):
     tree = ("rule", ds.PROGRAM_RULE, [("rule", ds.FILE_RULE, [("token", ds.PATH_TYPE, "app/a.cln"), ("rule", "s", [])]),
                                       ("rule", ds.FILE_RULE, [("absent",), ("rule", "s", [])])])
     assert ds.run_fragment(executable, ds.serialize(tree)) == (None, b"(%program (%file %path=app/a.cln (s)) (%file _ (s)))", None)
+
+
+# ------------------------------------------------------------------ DSM-18
+
+
+def list_rows(root):
+    return [json.loads(line) for line in (root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_text().splitlines()]
+
+
+def by_name(root):
+    return {r["name"]: r for r in list_rows(root)[1:]}
+
+
+def test_dsm18_each_declaration_is_one_derived_norm(repo):
+    root, nodes = repo
+    rows = list_rows(root)
+    assert rows[0] == {"kind": "meta", "type": "semantics", "last_derived_norm_number": len(rows) - 1}
+    names_found = [r["name"] for r in rows[1:]]
+    # In the order of NRM-13, by path, then by first_line: "." comes before "/".
+    assert names_found == ["Clean.lean:Clean.outcome", "Clean/Ast.lean:Clean.Statement", "Clean/Evaluation.lean:Clean.evaluate",
+                           "Clean/Syntax.lean:Clean.unquote", "Clean/Syntax.lean:Clean.statements",
+                           "Clean/Typing.lean:Clean.typing"]
+    assert [r["derived_norm_id"] for r in rows[1:]] == [f"semantics:{n}" for n in range(1, 7)]
+    evaluate = by_name(root)["Clean/Evaluation.lean:Clean.evaluate"]
+    lines = lean_code(nodes)["Clean/Evaluation.lean"].split("\n")
+    assert evaluate["path"] == "specs-derived/semantics/Clean/Evaluation.lean"
+    assert lines[evaluate["first_line"] - 1].startswith("-- PRO-1@")
+    assert lines[evaluate["last_line"] - 1].startswith("  | Statement.stop")
+    assert [c["norm_id"] for c in evaluate["cited_norms"]] == ["PRO-1", "PRO-2"]
+
+
+def test_dsm18_the_lines_of_a_string_literal_inside_a_declaration_count():
+    text = "\n".join(["-- PRO-1@11111111: a text", "def text : String := \"one", "two\"", "", "end Clean", ""])
+    declarations, _, _ = ds.parse_lean("Clean/Ast.lean", text)
+    assert [(d.derived_norm_first_line, d.derived_norm_last_line) for d in declarations] == [(1, 3)]
+
+
+def test_dsm18_the_fixed_files_hold_no_derived_norm(repo):
+    root, _ = repo
+    assert not [r for r in list_rows(root)[1:] if r["path"].endswith(("Fragment.lean", "Main.lean"))]
+
+
+def test_dsm18_the_same_declaration_keeps_its_derived_norm_id_and_a_moved_one_gets_a_new_one(repo):
+    root, nodes = repo
+    commit_the_list(root)
+    before = by_name(root)
+    code = lean_code(nodes)
+    code["Clean/Typing.lean"] = code["Clean/Typing.lean"].replace(":= none", ":= Option.none")
+    reseal(root, nodes, code)
+    commit_the_list(root)
+    after = by_name(root)
+    typing = "Clean/Typing.lean:Clean.typing"
+    assert after[typing]["derived_norm_id"] == before[typing]["derived_norm_id"]
+    assert after[typing]["derived_norm_fingerprint"] != before[typing]["derived_norm_fingerprint"]
+    code["Clean/Typing.lean"] = code["Clean/Typing.lean"].replace("def typing", "def typingOf").replace("typing program", "typingOf program")
+    code["Clean.lean"] = code["Clean.lean"].replace("typing program", "typingOf program")
+    reseal(root, nodes, code)
+    after = by_name(root)
+    assert typing not in after
+    assert after["Clean/Typing.lean:Clean.typingOf"]["derived_norm_id"] == "semantics:7"
+    assert list_rows(root)[0]["last_derived_norm_number"] == 7
+
+
+def test_dsm18_cdn8_the_name_and_not_the_key_keeps_a_declaration_the_same(repo, monkeypatch):
+    """DSM-18 and CDN-8: what keeps a declaration the same derived norm from one run to the next is its name.
+    A key that changes only by a tab that CDN-10 replaces with a space gives the same name, so the declaration
+    keeps its derived norm ID."""
+    root, nodes = repo
+    FakeLean(monkeypatch)
+    code = lean_code(nodes)
+    with_tab = code["Clean/Evaluation.lean"].replace(
+        "\nend Clean", "\n" + cite(nodes, "PRO-1", "an outcome is shown as its output") +
+        "\ninstance\t: ToString Fragment.Outcome where\n  toString outcome := outcome.output\n\nend Clean")
+    code["Clean/Evaluation.lean"] = with_tab
+    reseal(root, nodes, code)
+    commit_the_list(root)
+    name = "Clean/Evaluation.lean:instance : ToString Fragment.Outcome where"
+    before = by_name(root)[name]["derived_norm_id"]
+    code["Clean/Evaluation.lean"] = with_tab.replace("instance\t:", "instance :")
+    reseal(root, nodes, code)
+    assert "Clean/Evaluation.lean:instance : ToString Fragment.Outcome where" in declaration_keys(root)
+    assert by_name(root)[name]["derived_norm_id"] == before
+    assert [n for n in names(run_check(root)[0]) if n[0] == "derived-norms"] == []
+
+def test_dsm18_a_list_that_does_not_check(repo, monkeypatch):
+    root, _ = repo
+    FakeLean(monkeypatch)
+    rows = list_rows(root)
+    rows[1]["derived_norm_fingerprint"] = "00000000"
+    (root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(json.dumps(r) + "\n" for r in rows))
+    path = root / ds.STATUS_REL
+    head, _, body = path.read_text().partition("\n")
+    meta = json.loads(head)
+    meta["derived_norms_sha256"] = hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
+    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+    problems = run_check(root)[0]
+    assert [n for n in names(problems) if n[0] != "pending"] == [("derived-norms", rows[1]["derived_norm_id"])]
+    assert main_in(root, monkeypatch, "check") == 1
+
+
+def test_dsm16_a_change_by_hand_of_the_list_fails(repo, monkeypatch):
+    root, _ = repo
+    FakeLean(monkeypatch)
+    path = root / ds.PATH_OF_LIST_OF_DERIVED_NORMS
+    path.write_text(path.read_text() + "\n")
+    assert ("meta", "derived_norms_sha256") in names(run_check(root)[0])
+
+
+def test_dsm13_a_missing_list_exits_2(repo, monkeypatch):
+    root, _ = repo
+    FakeLean(monkeypatch)
+    (root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).unlink()
+    assert main_in(root, monkeypatch, "check") == 2
+
+
+def test_dsm13_no_semantic_fragment_yet_still_checks_the_list(repo, monkeypatch):
+    root, nodes = repo
+    monkeypatch.setattr(ds.shutil, "which", lambda name: None)
+    keep = [n for n in nodes if not ds.is_semantic_fragment(n)]
+    write_tree(root, keep)
+    reseal(root, keep, lines=[])
+    rows = list_rows(root)
+    (root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(json.dumps(r) + "\n" for r in rows[:-1]))
+    path = root / ds.STATUS_REL
+    head, _, body = path.read_text().partition("\n")
+    meta = dict(json.loads(head), derived_norms_sha256=hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest())
+    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+    assert names(run_check(root)[0]) == [("derived-norms", rows[-1]["name"])]
+
+
+def test_dsm15_the_script_has_no_command_that_compares_two_lists_of_derived_norms(repo, monkeypatch, capsys):
+    root, _ = repo
+    with pytest.raises(SystemExit) as error:
+        main_in(root, monkeypatch, "derived-norm-changes")
+    assert error.value.code == 2
+    assert "invalid choice: 'derived-norm-changes'" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ CDN-10, the name of a derived norm
+
+
+def test_cdn10_a_declaration_with_no_name_and_a_tab_is_named_with_a_space(repo, monkeypatch):
+    root, nodes = repo
+    FakeLean(monkeypatch)
+    code = lean_code(nodes)
+    code["Clean/Evaluation.lean"] = code["Clean/Evaluation.lean"].replace(
+        "\nend Clean", "\n" + cite(nodes, "PRO-1", "an outcome is shown as its output") +
+        "\ninstance\t: ToString Fragment.Outcome where\n  toString outcome := outcome.output\n\nend Clean")
+    reseal(root, nodes, code)
+    key = "Clean/Evaluation.lean:instance\t: ToString Fragment.Outcome where"
+    assert key in declaration_keys(root)
+    assert "Clean/Evaluation.lean:instance : ToString Fragment.Outcome where" in by_name(root)
+    assert [n for n in names(run_check(root)[0]) if n[0] == "derived-norms"] == []
