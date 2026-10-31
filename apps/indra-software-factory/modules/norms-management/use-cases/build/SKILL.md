@@ -7,7 +7,7 @@ argument-hint: "[--commit SHA]"
 # build
 
 Brings the norms of layer 2 up to date with one commit of layer 1
-([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
+([LAY-3](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
 Run it from the norms repository of the project: the output goes to the root
 of the git repository of the working directory.
 
@@ -36,7 +36,7 @@ uv run --frozen --project "${CLAUDE_PLUGIN_ROOT}" norms-gen verify --specs <laye
 its working tree, so uncommitted changes there are not built. On a non-zero
 exit, show its message as it is and stop: the meaning of each status is in
 the generator's spec,
-[R62](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/norms-versions.md).
+[R62](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/norms-management/specs/norms-versions.md).
 
 ## 3. Derive the derived norms
 

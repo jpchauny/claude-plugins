@@ -98,8 +98,8 @@ class Scaffold(unittest.TestCase):
             if r.get("role") == "tooling":
                 continue
             enabled = {k for k, v in self.settings(r["name"])["enabledPlugins"].items() if v}
-            self.assertEqual(enabled, {"development-methodology@jpchauny-plugins", "utilities@jpchauny-plugins",
-                                       f"{MODULE[r.get('layer', r.get('role'))]}@jpchauny-plugins"}, r["name"])
+            self.assertEqual(enabled, {"development-methodology@indra-software-factory", "utilities@indra-software-factory",
+                                       f"{MODULE[r.get('layer', r.get('role'))]}@indra-software-factory"}, r["name"])
 
     def test_orc5_ask_rules_where_a_person_approves_every_change(self):
         self.assertEqual(scaffold(self.folder).returncode, 0)
@@ -175,7 +175,7 @@ class Scaffold(unittest.TestCase):
                          [".claude-plugin/marketplace.json", ".claude/settings.json", "CLAUDE.md", "README.md",
                           "project.json"])
         settings = self.settings("billing-tooling")
-        self.assertEqual({k for k, v in settings["enabledPlugins"].items() if v}, {"utilities@jpchauny-plugins"})
+        self.assertEqual({k for k, v in settings["enabledPlugins"].items() if v}, {"utilities@indra-software-factory"})
         self.assertNotIn("permissions", settings)
         with open(os.path.join(tooling, ".claude-plugin", "marketplace.json"), encoding="utf-8") as f:
             self.assertEqual(f.read(), '{\n  "name": "billing-tooling",\n  "owner": {\n    "name": "acme"\n  },\n'
@@ -361,7 +361,7 @@ class Scaffold(unittest.TestCase):
         workflow = os.path.join(PLUGIN, "use-cases", "create-project", "templates", "acceptance",
                                 ".github", "workflows", "acceptance.yml")
         with open(workflow, encoding="utf-8") as f:
-            rel = re.search(r"\.\./claude-plugins/(\S+/acceptance_ci\.py)", f.read()).group(1)
+            rel = re.search(r"\.\./indra-software-factory/(\S+/acceptance_ci\.py)", f.read()).group(1)
         repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(PLUGIN))))
         self.assertTrue(os.path.isfile(os.path.join(repo, rel)), rel)
         self.assertFalse(os.path.exists(os.path.join(PLUGIN, "use-cases", "create-project", "scripts", "acceptance_ci.py")))

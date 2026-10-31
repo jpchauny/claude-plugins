@@ -18,7 +18,7 @@ PLUGIN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT = os.path.join(PLUGIN, "scripts", "index.py")
 LAYERS = os.path.join(PLUGIN, "specs", "layers.md")
 HOOKS = os.path.join(PLUGIN, "hooks", "hooks.json")
-APP_URL = "https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/app.md"
+APP_URL = "https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/specs/app.md"
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(PLUGIN))))
 
 sys.dont_write_bytecode = True  # no __pycache__ inside the plugin

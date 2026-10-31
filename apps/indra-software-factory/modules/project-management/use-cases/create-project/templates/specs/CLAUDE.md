@@ -4,14 +4,14 @@
 
 Layer 1 of `{{project}}`: its specification, in plain prose, written by
 people. The only source of truth of the project
-([LAY-2](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
+([LAY-2](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
 
 {{repositories}}
 
 ## Working here
 
-- The specs live under `specs/`. No change is made without a person's approval: the agent shows the whole diff, and the person approves the command that commits and pushes it to `main`. There is no pull request ([LAY-2](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
-- Issues opened by layers 3 and 4 (inconsistencies found while defining acceptance or implementing) are fixed here first ([LAY-5](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
+- The specs live under `specs/`. No change is made without a person's approval: the agent shows the whole diff, and the person approves the command that commits and pushes it to `main`. There is no pull request ([LAY-2](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
+- Issues opened by layers 3 and 4 (inconsistencies found while defining acceptance or implementing) are fixed here first ([LAY-5](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
 
 ## Issues
 

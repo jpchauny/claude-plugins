@@ -17,7 +17,7 @@ import sys
 
 LAYERS = ["Layer", "Recommended name", "Holds", "Written by"]
 MODULES = ["Module", "Where"]
-APP_URL = "https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/app.md"
+APP_URL = "https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/specs/app.md"
 
 
 def plugin_root():

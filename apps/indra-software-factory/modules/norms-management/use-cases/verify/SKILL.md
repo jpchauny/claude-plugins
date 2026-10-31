@@ -6,7 +6,7 @@ description: Check that layer 2 in this norms repository is exactly what the gen
 # verify
 
 Layer 2 is never edited by hand
-([LAY-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
+([LAY-3](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)).
 This checks it, from the norms repository of the project.
 
 1. Find layer 1 as the `build` skill of this plugin does.

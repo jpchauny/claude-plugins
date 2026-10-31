@@ -37,7 +37,7 @@ Rationale of the unqualified term: the common case is a project that uses ISF, s
 - **DEV-4.** Each fact is written in one place. Every other place that needs it refers to that place, and does not repeat it.
 - **DEV-9.** Every meta spec must follow [writing-specs.md](writing-specs.md).
 - **DEV-10.** The development of a meta repository never runs a use case, hook or script of ISF on a meta repository. The development of a meta repository never takes a rule of ISF as a meta rule. Exception (complete list): the module `utilities` of ISF, usable in any project, a meta repository included, because its use cases implement no rule of a methodology. Rationale: ISF is a product whose methodology is for the projects of its users; a meta repository developed with ISF's five layers would need ISF to build ISF, and a `<project>-tooling` repository developed with them would need the project's tooling to build that tooling. Any tool that the meta methodology needs is part of the meta methodology.
-- **DEV-11.** A `<project>-tooling` repository cites this spec by its URL, [https://github.com/jpchauny/claude-plugins/blob/main/specs/development.md](https://github.com/jpchauny/claude-plugins/blob/main/specs/development.md), and does not copy it. Rationale: a copy would drift from this spec (DEV-4).
+- **DEV-11.** A `<project>-tooling` repository cites this spec by its URL, [https://github.com/jpchauny/indra-software-factory/blob/main/specs/development.md](https://github.com/jpchauny/indra-software-factory/blob/main/specs/development.md), and does not copy it. Rationale: a copy would drift from this spec (DEV-4).
 
 ## Levels
 

@@ -7,13 +7,13 @@ argument-hint: "[project name]"
 # create-project
 
 Creates the repositories of the five layers of a new project, as
-[specs/layers.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md) requires (LAY-1), each with `development-methodology`, `utilities` and the module of its layer enabled (APP-6);
+[specs/layers.md](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md) requires (LAY-1), each with `development-methodology`, `utilities` and the module of its layer enabled (APP-6);
 its orchestration repository, with `development-methodology`, `utilities` and
 `workflow-orchestration` (LAY-11, ORC-5); and its tooling repository, an empty
 Claude Code marketplace with `utilities` alone, developed with the meta
 methodology, not with this app (LAY-14, CRP-4). The
 `project.json` of the project is in every one (ORC-20). Its specification is
-[specs/create-project.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md).
+[specs/create-project.md](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md).
 
 ## 1. Ask
 
@@ -24,7 +24,7 @@ Ask in one message, numbered, with the default of each:
 3. **GitHub owner**. Default: the logged-in account, `gh api user --jq .login`.
 4. **Visibility** of the repositories. Default: private.
 5. **Project folder**, where every repository is cloned. Default: the folder `<project>` in the current directory.
-6. **Default done profile** of the acceptance units: `prototype`, `product` or `critical` ([ACU-19 and ACU-20](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/acceptance-management/specs/module.md)). No default: the user chooses it, since choosing the rigour is choosing how much risk is accepted.
+6. **Default done profile** of the acceptance units: `prototype`, `product` or `critical` ([ACU-19 and ACU-20](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/acceptance-management/specs/module.md)). No default: the user chooses it, since choosing the rigour is choosing how much risk is accepted.
 
 When the answer to 2 is yes, ask in a second message for the **names of the
 components**, lowercase-dash, comma-separated (`api, web`): layer 4 is one

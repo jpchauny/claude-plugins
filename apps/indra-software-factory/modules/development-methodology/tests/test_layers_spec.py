@@ -24,7 +24,7 @@ def clause(text, clause_id):
     return text.split("- **%s.**" % clause_id, 1)[1].split("\n- **", 1)[0].split("\n## ", 1)[0]
 
 
-NORMS_MANAGEMENT_URL = ("https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/"
+NORMS_MANAGEMENT_URL = ("https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/"
                         "norms-management/specs/module.md")
 
 

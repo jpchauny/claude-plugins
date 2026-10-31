@@ -13,7 +13,7 @@
 # (LAY-6).
 #
 # The acceptance repository is checked out in acceptance/ and the plugin in
-# claude-plugins/, side by side, and the scratch folder of acceptance_ci.py is
+# indra-software-factory/, side by side, and the scratch folder of acceptance_ci.py is
 # under $RUNNER_TEMP: nothing but records/ is written inside the acceptance
 # repository, and ACCEPTANCE_REPORT is outside it (ACU-34).
 #
@@ -84,9 +84,9 @@ jobs:
       - name: Check out the plugin acceptance-management
         uses: actions/checkout@v4
         with:
-          repository: jpchauny/claude-plugins
+          repository: jpchauny/indra-software-factory
           ref: main
-          path: claude-plugins
+          path: indra-software-factory
           sparse-checkout: apps/indra-software-factory/modules/acceptance-management
           persist-credentials: false
       - name: Write the token to a file
@@ -99,7 +99,7 @@ jobs:
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          python3 -I ../claude-plugins/apps/indra-software-factory/modules/acceptance-management/scripts/acceptance_ci.py \
+          python3 -I ../indra-software-factory/apps/indra-software-factory/modules/acceptance-management/scripts/acceptance_ci.py \
             --repo . --work "$RUNNER_TEMP/acceptance" --produced-by "$RUN_URL" \
             --token-file "$RUNNER_TEMP/code-read-token"
       - name: Collect the records

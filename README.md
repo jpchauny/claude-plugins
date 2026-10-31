@@ -1,6 +1,6 @@
 # Indra Software Factory
 
-A Claude Code app, published as the plugin marketplace `jpchauny-plugins`, for
+A Claude Code app, published as the plugin marketplace `indra-software-factory`, for
 working in five layers: draft specs and specs written by people, norms and
 derived norms generated from them, acceptance areas and acceptance units that
 agents write from the norms and people approve, and code built from the norms
@@ -33,8 +33,8 @@ Each module is a plugin of its own. A repository enables
 Once per person:
 
 ```sh
-claude plugin marketplace add jpchauny/claude-plugins
-claude plugin install project-management@jpchauny-plugins --scope user
+claude plugin marketplace add jpchauny/indra-software-factory
+claude plugin install project-management@indra-software-factory --scope user
 ```
 
 Then, in any session, `/project-management:create-project <name>`. It creates
@@ -48,10 +48,10 @@ with `<module>` the module of its layer: `specs-management`,
 `norms-management`, `acceptance-management` or `code-implementation`:
 
 ```sh
-claude plugin marketplace add jpchauny/claude-plugins --scope project
-claude plugin install development-methodology@jpchauny-plugins --scope project
-claude plugin install utilities@jpchauny-plugins --scope project
-claude plugin install <module>@jpchauny-plugins --scope project
+claude plugin marketplace add jpchauny/indra-software-factory --scope project
+claude plugin install development-methodology@indra-software-factory --scope project
+claude plugin install utilities@indra-software-factory --scope project
+claude plugin install <module>@indra-software-factory --scope project
 ```
 
 These commands only enable the plugins. `/project-management:create-project`
@@ -100,7 +100,7 @@ reports that a plugin is enabled but not installed, install each plugin
 that the repository's `.claude/settings.json` enables:
 
 ```sh
-claude plugin install <plugin>@jpchauny-plugins --scope project
+claude plugin install <plugin>@indra-software-factory --scope project
 ```
 
 ## Updates
@@ -111,8 +111,8 @@ Change a plugin here, push to `main`. Updates are not automatic for a
 third-party marketplace: each teammate runs
 
 ```sh
-claude plugin marketplace update jpchauny-plugins
-claude plugin update <plugin>@jpchauny-plugins
+claude plugin marketplace update indra-software-factory
+claude plugin update <plugin>@indra-software-factory
 ```
 
 for each plugin they have installed.

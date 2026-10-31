@@ -48,7 +48,7 @@ class Plan(unittest.TestCase):
         git(path, "remote", "add", "origin", f"https://github.com/acme/{name}")
         with open(os.path.join(path, "project.json"), "w", encoding="utf-8") as f:
             f.write(project_json)
-        settings = {"enabledPlugins": {"utilities@jpchauny-plugins": True}}
+        settings = {"enabledPlugins": {"utilities@indra-software-factory": True}}
         if deny is not None:
             settings["permissions"] = {"deny": deny}
         with open(os.path.join(path, ".claude", "settings.json"), "w", encoding="utf-8") as f:
@@ -121,7 +121,7 @@ class Plan(unittest.TestCase):
             "Read(//**/billing-code-mobile/**)", "Edit(//**/billing-code-mobile/**)",
         ])
         self.assertEqual(self.settings_files["acme/billing-acceptance"]["enabledPlugins"],
-                         {"utilities@jpchauny-plugins": True})
+                         {"utilities@indra-software-factory": True})
         self.assertEqual(by["acme/billing-code-mobile"]["settings_state"], "differs")
         self.assertEqual(self.settings_files["acme/billing-code-mobile"]["permissions"]["deny"],
                          ["Edit(//**/billing-acceptance/**)"])
@@ -227,8 +227,8 @@ class Plan(unittest.TestCase):
                              ("skipped", ".claude/settings.json is not a JSON object of Claude Code"), text)
 
     def test_snc1_settings_without_deny_get_the_rules(self):
-        for data in ({"enabledPlugins": {"utilities@jpchauny-plugins": True}},
-                     {"enabledPlugins": {"utilities@jpchauny-plugins": True}, "permissions": {"ask": ["Bash(x)"]}}):
+        for data in ({"enabledPlugins": {"utilities@indra-software-factory": True}},
+                     {"enabledPlugins": {"utilities@indra-software-factory": True}, "permissions": {"ask": ["Bash(x)"]}}):
             self.write_settings(json.dumps(data) + "\n")
             t = self.settings_of_code()
             self.assertEqual(t["settings_state"], "differs")

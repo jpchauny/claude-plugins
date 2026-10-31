@@ -29,7 +29,7 @@ Automation, such as a CI job, installs the generator straight from this
 repository, with [uv](https://docs.astral.sh/uv/):
 
 ```sh
-uvx --from "git+https://github.com/jpchauny/claude-plugins#subdirectory=apps/indra-software-factory/modules/norms-management" \
+uvx --from "git+https://github.com/jpchauny/indra-software-factory#subdirectory=apps/indra-software-factory/modules/norms-management" \
     norms-gen build --specs <layer 1 repository>
 ```
 

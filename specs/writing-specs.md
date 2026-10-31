@@ -2,12 +2,12 @@
 
 **Prefix:** SPC
 
-This guideline says how to word a good meta spec. Its goal is that the implementing agent builds what the authors of the meta spec meant. Meta rule SPC-n comes from core dimension Cn in [spec-dimensions.md](https://github.com/jpchauny/claude-plugins/blob/main/research/SDD/spec-dimensions.md). Decision SPC-Tn comes from tension Tn in the same file. That file gives the reasons for each meta rule.
+This guideline says how to word a good meta spec. Its goal is that the implementing agent builds what the authors of the meta spec meant. Meta rule SPC-n comes from core dimension Cn in [spec-dimensions.md](https://github.com/jpchauny/indra-software-factory/blob/main/research/SDD/spec-dimensions.md). Decision SPC-Tn comes from tension Tn in the same file. That file gives the reasons for each meta rule.
 
 ## Purpose and scope
 
 - This guideline is for the people who write meta specs and for the approver.
-- It applies to every meta spec, of this repository and of every `<project>-tooling` repository, which must follow it ([DEV-9](https://github.com/jpchauny/claude-plugins/blob/main/specs/development.md#method)). It does not apply to the specs of a project that uses ISF: the module `specs-management` of ISF has its own guide for those, with its own prefix, and neither guide cites the other.
+- It applies to every meta spec, of this repository and of every `<project>-tooling` repository, which must follow it ([DEV-9](https://github.com/jpchauny/indra-software-factory/blob/main/specs/development.md#method)). It does not apply to the specs of a project that uses ISF: the module `specs-management` of ISF has its own guide for those, with its own prefix, and neither guide cites the other.
 - Where meta specs live and how they change is outside this guideline.
 - This guideline covers what a meta spec must say and how the meta spec words it. This includes results that a test can check.
 - No meta rule in this guideline requires a particular tool, template or folder structure.
@@ -18,7 +18,7 @@ This guideline says how to word a good meta spec. Its goal is that the implement
 
 | Term | Meaning |
 |---|---|
-| Meta spec, meta rule, meta module, meta repository, ISF | As [development.md](https://github.com/jpchauny/claude-plugins/blob/main/specs/development.md#terms) defines them. |
+| Meta spec, meta rule, meta module, meta repository, ISF | As [development.md](https://github.com/jpchauny/indra-software-factory/blob/main/specs/development.md#terms) defines them. |
 | Approver | The person who approves a change to a meta spec before the component is built. |
 | Binding | Describes text that the implementation must satisfy. |
 | Claim | One thing that a statement says, which can be true or false. |

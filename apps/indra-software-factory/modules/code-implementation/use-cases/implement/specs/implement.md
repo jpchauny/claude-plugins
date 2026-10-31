@@ -611,8 +611,8 @@ Feature: Implement a task
 
     Scenario: The issue cannot be opened
       Given "gh issue create" fails for the issue of a defect of a derived-norms generator
-      Then the skill says "code-implementation:implement: cannot open the issue in jpchauny/claude-plugins"
-      And the message binds byte for byte once filled, where "jpchauny/claude-plugins" stands for "marketplace_repository"
+      Then the skill says "code-implementation:implement: cannot open the issue in jpchauny/indra-software-factory"
+      And the message binds byte for byte once filled, where "jpchauny/indra-software-factory" stands for "marketplace_repository"
 
     Scenario: No issue without a yes (must not)
       Given the user says anything but yes to the issue of a defect of a derived-norms generator

@@ -10,7 +10,7 @@
 
 | Term | Meaning |
 |---|---|
-| Marketplace | The Claude Code plugin marketplace `jpchauny-plugins`: this repository, `jpchauny/claude-plugins`, a meta repository. |
+| Marketplace | The Claude Code plugin marketplace `indra-software-factory`: this repository, `jpchauny/indra-software-factory`, a meta repository. |
 | Meta app, meta module, meta repository, meta spec | As [development.md](development.md#terms) defines them. |
 
 ## Meta rules
@@ -26,7 +26,7 @@
 - **MKT-4.** A person adds the marketplace once:
 
   ```sh
-  claude plugin marketplace add jpchauny/claude-plugins
+  claude plugin marketplace add jpchauny/indra-software-factory
   ```
 
   Which meta modules of a meta app are installed, at which scope and in which repository, the meta spec of the meta app says.
