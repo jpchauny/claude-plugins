@@ -525,7 +525,7 @@ class Skill(unittest.TestCase):
 
     def test_renumber_only_new_declared_ids(self):
         """ORC-65: an ID of `ids` collides only when another file declares it and it is new in this run;
-        an ID the draft already had is never renumbered (SPC-14)."""
+        an ID the draft already had is never renumbered (WSP-14)."""
         with open(os.path.join(PLUGIN, "use-cases", "write", "SKILL.md"), encoding="utf-8") as f:
             text = " ".join(f.read().split())
         self.assertIn("it collides only when an `also` entry has `declared` true and the ID is new in this run",

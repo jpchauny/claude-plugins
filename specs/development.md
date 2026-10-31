@@ -28,6 +28,7 @@ follows it.
 - **DEV-3.** Once implemented, the implementation is checked against every rule and scenario of its spec. A gap is fixed in the implementation; when the spec is what is wrong, the spec is fixed first, and approved again.
 - **DEV-4.** Each fact is written in one place. Every other place that needs it refers to that place, and does not repeat it.
 - **DEV-9.** Every spec of this marketplace must follow [writing-specs.md](writing-specs.md).
+- **DEV-10.** The development of this marketplace never runs a use case, hook or script of an app of this marketplace on the specs or the implementation of this marketplace, and never takes a rule of an app as its own. Each app is a product whose methodology is for the projects of its users; this marketplace is developed with the method of this spec alone, and any tool that this method needs is part of it. The one exception is the module `utilities` of Indra Software Factory: its use cases are for any project, this marketplace included, and implement no rule of a methodology.
 
 ## Levels
 

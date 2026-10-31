@@ -83,49 +83,49 @@ check of writing goes on, and recommends no clone or sync command (AUD-59).
 
 ## 3. How to check
 
-- Binding rules (complete list): SPC-1 to SPC-20, SPC-T4, SPC-T5, SPC-T11,
-  SPC-T14, SPC-T15. Check every selected file against SPC-1 to SPC-12 and the
-  decisions (AUD-16). For each of SPC-13 to SPC-20 and each selected file,
+- Binding rules (complete list): WSP-1 to WSP-20, WSP-T4, WSP-T5, WSP-T11,
+  WSP-T14, WSP-T15. Check every selected file against WSP-1 to WSP-12 and the
+  decisions (AUD-16). For each of WSP-13 to WSP-20 and each selected file,
   decide whether its "Applies when:" line holds, from what the text states
-  beyond doubt, and check the rule only there (AUD-17). SPC-13 holds for
+  beyond doubt, and check the rule only there (AUD-17). WSP-13 holds for
   every selected file or for none, by the size of the spec set. Each of
-  SPC-14 to SPC-20 holds for a file only when that file's own text shows the
+  WSP-14 to WSP-20 holds for a file only when that file's own text shows the
   condition, also where the line names the spec set or the component. For
-  SPC-14, a statement of another spec file that refers to an individual
+  WSP-14, a statement of another spec file that refers to an individual
   statement of the file also shows the condition for the file.
-- Check SPC-3 and SPC-11 across the whole spec set, SPC-14 too when it applies
+- Check WSP-3 and WSP-11 across the whole spec set, WSP-14 too when it applies
   to a selected file. Give such a finding to `filter` unplaced, with
   `"involved": [{"path", "line", "quote", "rewrite"}, ...]`, every involved
   place of that finding, in any spec file, and no place the finding is not
   about, each with the rewrite of its own quoted text (its
   quote unchanged when that place needs no change), in place of `path`,
   `line`, `quote`, `rewrite` and `see_also`. The involved places are exactly
-  (complete list): for SPC-3, the definition of the term, or its first use in
+  (complete list): for WSP-3, the definition of the term, or its first use in
   the spec set when it has none, and in each file the first line that uses a
   synonym of the term or the term in another meaning, or, for the
   one-language rule, in each file the first line, outside literal blocks and
   user-facing text, whose prose is in another language than that of section
-  2; for SPC-11, the first line of each statement of the fact or of one of its
+  2; for WSP-11, the first line of each statement of the fact or of one of its
   exceptions, and the first line of each of two statements that can collide
-  with no stated winner; for SPC-14, each line that holds the identifier or
+  with no stated winner; for WSP-14, each line that holds the identifier or
   the reference that breaks the rule, the first line of each statement that
   such a reference points to, and the first line of each statement that the
   finding says lacks an identifier. `filter` drops each place whose quote
   does not match the lines of a spec file from that place on, places the finding as
   AUD-19 states (under the first selected file that was checked, in code point
   order of path, at its first involved line, every other place in `see_also`;
-  for SPC-14 only among the files of `spc14_applies_to`, the selected files
-  where SPC-14 applies), keeps the rewrite of the place it chooses as
+  for WSP-14 only among the files of `wsp14_applies_to`, the selected files
+  where WSP-14 applies), keeps the rewrite of the place it chooses as
   `rewrite` and, in `rewrites`, the rewrite of each other place whose rewrite
   differs from its quote (its `Rewrite at` line, AUD-19), and drops the finding
   when no place is left. Never place it yourself. Only a finding across files
   has `see_also` places (AUD-20, AUD-30): `filter` gives a finding of one file
   none.
-- Non-binding text: from a label the spec set declares non-binding (SPC-9) to
+- Non-binding text: from a label the spec set declares non-binding (WSP-9) to
   the end of its item or paragraph, and examples marked illustrative; without
   such a declaration, the labels `Rationale:`, `Why:`, `Accepted cost:` and
   each translation of one of them into the language of the file that holds it.
-  Check it only against SPC-3, SPC-9, SPC-12 and SPC-T14 (AUD-18).
+  Check it only against WSP-3, WSP-9, WSP-12 and WSP-T14 (AUD-18).
 - A finding (AUD-20), with exactly these JSON types (`filter` and `render`
   refuse any other, with exit 2):
   - `path`: a string, relative to the repository root, with `/`;
@@ -147,7 +147,7 @@ check of writing goes on, and recommends no clone or sync command (AUD-59).
     `{"path", "line", "quote", "rewrite"}` with the types above, in place of
     `path`, `line`, `quote`, `rewrite` and `see_also`.
 
-  Missing text (AUD-21): text that SPC-1 or SPC-9 requires of each spec cites
+  Missing text (AUD-21): text that WSP-1 or WSP-9 requires of each spec cites
   and quotes line 1; that text is (complete list) the purpose, the audience,
   what the spec covers, the systems the component works with, what is out of
   scope, what must never happen, the convention for binding words. Any other
@@ -159,7 +159,7 @@ check of writing goes on, and recommends no clone or sync command (AUD-59).
   merges only findings with the same place, rule, `see_also` and problem
   (AUD-29 step 3). Report only what you can point to in the words of the
   rule.
-- Questions SPC-Q1 to SPC-Q17: gather evidence, each a place
+- Questions WSP-Q1 to WSP-Q17: gather evidence, each a place
   (`path`, `line`) and one sentence; never answer a question (AUD-22).
 
 ## 4a. Session mode (`mode` is `session`)
@@ -168,16 +168,16 @@ No other agent (AUD-24).
 
 1. Read every spec file whole. A spec file that cannot be read goes under
    Not checked (step 5); `render` adds those of `unreadable` itself.
-2. Check as section 3 says. Gather the evidence for SPC-Q2 and SPC-Q3 yourself
-   and set `not_independent` on both (AUD-27): SPC-Q2 gets each place whose
-   text you can build into two behaviours that differ; SPC-Q3 gets each line
+2. Check as section 3 says. Gather the evidence for WSP-Q2 and WSP-Q3 yourself
+   and set `not_independent` on both (AUD-27): WSP-Q2 gets each place whose
+   text you can build into two behaviours that differ; WSP-Q3 gets each line
    you can read in two ways and each gap you find. A list of the behaviours
    you would build is never evidence.
 3. Run `filter` (AUD-29 steps 2 and 3, and the placement of AUD-19) on
-   `{"repo_root", "spec_files", "selected", "checked", "spc14_applies_to",
+   `{"repo_root", "spec_files", "selected", "checked", "wsp14_applies_to",
    "findings": [...]}`: `spec_files` and `selected` from `prepare`, `checked`
-   the selected files you read, `spc14_applies_to` the selected files where
-   you decided that SPC-14 applies, `findings` those of
+   the selected files you read, `wsp14_applies_to` the selected files where
+   you decided that WSP-14 applies, `findings` those of
    one file with `path`, `line` and `quote`, those across files with
    `involved` (section 3). Its output is `{"part", "parts", "findings",
    "verify", "dropped"}`, `dropped` holding the `index` (from 0) and `reason`
@@ -191,7 +191,7 @@ No other agent (AUD-24).
    the parts before and after; its `verify` entry is in the JSON line of piece 1.
 4. Check each finding of `filter`'s output once more against its rule, its
    quote and the lines of its `see_also` places, judged together (a term
-   defined at the quote and renamed at a `see_also` place breaks SPC-3), with
+   defined at the quote and renamed at a `see_also` place breaks WSP-3), with
    the decisions of AUD-17 as given: never drop a finding because its rule
    does not apply. Drop the refuted ones; the others are `"verified": true`
    (AUD-29 steps 4 and 5).
@@ -211,7 +211,7 @@ No other agent (AUD-24).
    path}], "checkers": [{path, ok, conditional}], "findings", "evidence":
    [{question, path, line, text}], "behaviours": [{reader, path, line,
    behaviour}], "two_readings", "gaps"}`; `applies_to` lists the selected
-   files of the rows SPC-13 and SPC-14 of the pass across files. When `parts`
+   files of the rows WSP-13 and WSP-14 of the pass across files. When `parts`
    is more than 1, call the Workflow tool again for each k from 2 to `parts`,
    with the same `scriptPath`, `resumeFromRunId` the `runId` of the stage's
    first call, and the same `args` plus `"part": k`; resumed, it runs no agent
@@ -225,22 +225,22 @@ No other agent (AUD-24).
    `filter` to place (AUD-19).
    - A checker with `ok` false: its file is not checked, reason
      `the checker failed or did not finish`.
-   - `cross` null: Not checked `across files (SPC-3, SPC-11, SPC-13, SPC-14, SPC-Q4, SPC-Q12)`,
-     reason `the pass failed or did not finish`; the rows SPC-13 and SPC-14
+   - `cross` null: Not checked `across files (WSP-3, WSP-11, WSP-13, WSP-14, WSP-Q4, WSP-Q12)`,
+     reason `the pass failed or did not finish`; the rows WSP-13 and WSP-14
      list no file, why: not decided.
-   - A reader not ok (`readers_ok`): Not checked `readers (SPC-Q2, SPC-Q3)`,
-     reason `a reader failed or did not finish`; SPC-Q2 and SPC-Q3 get no
+   - A reader not ok (`readers_ok`): Not checked `readers (WSP-Q2, WSP-Q3)`,
+     reason `a reader failed or did not finish`; WSP-Q2 and WSP-Q3 get no
      evidence.
-   - Otherwise SPC-Q2's evidence is each place where the behaviours of
+   - Otherwise WSP-Q2's evidence is each place where the behaviours of
      reader 0 and reader 1 differ (`behaviours` holds only the places that
-     both readers list, AUD-26). SPC-Q3's is the `two_readings` lines and
+     both readers list, AUD-26). WSP-Q3's is the `two_readings` lines and
      `gaps` (AUD-26).
    - The files of `unreadable` go under Not checked: `render` adds them from
      `unreadable` (AUD-42).
 3. Run `filter` on `{"repo_root", "spec_files", "selected", "checked",
-   "spc14_applies_to", "findings"}`: `spec_files` and `selected` from
+   "wsp14_applies_to", "findings"}`: `spec_files` and `selected` from
    `prepare`, `checked` the paths of the checkers with `ok` true,
-   `spc14_applies_to` the paths of the `applies_to` items with rule SPC-14
+   `wsp14_applies_to` the paths of the `applies_to` items with rule WSP-14
    (`[]` when `cross` is null), `findings` the result's `findings`, each as the
    workflow gave it, `involved` included. Join its parts as 4a step 3 says.
 4. When findings remain, call the Workflow tool again, without
@@ -282,23 +282,23 @@ finished exactly as `workflow.js` does, before 4b step 2:
 - Of each reader's `behaviours`, `two_readings` and `gaps`, keep only the
   items of the selected files (AUD-26).
 - Reduce each `applies_to` of `across files` to only the selected files, each
-  once; when the row SPC-13 then lists any selected file, make it list every
+  once; when the row WSP-13 then lists any selected file, make it list every
   selected file (AUD-17: every selected file or none).
 - Reduce each finding of `across files` to `rule`, `involved` and `problem`,
   each place to `path`, `line`, `quote` and `rewrite`, and give it to
   `filter` unplaced: never place it yourself (AUD-19). Pass
-  `spc14_applies_to` from the reduced row SPC-14.
+  `wsp14_applies_to` from the reduced row WSP-14.
 - Keep only the behaviours at places that both readers list (AUD-26), and
   read the results as the joined result of 4b step 2.
 
 Then apply the drops of AUD-17 yourself, as `workflow.js` does:
 
-- Drop a finding of `across files` of SPC-14 when that pass listed no
-  selected file for SPC-14.
-- Drop a checker's finding of SPC-15 to SPC-20 whose rule that checker
+- Drop a finding of `across files` of WSP-14 when that pass listed no
+  selected file for WSP-14.
+- Drop a checker's finding of WSP-15 to WSP-20 whose rule that checker
   marked as not applying to its file.
-- Drop a checker's SPC-13 finding unless `across files` listed that file
-  for SPC-13; when that pass did not finish, drop every SPC-13 finding.
+- Drop a checker's WSP-13 finding unless `across files` listed that file
+  for WSP-13; when that pass did not finish, drop every WSP-13 finding.
 
 ## 5. Render and reply (AUD-30 to AUD-37)
 
@@ -309,8 +309,8 @@ Run `render` with:
  "unreadable": [from prepare], "unsearchable": [from prepare], "checked": [selected files checked],
  "link_reports": [from prepare], "links_not_checked": from prepare,
  "findings": [{path, line, rule, quote, problem, rewrite, see_also, rewrites, sha256, check, verified}],
- "conditional": [{"rule": "SPC-13".."SPC-20", "applies_to": [selected paths], "why": "<one sentence>"}],
- "questions": [{"id": "SPC-Q1".."SPC-Q17", "evidence": [{path, line, text}], "not_independent": bool}],
+ "conditional": [{"rule": "WSP-13".."WSP-20", "applies_to": [selected paths], "why": "<one sentence>"}],
+ "questions": [{"id": "WSP-Q1".."WSP-Q17", "evidence": [{path, line, text}], "not_independent": bool}],
  "not_checked": [{"what": "<path or pass>", "reason": "<exact reason>"}]}
 ```
 
@@ -333,9 +333,9 @@ Run `render` with:
 - `selected`: exactly as `prepare` gave it, unreadable files included; render
   refuses a selected file that is neither in `checked` nor in `not_checked`
   or `unreadable` (AUD-35), and keeps only selected files in `applies_to` (AUD-31).
-- `conditional`: one row per rule, SPC-13 to SPC-20; `applies_to` from the
+- `conditional`: one row per rule, WSP-13 to WSP-20; `applies_to` from the
   per-file decisions; `why` one sentence over all files. `render` shows an
-  SPC-13 row that lists some selected files with every selected file (AUD-17).
+  WSP-13 row that lists some selected files with every selected file (AUD-17).
 - `questions`: all 17, those without evidence with an empty list.
 - `unreadable`: exactly as `prepare` gave it; `render` lists each of these
   files under Not checked, `could not be read` when selected,

@@ -248,7 +248,7 @@ def check(repo, path):
         if any(t == path for _, _, t in layers.layer_links(p, text)):
             near(layer, p, "links to the draft")
 
-    # Each term of the draft that another file also defines (SPC-3).
+    # Each term of the draft that another file also defines (WSP-3).
     defined = {}
     for (layer, p), text in sorted(others.items()):
         for n, t in terms(text):
@@ -267,7 +267,7 @@ def check(repo, path):
             if any(word.search(line) for _, line in prose_lines(text)):
                 near(layer, p, "holds a term of the draft")
 
-    # Each statement ID of the draft that another file also uses (SPC-14): first line per file.
+    # Each statement ID of the draft that another file also uses (WSP-14): first line per file.
     id_rows = []
     for n, i in declared_ids(draft):
         word = re.compile(r"(?<![A-Za-z0-9-])" + re.escape(i) + r"(?![A-Za-z0-9-])")

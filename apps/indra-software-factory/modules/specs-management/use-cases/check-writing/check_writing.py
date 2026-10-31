@@ -10,9 +10,9 @@ Commands, run as `python3 check_writing.py <command>`:
                              JSON on stdin and stdout; `spec_files` (from
                              prepare) required for a finding across files,
                              the only kind with See also places (AUD-20);
-                             `spc14_applies_to` (the
-                             selected files where SPC-14 applies) required for
-                             an SPC-14 finding across files
+                             `wsp14_applies_to` (the
+                             selected files where WSP-14 applies) required for
+                             a WSP-14 finding across files
   render [--part N]          the report of AUD-30 to AUD-35; JSON on stdin,
                              `selected`, `spec_files`, `link_reports` and
                              `links_not_checked` (from prepare) required
@@ -65,15 +65,15 @@ import layers  # noqa: E402
 GUIDELINE = os.path.join(PLUGIN_ROOT, "writing-specs.md")
 
 # Term "Binding rule" (complete list), in the order of AUD-34.
-BINDING_RULES = ["SPC-%d" % i for i in range(1, 21)] + ["SPC-T4", "SPC-T5", "SPC-T11", "SPC-T14", "SPC-T15"]
+BINDING_RULES = ["WSP-%d" % i for i in range(1, 21)] + ["WSP-T4", "WSP-T5", "WSP-T11", "WSP-T14", "WSP-T15"]
 RULE_ORDER = {rule: index for index, rule in enumerate(BINDING_RULES)}
-CONDITIONAL_RULES = ["SPC-%d" % i for i in range(13, 21)]
-QUESTION_IDS = ["SPC-Q%d" % i for i in range(1, 18)]
+CONDITIONAL_RULES = ["WSP-%d" % i for i in range(13, 21)]
+QUESTION_IDS = ["WSP-Q%d" % i for i in range(1, 18)]
 
 # AUD-42: the labels and reasons of the passes under "Not checked".
-ACROSS_LABEL = "across files (SPC-3, SPC-11, SPC-13, SPC-14, SPC-Q4, SPC-Q12)"
+ACROSS_LABEL = "across files (WSP-3, WSP-11, WSP-13, WSP-14, WSP-Q4, WSP-Q12)"
 ACROSS_REASON = "the pass failed or did not finish"
-READERS_LABEL = "readers (SPC-Q2, SPC-Q3)"
+READERS_LABEL = "readers (WSP-Q2, WSP-Q3)"
 READERS_REASON = "a reader failed or did not finish"
 CONTEXT_REASON = "could not be read (context only)"
 FOLDER_REASON = "could not be searched"
@@ -1181,14 +1181,14 @@ def step2_reason(f, selected, files):
     return None
 
 
-def place_across(f, eligible, spc14):
+def place_across(f, eligible, wsp14):
     """AUD-19: under the first eligible file in code point order of path, at its first involved line,
     with the rewrite of that place; every other involved place goes to See also. None when no involved
-    line is in an eligible file (for SPC-14, an eligible file in `spc14`, where SPC-14 applies)."""
+    line is in an eligible file (for WSP-14, an eligible file in `wsp14`, where WSP-14 applies)."""
     places = f.pop("involved")
     mine = [p for p in places if p["path"] in eligible]
-    if f["rule"] == "SPC-14":
-        mine = [p for p in mine if p["path"] in spc14]  # AUD-19, AUD-17: only where SPC-14 applies
+    if f["rule"] == "WSP-14":
+        mine = [p for p in mine if p["path"] in wsp14]  # AUD-19, AUD-17: only where WSP-14 applies
     if not mine:
         return None
     main = min(mine, key=lambda p: (p["path"], p["line"]))
@@ -1226,15 +1226,15 @@ def filter_findings(data):
     findings = data.get("findings")
     checked = data.get("checked")
     spec_files = data.get("spec_files")
-    spc14 = data.get("spc14_applies_to")
+    wsp14 = data.get("wsp14_applies_to")
     if not isinstance(root, str) or not is_str_list(selected) or not isinstance(findings, list):
         raise BadInput("filter needs repo_root, selected and findings")
     if checked is not None and not is_str_list(checked):
         raise BadInput("checked must be a list of paths")
     if spec_files is not None and not is_str_list(spec_files):
         raise BadInput("spec_files must be a list of paths")
-    if spc14 is not None and not is_str_list(spc14):
-        raise BadInput("spc14_applies_to must be a list of paths")
+    if wsp14 is not None and not is_str_list(wsp14):
+        raise BadInput("wsp14_applies_to must be a list of paths")
     selected = set(selected)
     # AUD-35: a file not checked is listed under "Not checked" only, so no finding may go to it.
     eligible = selected if checked is None else selected & set(checked)
@@ -1245,9 +1245,9 @@ def filter_findings(data):
             check_types(i, f, ("rule", "problem"), ("rule", "problem"))
             if spec_files is None:
                 raise BadInput("%s: a finding across files needs spec_files from prepare (AUD-19)" % label(i, f))
-            if f["rule"] == "SPC-14" and spc14 is None:
-                raise BadInput("%s: an SPC-14 finding across files needs spc14_applies_to, the selected files "
-                               "where SPC-14 applies (AUD-19, AUD-17)" % label(i, f))
+            if f["rule"] == "WSP-14" and wsp14 is None:
+                raise BadInput("%s: a WSP-14 finding across files needs wsp14_applies_to, the selected files "
+                               "where WSP-14 applies (AUD-19, AUD-17)" % label(i, f))
         else:
             check_types(i, f, ("path", "line", "rule", "quote", "problem", "rewrite", "see_also"),
                         ("path", "line", "rule", "quote", "problem", "rewrite"))
@@ -1263,7 +1263,7 @@ def filter_findings(data):
             # from that place on; any other place is left out before the finding is placed.
             f["involved"] = [p for p in f["involved"]
                              if p["path"] in spec and quote_matches(files.lines(p["path"]), p["line"], p["quote"])]
-            f = place_across(f, eligible, set(spc14 or []))
+            f = place_across(f, eligible, set(wsp14 or []))
             if f is None:
                 dropped.append({"index": position, "reason": "no involved line is in a selected file that was checked"})
                 continue
@@ -1315,7 +1315,7 @@ def questions_from_guideline():
     found = {}
     for line in text.splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) >= 2 and re.fullmatch(r"SPC-Q\d+", cells[0]) and cells[0] not in found:
+        if len(cells) >= 2 and re.fullmatch(r"WSP-Q\d+", cells[0]) and cells[0] not in found:
             found[cells[0]] = cells[1]
     missing = [q for q in QUESTION_IDS if q not in found]
     if missing:
@@ -1552,8 +1552,8 @@ def render(data):
         c = rows.get(rule, {})
         # AUD-31: <paths> are the selected files where the rule applies.
         paths = sorted(set(p for p in c.get("applies_to") or [] if p in sel))
-        if rule == "SPC-13" and paths:
-            paths = sorted(sel)  # AUD-17: SPC-13 holds for every selected file or for none
+        if rule == "WSP-13" and paths:
+            paths = sorted(sel)  # AUD-17: WSP-13 holds for every selected file or for none
         why = one_line(c.get("why", "Not decided in this run.")).replace("|", "\\|")
         out.append("| %s | %s | %s |" % (rule, ", ".join(cell(p) for p in paths) if paths else "none", why))
     out += ["", "## Questions for the approver", ""]
@@ -1571,7 +1571,7 @@ def render(data):
             # AUD-46: every Evidence line cites its place as <path>:<line>, a line of a spec file.
             if isinstance(e, dict) and place_ok(e.get("path"), e.get("line")):
                 items.append((e["path"], e["line"], one_line(e.get("text", ""))))
-        if qid in ("SPC-Q2", "SPC-Q3") and "readers" in passes:
+        if qid in ("WSP-Q2", "WSP-Q3") and "readers" in passes:
             items = []  # AUD-42: a reader failed
         if not items:
             out.append("  Evidence: none.")

@@ -481,7 +481,7 @@ class Filter(Base):
 
     def test_kept(self):
         """AUD-E4, AUD-29: a finding whose path, line, quote and rule hold is kept."""
-        out = self.run_filter([self.finding("specs/shipping.md", 12, "SPC-2", ["Large orders get free shipping, etc."])])
+        out = self.run_filter([self.finding("specs/shipping.md", 12, "WSP-2", ["Large orders get free shipping, etc."])])
         self.assertEqual(len(out["findings"]), 1)
         self.assertEqual(out["dropped"], [])
 
@@ -489,16 +489,16 @@ class Filter(Base):
         """AUD-29 step 2: path not selected, line missing, quote different, rule not binding."""
         q = ["Large orders get free shipping, etc."]
         cases = [
-            (self.finding("specs/other.md", 1, "SPC-2", ["# Other"]), "path is not a selected file"),
-            (self.finding("specs/shipping.md", 13, "SPC-2", [""]), "line does not exist"),
-            (self.finding("specs/shipping.md", 0, "SPC-2", q), "line does not exist"),
-            (self.finding("specs/shipping.md", 11, "SPC-2", q), "quote differs from the file"),
-            (self.finding("specs/shipping.md", 12, "SPC-2", ["Large orders get free shipping, etc. "]), "quote differs from the file"),
-            (self.finding("specs/shipping.md", 12, "SPC-2", q + ["more"]), "quote differs from the file"),
-            (self.finding("specs/shipping.md", 12, "SPC-2", []), "quote differs from the file"),
-            (self.finding("specs/shipping.md", 12, "SPC-21", q), "rule is not a binding rule"),
-            (self.finding("specs/shipping.md", 12, "SPC-Q2", q), "rule is not a binding rule"),
-            (self.finding("specs/shipping.md", 12, "SPC-T1", q), "rule is not a binding rule"),
+            (self.finding("specs/other.md", 1, "WSP-2", ["# Other"]), "path is not a selected file"),
+            (self.finding("specs/shipping.md", 13, "WSP-2", [""]), "line does not exist"),
+            (self.finding("specs/shipping.md", 0, "WSP-2", q), "line does not exist"),
+            (self.finding("specs/shipping.md", 11, "WSP-2", q), "quote differs from the file"),
+            (self.finding("specs/shipping.md", 12, "WSP-2", ["Large orders get free shipping, etc. "]), "quote differs from the file"),
+            (self.finding("specs/shipping.md", 12, "WSP-2", q + ["more"]), "quote differs from the file"),
+            (self.finding("specs/shipping.md", 12, "WSP-2", []), "quote differs from the file"),
+            (self.finding("specs/shipping.md", 12, "WSP-21", q), "rule is not a binding rule"),
+            (self.finding("specs/shipping.md", 12, "WSP-Q2", q), "rule is not a binding rule"),
+            (self.finding("specs/shipping.md", 12, "WSP-T1", q), "rule is not a binding rule"),
             (self.finding("specs/shipping.md", 12, "spc-2", q), "rule is not a binding rule"),
         ]
         out = self.run_filter([c[0] for c in cases])
@@ -506,8 +506,8 @@ class Filter(Base):
         self.assertEqual([d["reason"] for d in out["dropped"]], [c[1] for c in cases])
 
     def test_every_binding_rule_kept(self):
-        """Term "Binding rule": SPC-1 to SPC-20 and SPC-T4, SPC-T5, SPC-T11, SPC-T14, SPC-T15 (complete list)."""
-        rules = ["SPC-%d" % i for i in range(1, 21)] + ["SPC-T4", "SPC-T5", "SPC-T11", "SPC-T14", "SPC-T15"]
+        """Term "Binding rule": WSP-1 to WSP-20 and WSP-T4, WSP-T5, WSP-T11, WSP-T14, WSP-T15 (complete list)."""
+        rules = ["WSP-%d" % i for i in range(1, 21)] + ["WSP-T4", "WSP-T5", "WSP-T11", "WSP-T14", "WSP-T15"]
         out = self.run_filter([self.finding("specs/shipping.md", 1, r, ["# Shipping"]) for r in rules])
         self.assertEqual([f["rule"] for f in out["findings"]], rules)
 
@@ -515,13 +515,13 @@ class Filter(Base):
         """Term "Line", AUD-E11: CR before LF is not part of a line; a last line without LF is a line.
         Term "Quote", AUD-29 step 2: a quote line matches with or without the line's other CRs."""
         out = self.run_filter([
-            self.finding("specs/crlf.md", 2, "SPC-2", ["- Large orders get free shipping,", "  etc."]),
-            self.finding("specs/crlf.md", 4, "SPC-2", ["last\r"]),
-            self.finding("specs/crlf.md", 4, "SPC-4", ["last"]),
-            self.finding("specs/crlf.md", 4, "SPC-5", ["lost"]),
-            self.finding("specs/crlf.md", 5, "SPC-2", [""]),
+            self.finding("specs/crlf.md", 2, "WSP-2", ["- Large orders get free shipping,", "  etc."]),
+            self.finding("specs/crlf.md", 4, "WSP-2", ["last\r"]),
+            self.finding("specs/crlf.md", 4, "WSP-4", ["last"]),
+            self.finding("specs/crlf.md", 4, "WSP-5", ["lost"]),
+            self.finding("specs/crlf.md", 5, "WSP-2", [""]),
         ])
-        self.assertEqual([(f["line"], f["rule"]) for f in out["findings"]], [(2, "SPC-2"), (4, "SPC-2"), (4, "SPC-4")])
+        self.assertEqual([(f["line"], f["rule"]) for f in out["findings"]], [(2, "WSP-2"), (4, "WSP-2"), (4, "WSP-4")])
         self.assertEqual([d["reason"] for d in out["dropped"]], ["quote differs from the file", "line does not exist"])
 
     def test_merge(self):
@@ -529,14 +529,14 @@ class Filter(Base):
         self.write("specs/a.md", "x\n" * 10)
         q = ["Large orders get free shipping, etc."]
         out = self.run_filter([
-            self.finding("specs/shipping.md", 12, "SPC-2", q, problem="first", see_also=["specs/a.md:10", "specs/a.md:2"]),
-            self.finding("specs/shipping.md", 12, "SPC-3", q),
-            self.finding("specs/shipping.md", 12, "SPC-2", q, problem="first", rewrite="other",
+            self.finding("specs/shipping.md", 12, "WSP-2", q, problem="first", see_also=["specs/a.md:10", "specs/a.md:2"]),
+            self.finding("specs/shipping.md", 12, "WSP-3", q),
+            self.finding("specs/shipping.md", 12, "WSP-2", q, problem="first", rewrite="other",
                          see_also=["specs/a.md:2", "specs/a.md:10"]),
-            self.finding("specs/shipping.md", 12, "SPC-3", q, rewrite="again"),
+            self.finding("specs/shipping.md", 12, "WSP-3", q, rewrite="again"),
         ])
         self.assertEqual([(f["rule"], f["problem"], f["rewrite"]) for f in out["findings"]],
-                         [("SPC-2", "first", "r"), ("SPC-3", "p", "r")])
+                         [("WSP-2", "first", "r"), ("WSP-3", "p", "r")])
         # AUD-20 (round 5, defect 14): a finding of one file has no See also places.
         self.assertEqual(out["findings"][0]["see_also"], [])
 
@@ -548,9 +548,9 @@ class Filter(Base):
         member = {"path": "specs/a.md", "line": 2, "quote": ["| Member | a person with a card; Card: a paid pass |"],
                   "rewrite": "r"}
         out = self.run_filter([
-            {"rule": "SPC-3", "problem": "Member is called user in b.md.",
+            {"rule": "WSP-3", "problem": "Member is called user in b.md.",
              "involved": [member, {"path": "specs/b.md", "line": 1, "quote": ["A user borrows."], "rewrite": "r"}]},
-            {"rule": "SPC-3", "problem": "Card is called pass in b.md.",
+            {"rule": "WSP-3", "problem": "Card is called pass in b.md.",
              "involved": [member, {"path": "specs/b.md", "line": 2, "quote": ["A pass is needed."], "rewrite": "r"}]},
         ], selected=["specs/a.md", "specs/b.md"])
         self.assertEqual([(f["problem"], f["see_also"]) for f in out["findings"]],
@@ -567,7 +567,7 @@ class Filter(Base):
             {"path": "specs/a.md", "line": 7, "quote": ["Another member line."], "rewrite": "r"},
             {"path": "specs/a.md", "line": 4, "quote": ["Member: a person with a card."], "rewrite": "r"},
         ]
-        f = {"rule": "SPC-3", "involved": involved, "problem": "p"}
+        f = {"rule": "WSP-3", "involved": involved, "problem": "p"}
         out = self.run_filter([f], selected=["specs/a.md"])
         self.assertEqual(len(out["findings"]), 1)
         got = out["findings"][0]
@@ -582,7 +582,7 @@ class Filter(Base):
         """AUD-19, AUD-35: a finding across files goes to the first selected file that was checked."""
         self.write("specs/a.md", "Member: a person with a card.\n")
         self.write("specs/b.md", "A user borrows.\n")
-        f = {"rule": "SPC-3", "problem": "p", "involved": [
+        f = {"rule": "WSP-3", "problem": "p", "involved": [
             {"path": "specs/a.md", "line": 1, "quote": ["Member: a person with a card."], "rewrite": "r"},
             {"path": "specs/b.md", "line": 1, "quote": ["A user borrows."], "rewrite": "r"}]}
         out = self.run_filter([f], selected=["specs/a.md", "specs/b.md"], checked=["specs/b.md"])
@@ -592,33 +592,33 @@ class Filter(Base):
         self.assertEqual(out["findings"], [])
         # A finding of a single file on a file that was not checked is dropped too.
         out = self.json_cmd("filter", {"repo_root": self.repo, "selected": ["specs/a.md"], "checked": [],
-                                       "findings": [self.finding("specs/a.md", 1, "SPC-2", ["Member: a person with a card."])]})
+                                       "findings": [self.finding("specs/a.md", 1, "WSP-2", ["Member: a person with a card."])]})
         self.assertEqual(out["dropped"][0]["reason"], "file was not checked")
 
     def test_types_refused(self):
         """SKILL.md section 3: quote a list of strings, rewrite one string, see_also "path:line" strings; else exit 2."""
         q = ["Large orders get free shipping, etc."]
         cases = [
-            (self.finding("specs/shipping.md", 12, "SPC-2", "Large orders get free shipping, etc."), "'quote' must be"),
-            (self.finding("specs/shipping.md", 12, "SPC-2", q, rewrite=["One.", "Two."]), "'rewrite' must be"),
-            (self.finding("specs/shipping.md", 12, "SPC-2", q, see_also="specs/a.md:2"), "'see_also' must be"),
-            (self.finding("specs/shipping.md", 12, "SPC-2", q, see_also=["specs/a.md"]), "'see_also' must be"),
-            (self.finding("specs/shipping.md", 12, "SPC-2", q, see_also=[{"path": "a.md", "line": 2}]), "'see_also' must be"),
-            (self.finding("specs/shipping.md", "12", "SPC-2", q), "'line' must be"),
-            ({"path": "specs/shipping.md", "line": 12, "rule": "SPC-2", "quote": q, "problem": "p"}, "'rewrite' is missing"),
-            ({"rule": "SPC-3", "problem": "p", "involved": ["specs/shipping.md:12"]}, "each place of"),
-            ({"rule": "SPC-3", "problem": "p", "involved": [{"path": "specs/shipping.md", "line": 12, "quote": q}]},
+            (self.finding("specs/shipping.md", 12, "WSP-2", "Large orders get free shipping, etc."), "'quote' must be"),
+            (self.finding("specs/shipping.md", 12, "WSP-2", q, rewrite=["One.", "Two."]), "'rewrite' must be"),
+            (self.finding("specs/shipping.md", 12, "WSP-2", q, see_also="specs/a.md:2"), "'see_also' must be"),
+            (self.finding("specs/shipping.md", 12, "WSP-2", q, see_also=["specs/a.md"]), "'see_also' must be"),
+            (self.finding("specs/shipping.md", 12, "WSP-2", q, see_also=[{"path": "a.md", "line": 2}]), "'see_also' must be"),
+            (self.finding("specs/shipping.md", "12", "WSP-2", q), "'line' must be"),
+            ({"path": "specs/shipping.md", "line": 12, "rule": "WSP-2", "quote": q, "problem": "p"}, "'rewrite' is missing"),
+            ({"rule": "WSP-3", "problem": "p", "involved": ["specs/shipping.md:12"]}, "each place of"),
+            ({"rule": "WSP-3", "problem": "p", "involved": [{"path": "specs/shipping.md", "line": 12, "quote": q}]},
              "each place of"),
-            ({"rule": "SPC-3", "problem": "p", "path": "specs/shipping.md",
+            ({"rule": "WSP-3", "problem": "p", "path": "specs/shipping.md",
               "involved": [{"path": "specs/shipping.md", "line": 12, "quote": q, "rewrite": "r"}]}, "not both"),
-            ({"rule": "SPC-3", "problem": "p", "see_also": [],
+            ({"rule": "WSP-3", "problem": "p", "see_also": [],
               "involved": [{"path": "specs/shipping.md", "line": 12, "quote": q, "rewrite": "r"}]}, "not both"),
-            ({"rule": "SPC-3", "problem": "p", "rewrite": "r",
+            ({"rule": "WSP-3", "problem": "p", "rewrite": "r",
               "involved": [{"path": "specs/shipping.md", "line": 12, "quote": q, "rewrite": "r"}]}, "not both"),
         ]
         for finding, message in cases:
             data = {"repo_root": self.repo, "selected": ["specs/shipping.md"], "spec_files": self.SPEC_FILES,
-                    "findings": [self.finding("specs/shipping.md", 12, "SPC-2", q), finding]}
+                    "findings": [self.finding("specs/shipping.md", 12, "WSP-2", q), finding]}
             status, out, err = self.run_script("filter", stdin=json.dumps(data).encode())
             self.assertEqual((status, out), (2, ""), finding)
             self.assertIn("finding 2", err)
@@ -629,7 +629,7 @@ class Filter(Base):
         self.write("specs/latin.md", b"caf\xe9\n")
         quote = [b"caf\xe9".decode("utf-8", "surrogateescape")]
         data = json.dumps({"repo_root": self.repo, "selected": ["specs/latin.md"],
-                           "findings": [self.finding("specs/latin.md", 1, "SPC-2", quote)]})
+                           "findings": [self.finding("specs/latin.md", 1, "WSP-2", quote)]})
         status, out, err = self.run_script("filter", stdin=data.encode())
         self.assertEqual((status, len(json.loads(out)["findings"])), (0, 1), err)
 
@@ -637,7 +637,7 @@ class Filter(Base):
         """AUD-29, AUD-46: a tab copied raw into a JSON string (a heredoc, SKILL.md section 1) is accepted, not refused as non-JSON."""
         self.write("specs/tabs.md", "# Tabs\n\t- nested etc.\n")
         raw = ('{"repo_root": %s, "selected": ["specs/tabs.md"], "findings": [{"path": "specs/tabs.md", "line": 2, '
-               '"rule": "SPC-2", "quote": ["\t- nested etc."], "problem": "p", "rewrite": "r"}]}' % json.dumps(self.repo))
+               '"rule": "WSP-2", "quote": ["\t- nested etc."], "problem": "p", "rewrite": "r"}]}' % json.dumps(self.repo))
         self.assertIn("\t", raw)
         status, out, err = self.run_script("filter", stdin=raw.encode())
         self.assertEqual(status, 0, err)
@@ -646,8 +646,8 @@ class Filter(Base):
     def test_empty_file_has_line_1(self):
         """Term "Line", AUD-21: a file with no bytes has one empty line 1, so a finding on it is kept."""
         self.write("specs/empty.md", b"")
-        out = self.run_filter([self.finding("specs/empty.md", 1, "SPC-1", [""]),
-                               self.finding("specs/empty.md", 2, "SPC-1", [""])], selected=["specs/empty.md"])
+        out = self.run_filter([self.finding("specs/empty.md", 1, "WSP-1", [""]),
+                               self.finding("specs/empty.md", 2, "WSP-1", [""])], selected=["specs/empty.md"])
         self.assertEqual([f["line"] for f in out["findings"]], [1])
         self.assertEqual(out["dropped"][0]["reason"], "line does not exist")
 
@@ -659,17 +659,17 @@ class Filter(Base):
         self.write("specs/latin.md", b"caf\xe9 must be fast.\n")
         sel = ["specs/booking.md", "specs/cr.md", "specs/latin.md"]
         out = self.run_filter([
-            self.finding("specs/booking.md", 1, "SPC-1", ["# Booking"]),
-            self.finding("specs/booking.md", 1, "SPC-2", ["\ufeff# Booking"]),
-            self.finding("specs/cr.md", 1, "SPC-2", ["# Titlefirst etc.second"]),
-            self.finding("specs/cr.md", 1, "SPC-4", ["# Title\rfirst etc.\rsecond"]),
-            self.finding("specs/latin.md", 1, "SPC-2", ["caf\ufffd must be fast."]),
-            self.finding("specs/latin.md", 1, "SPC-4", [b"caf\xe9 must be fast.".decode("utf-8", "surrogateescape")]),
-            self.finding("specs/latin.md", 1, "SPC-5", ["cafe must be fast."]),
+            self.finding("specs/booking.md", 1, "WSP-1", ["# Booking"]),
+            self.finding("specs/booking.md", 1, "WSP-2", ["\ufeff# Booking"]),
+            self.finding("specs/cr.md", 1, "WSP-2", ["# Titlefirst etc.second"]),
+            self.finding("specs/cr.md", 1, "WSP-4", ["# Title\rfirst etc.\rsecond"]),
+            self.finding("specs/latin.md", 1, "WSP-2", ["caf\ufffd must be fast."]),
+            self.finding("specs/latin.md", 1, "WSP-4", [b"caf\xe9 must be fast.".decode("utf-8", "surrogateescape")]),
+            self.finding("specs/latin.md", 1, "WSP-5", ["cafe must be fast."]),
         ], selected=sel)
         self.assertEqual([(f["path"], f["rule"]) for f in out["findings"]], [
-            ("specs/booking.md", "SPC-1"), ("specs/booking.md", "SPC-2"), ("specs/cr.md", "SPC-2"), ("specs/cr.md", "SPC-4"),
-            ("specs/latin.md", "SPC-2"), ("specs/latin.md", "SPC-4")])
+            ("specs/booking.md", "WSP-1"), ("specs/booking.md", "WSP-2"), ("specs/cr.md", "WSP-2"), ("specs/cr.md", "WSP-4"),
+            ("specs/latin.md", "WSP-2"), ("specs/latin.md", "WSP-4")])
         self.assertEqual([d["reason"] for d in out["dropped"]], ["quote differs from the file"])
 
     def test_involved_places_validated_and_render_accepts(self):
@@ -680,7 +680,7 @@ class Filter(Base):
                {"path": "../../../../etc/passwd", "line": 99999, "quote": ["x"], "rewrite": "r"},
                {"path": "specs/other.md", "line": 2, "quote": ["x"], "rewrite": "r"},
                {"path": "specs/x\n.md", "line": 1, "quote": ["x"], "rewrite": "r"}]
-        f = {"rule": "SPC-11", "problem": "p",
+        f = {"rule": "WSP-11", "problem": "p",
              "involved": [{"path": "specs/booking.md", "line": 2, "quote": ["A member books."], "rewrite": "r"},
                           {"path": "specs/other.md", "line": 1, "quote": ["# Other"], "rewrite": "r"}] + bad}
         sel = ["specs/booking.md"]
@@ -701,12 +701,12 @@ class Filter(Base):
         quotes, with the problem it claims (round 2, defect 13)."""
         q = ["Large orders get free shipping, etc."]
         out = self.run_filter([
-            self.finding("specs/shipping.md", 12, "SPC-2", q),
-            self.finding("specs/crlf.md", 2, "SPC-2", ["- Large orders get free shipping,", "  etc."], see_also=["specs/shipping.md:1"]),
+            self.finding("specs/shipping.md", 12, "WSP-2", q),
+            self.finding("specs/crlf.md", 2, "WSP-2", ["- Large orders get free shipping,", "  etc."], see_also=["specs/shipping.md:1"]),
         ])
         self.assertEqual(out["verify"], [
-            {"path": "specs/shipping.md", "line": 12, "lines": 1, "rule": "SPC-2", "see_also": [], "problem": "p"},
-            {"path": "specs/crlf.md", "line": 2, "lines": 2, "rule": "SPC-2", "see_also": [],
+            {"path": "specs/shipping.md", "line": 12, "lines": 1, "rule": "WSP-2", "see_also": [], "problem": "p"},
+            {"path": "specs/crlf.md", "line": 2, "lines": 2, "rule": "WSP-2", "see_also": [],
              "problem": "p"}])  # AUD-20 (round 5, defect 14): no See also for a finding of one file
         self.assertEqual([(f["path"], f["line"]) for f in out["findings"]], [("specs/shipping.md", 12), ("specs/crlf.md", 2)])
 
@@ -727,7 +727,7 @@ def questions():
             lines = f.read().splitlines()
         for line in lines:
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            if cells and cells[0].startswith("SPC-Q") and cells[0][5:].isdigit():
+            if cells and cells[0].startswith("WSP-Q") and cells[0][5:].isdigit():
                 QUESTIONS[cells[0]] = cells[1]
     return QUESTIONS
 
@@ -751,7 +751,7 @@ class Render(Base):
     def base(self, **extra):
         data = {
             "repo_root": self.repo, "n": 1, "s": 1, "mode": "session", "checked": [], "findings": [],
-            "conditional": [{"rule": "SPC-%d" % i, "applies_to": [], "why": "No line meets it."} for i in range(13, 21)],
+            "conditional": [{"rule": "WSP-%d" % i, "applies_to": [], "why": "No line meets it."} for i in range(13, 21)],
             "questions": [], "not_checked": [],
         }
         data.update(extra)
@@ -768,10 +768,10 @@ class Render(Base):
     def tail(self):
         lines = ["", "## Links between layers", "", "None."]  # AUD-30, AUD-35
         lines += ["", "## Conditional rules", "", "| Rule | Applies to | Why |", "|---|---|---|"]
-        lines += ["| SPC-%d | none | No line meets it. |" % i for i in range(13, 21)]
+        lines += ["| WSP-%d | none | No line meets it. |" % i for i in range(13, 21)]
         lines += ["", "## Questions for the approver", ""]
         for i in range(1, 18):
-            lines += ["- SPC-Q%d %s" % (i, questions()["SPC-Q%d" % i]), "  Evidence: none."]
+            lines += ["- WSP-Q%d %s" % (i, questions()["WSP-Q%d" % i]), "  Evidence: none."]
         return lines
 
     def test_whole_report(self):
@@ -781,9 +781,9 @@ class Render(Base):
             n=2, s=2,
             checked=["specs/shipping.md", "specs/a.md"],
             findings=[
-                {"path": "specs/shipping.md", "line": 12, "rule": "SPC-2", "quote": q12,
+                {"path": "specs/shipping.md", "line": 12, "rule": "WSP-2", "quote": q12,
                  "problem": "The list ends in etc.", "rewrite": "An order of 50.00 EUR or more must ship free.", "see_also": []},
-                {"path": "specs/shipping.md", "line": 7, "rule": "SPC-2", "quote": ["- Large orders get free shipping,", "  etc."],
+                {"path": "specs/shipping.md", "line": 7, "rule": "WSP-2", "quote": ["- Large orders get free shipping,", "  etc."],
                  "problem": "Two readings.", "rewrite": "One.; Two.", "see_also": []},
             ],
         )
@@ -798,13 +798,13 @@ class Render(Base):
             "",
             "### specs/shipping.md",
             "",
-            "- specs/shipping.md:7 · SPC-2",
+            "- specs/shipping.md:7 · WSP-2",
             "  > - Large orders get free shipping,",
             "  >   etc.",
             "  Problem: Two readings.",
             "  Rewrite: One.; Two.",
             "",
-            "- specs/shipping.md:12 · SPC-2",
+            "- specs/shipping.md:12 · WSP-2",
             "  > Large orders get free shipping, etc.",
             "  Problem: The list ends in etc.",
             "  Rewrite: An order of 50.00 EUR or more must ship free.",
@@ -813,7 +813,7 @@ class Render(Base):
 
     def test_singular(self):
         """AUD-32, AUD-E1: `file` when <s> or <n> is 1, `finding` when <f> is 1; Mode: session."""
-        out = self.report(checked=["a.md"], findings=[{"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"],
+        out = self.report(checked=["a.md"], findings=[{"path": "a.md", "line": 1, "rule": "WSP-1", "quote": ["# A"],
                                                        "problem": "p", "rewrite": "r"}])
         self.assertTrue(out.startswith("Check of writing of " + self.repo + " against writing-specs.md: 1 of 1 selected spec file checked, "
                                        "1 finding. Spec set: 1 spec file. Mode: session.\n"))
@@ -822,33 +822,33 @@ class Render(Base):
                                        "0 findings. Spec set: 4 spec files. Mode: workflow.\n"))
 
     def test_finding_order(self):
-        """AUD-34: file sections by path; findings by rule (SPC-1..SPC-20, then the decisions), then by line."""
+        """AUD-34: file sections by path; findings by rule (WSP-1..WSP-20, then the decisions), then by line."""
         def f(path, line, rule):
             return {"path": path, "line": line, "rule": rule, "quote": ["x"], "problem": "p", "rewrite": "r"}
         out = self.report(n=2, s=2, checked=["b.md", "B.md"], findings=[
-            f("b.md", 1, "SPC-T4"), f("b.md", 5, "SPC-10"), f("b.md", 9, "SPC-2"), f("b.md", 2, "SPC-2"),
-            f("b.md", 1, "SPC-T15"), f("b.md", 1, "SPC-T11"), f("B.md", 3, "SPC-20")])
-        firsts = [l for l in out.splitlines() if l.startswith("- ") and "SPC-Q" not in l]
-        self.assertEqual(firsts, ["- B.md:3 · SPC-20", "- b.md:2 · SPC-2", "- b.md:9 · SPC-2", "- b.md:5 · SPC-10",
-                                  "- b.md:1 · SPC-T4", "- b.md:1 · SPC-T11", "- b.md:1 · SPC-T15"])
+            f("b.md", 1, "WSP-T4"), f("b.md", 5, "WSP-10"), f("b.md", 9, "WSP-2"), f("b.md", 2, "WSP-2"),
+            f("b.md", 1, "WSP-T15"), f("b.md", 1, "WSP-T11"), f("B.md", 3, "WSP-20")])
+        firsts = [l for l in out.splitlines() if l.startswith("- ") and "WSP-Q" not in l]
+        self.assertEqual(firsts, ["- B.md:3 · WSP-20", "- b.md:2 · WSP-2", "- b.md:9 · WSP-2", "- b.md:5 · WSP-10",
+                                  "- b.md:1 · WSP-T4", "- b.md:1 · WSP-T11", "- b.md:1 · WSP-T15"])
 
     def test_see_also(self):
         """AUD-E9, AUD-31, AUD-34: See also places by path then line, separated by `, `."""
         self.write("specs/b.md", "x\n" * 10)
         self.write("specs/c.md", "x\n" * 2)
         out = self.report(n=3, checked=["specs/a.md"], spec_files=["specs/a.md", "specs/b.md", "specs/c.md"], findings=[{
-            "path": "specs/a.md", "line": 4, "rule": "SPC-3", "quote": ["Member: a person with a card."],
+            "path": "specs/a.md", "line": 4, "rule": "WSP-3", "quote": ["Member: a person with a card."],
             "problem": "p", "rewrite": "r", "see_also": ["specs/c.md:2", "specs/b.md:10", "specs/b.md:9"]}])
-        self.assertIn("- specs/a.md:4 · SPC-3\n  > Member: a person with a card.\n  Problem: p\n  Rewrite: r\n"
+        self.assertIn("- specs/a.md:4 · WSP-3\n  > Member: a person with a card.\n  Problem: p\n  Rewrite: r\n"
                       "  See also: specs/b.md:9, specs/b.md:10, specs/c.md:2\n\n## Links between layers", out)
 
     def test_not_verified(self):
         """AUD-43: a finding whose skeptic failed ends its first line with ` · not verified`."""
         out = self.report(checked=["a.md"], findings=[
-            {"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"], "problem": "p", "rewrite": "r", "verified": False},
-            {"path": "a.md", "line": 1, "rule": "SPC-2", "quote": ["# A"], "problem": "p", "rewrite": "r", "verified": True}])
-        self.assertIn("- a.md:1 · SPC-1 · not verified\n", out)
-        self.assertIn("- a.md:1 · SPC-2\n", out)
+            {"path": "a.md", "line": 1, "rule": "WSP-1", "quote": ["# A"], "problem": "p", "rewrite": "r", "verified": False},
+            {"path": "a.md", "line": 1, "rule": "WSP-2", "quote": ["# A"], "problem": "p", "rewrite": "r", "verified": True}])
+        self.assertIn("- a.md:1 · WSP-1 · not verified\n", out)
+        self.assertIn("- a.md:1 · WSP-2\n", out)
         self.assertIn("2 findings", out)
 
     def test_failed_checker(self):
@@ -869,54 +869,54 @@ class Render(Base):
             {"what": "a.md", "reason": "could not be read (context only)"},
             {"what": "B.md", "reason": "could not be read"},
         ], questions=[
-            {"id": "SPC-Q2", "evidence": [{"path": "a.md", "line": 1, "text": "Readers differ."}]},
-            {"id": "SPC-Q4", "evidence": [{"path": "a.md", "line": 2, "text": "No error path."}]},
+            {"id": "WSP-Q2", "evidence": [{"path": "a.md", "line": 1, "text": "Readers differ."}]},
+            {"id": "WSP-Q4", "evidence": [{"path": "a.md", "line": 2, "text": "No error path."}]},
         ])
         self.assertTrue(out.endswith(
             "## Not checked\n\n"
             "- B.md — could not be read\n"
             "- a.md — could not be read (context only)\n"
             "- z.md — the run was stopped\n"
-            "- across files (SPC-3, SPC-11, SPC-13, SPC-14, SPC-Q4, SPC-Q12) — the pass failed or did not finish\n"
-            "- readers (SPC-Q2, SPC-Q3) — a reader failed or did not finish\n"))
+            "- across files (WSP-3, WSP-11, WSP-13, WSP-14, WSP-Q4, WSP-Q12) — the pass failed or did not finish\n"
+            "- readers (WSP-Q2, WSP-Q3) — a reader failed or did not finish\n"))
         self.assertIn("## Findings\n\nNone.\n\n## Links between layers\n\nNone.\n\n## Conditional rules", out)
-        self.assertIn("- SPC-Q2 %s\n  Evidence: none.\n" % questions()["SPC-Q2"], out)
-        self.assertIn("- SPC-Q4 %s\n  Evidence: a.md:2 No error path.\n" % questions()["SPC-Q4"], out)
+        self.assertIn("- WSP-Q2 %s\n  Evidence: none.\n" % questions()["WSP-Q2"], out)
+        self.assertIn("- WSP-Q4 %s\n  Evidence: a.md:2 No error path.\n" % questions()["WSP-Q4"], out)
 
     def test_questions(self):
         """AUD-22, AUD-27, AUD-34: evidence by path, line, text; ` (not independent)`, never after Evidence: none."""
         out = self.report(questions=[
-            {"id": "SPC-Q3", "not_independent": True, "evidence": [
+            {"id": "WSP-Q3", "not_independent": True, "evidence": [
                 {"path": "b.md", "line": 2, "text": "Gap."}, {"path": "a.md", "line": 10, "text": "Two readings."},
                 {"path": "a.md", "line": 9, "text": "Z."}, {"path": "a.md", "line": 9, "text": "A."}]},
-            {"id": "SPC-Q2", "not_independent": True, "evidence": []},
-            {"id": "SPC-Q1", "evidence": [{"path": "a.md", "line": 1, "text": "No audience."}, {"text": "no place"}]},
+            {"id": "WSP-Q2", "not_independent": True, "evidence": []},
+            {"id": "WSP-Q1", "evidence": [{"path": "a.md", "line": 1, "text": "No audience."}, {"text": "no place"}]},
         ])
-        self.assertIn("- SPC-Q1 %s\n  Evidence: a.md:1 No audience.\n- SPC-Q2 %s\n  Evidence: none.\n- SPC-Q3 %s\n"
+        self.assertIn("- WSP-Q1 %s\n  Evidence: a.md:1 No audience.\n- WSP-Q2 %s\n  Evidence: none.\n- WSP-Q3 %s\n"
                       "  Evidence: a.md:9 A. (not independent)\n  Evidence: a.md:9 Z. (not independent)\n"
-                      "  Evidence: a.md:10 Two readings. (not independent)\n  Evidence: b.md:2 Gap. (not independent)\n- SPC-Q4"
-                      % (questions()["SPC-Q1"], questions()["SPC-Q2"], questions()["SPC-Q3"]), out)
-        self.assertEqual(out.count("\n- SPC-Q"), 17)
+                      "  Evidence: a.md:10 Two readings. (not independent)\n  Evidence: b.md:2 Gap. (not independent)\n- WSP-Q4"
+                      % (questions()["WSP-Q1"], questions()["WSP-Q2"], questions()["WSP-Q3"]), out)
+        self.assertEqual(out.count("\n- WSP-Q"), 17)
 
     def test_question_texts_from_guideline(self):
         """AUD-15, AUD-22: the question texts are read from the guideline at run time."""
         with open(self.guideline, encoding="utf-8") as f:
             text = f.read()
         with open(self.guideline, "w", encoding="utf-8") as f:
-            f.write(text.replace(questions()["SPC-Q7"], "Changed question seven?"))
-        self.assertIn("- SPC-Q7 Changed question seven?\n", self.report())
+            f.write(text.replace(questions()["WSP-Q7"], "Changed question seven?"))
+        self.assertIn("- WSP-Q7 Changed question seven?\n", self.report())
         os.remove(self.guideline)
         self.assertEqual(self.run_script("render", stdin=json.dumps(self.base()).encode())[0], 2)
 
     def test_conditional_rules(self):
-        """AUD-31, AUD-34, AUD-35: one row per SPC-13 to SPC-20 in order; paths in code point order, or none."""
+        """AUD-31, AUD-34, AUD-35: one row per WSP-13 to WSP-20 in order; paths in code point order, or none."""
         out = self.report(checked=["specs/a.md", "specs/b.md"], conditional=[
-            {"rule": "SPC-17", "applies_to": ["specs/b.md", "specs/a.md"], "why": "It reads | files."},
-        ] + [{"rule": "SPC-%d" % i, "applies_to": [], "why": "No."} for i in range(13, 21) if i != 17])
-        rows = [l for l in out.splitlines() if l.startswith("| SPC-")]
-        self.assertEqual([r.split(" | ")[0] for r in rows], ["| SPC-%d" % i for i in range(13, 21)])
-        self.assertIn("| SPC-17 | specs/a.md, specs/b.md | It reads \\| files. |", rows)
-        self.assertIn("| SPC-13 | none | No. |", rows)
+            {"rule": "WSP-17", "applies_to": ["specs/b.md", "specs/a.md"], "why": "It reads | files."},
+        ] + [{"rule": "WSP-%d" % i, "applies_to": [], "why": "No."} for i in range(13, 21) if i != 17])
+        rows = [l for l in out.splitlines() if l.startswith("| WSP-")]
+        self.assertEqual([r.split(" | ")[0] for r in rows], ["| WSP-%d" % i for i in range(13, 21)])
+        self.assertIn("| WSP-17 | specs/a.md, specs/b.md | It reads \\| files. |", rows)
+        self.assertIn("| WSP-13 | none | No. |", rows)
 
     def test_partition_enforced(self):
         """AUD-35: a selected file never appears both under Findings and under Not checked."""
@@ -925,14 +925,14 @@ class Render(Base):
         data = self.base(checked=["a.md"], selected=["a.md", "b.md"])
         self.assertEqual(self.run_script("render", stdin=json.dumps(data).encode())[0], 2)
         data = self.base(checked=[], selected=["a.md"], not_checked=[{"what": "a.md", "reason": "could not be read"}],
-                         findings=[{"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"], "problem": "p", "rewrite": "r"}])
+                         findings=[{"path": "a.md", "line": 1, "rule": "WSP-1", "quote": ["# A"], "problem": "p", "rewrite": "r"}])
         status, _, err = self.run_script("render", stdin=json.dumps(data).encode())
         self.assertEqual(status, 2)
         self.assertIn("not checked", err)
 
     def test_step2_rerun(self):
         """AUD-46, AUD-29 step 2: render refuses a finding that step 2 drops, naming it, and prints no report."""
-        good = {"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"], "problem": "p", "rewrite": "r"}
+        good = {"path": "a.md", "line": 1, "rule": "WSP-1", "quote": ["# A"], "problem": "p", "rewrite": "r"}
         cases = [
             (dict(good, quote=["# A "]), "quote differs from the file"),
             (dict(good, quote=["#  A"]), "quote differs from the file"),
@@ -940,7 +940,7 @@ class Render(Base):
             (dict(good, quote=[]), "quote differs from the file"),
             (dict(good, line=11), "line does not exist"),
             (dict(good, line=0), "line does not exist"),
-            (dict(good, rule="SPC-Q1"), "rule is not a binding rule"),
+            (dict(good, rule="WSP-Q1"), "rule is not a binding rule"),
             (dict(good, path="b.md", quote=["x"]), "path is not a selected file"),
         ]
         for finding, reason in cases:
@@ -949,11 +949,11 @@ class Render(Base):
             self.assertEqual((status, out), (2, ""), finding)
             self.assertIn("finding 2 (%s:%d %s)" % (finding["path"], finding["line"], finding["rule"]), err)
             self.assertIn(reason, err)
-        self.assertIn("- a.md:1 · SPC-1\n", self.report(checked=["a.md"], findings=[good]))
+        self.assertIn("- a.md:1 · WSP-1\n", self.report(checked=["a.md"], findings=[good]))
 
     def test_types_refused(self):
         """SKILL.md section 3: render takes only the exact types; a quote string or a rewrite list is refused."""
-        good = {"path": "a.md", "line": 1, "rule": "SPC-1", "quote": ["# A"], "problem": "p", "rewrite": "r"}
+        good = {"path": "a.md", "line": 1, "rule": "WSP-1", "quote": ["# A"], "problem": "p", "rewrite": "r"}
         cases = [
             (dict(good, quote="# A"), "'quote' must be"),
             (dict(good, rewrite=["One.", "Two."]), "'rewrite' must be"),
@@ -982,19 +982,19 @@ class Render(Base):
     def test_applies_to_only_selected(self):
         """AUD-31: <paths> of a conditional rule lists only selected files."""
         out = self.report(checked=["a.md"], conditional=[
-            {"rule": "SPC-15", "applies_to": ["a.md", "other.md"], "why": "It reads the clock."},
-            {"rule": "SPC-16", "applies_to": ["other.md"], "why": "No."}])
-        self.assertIn("| SPC-15 | a.md | It reads the clock. |", out)
-        self.assertIn("| SPC-16 | none | No. |", out)
+            {"rule": "WSP-15", "applies_to": ["a.md", "other.md"], "why": "It reads the clock."},
+            {"rule": "WSP-16", "applies_to": ["other.md"], "why": "No."}])
+        self.assertIn("| WSP-15 | a.md | It reads the clock. |", out)
+        self.assertIn("| WSP-16 | none | No. |", out)
 
     def test_evidence_places_validated(self):
         """AUD-46, AUD-26: an Evidence line cites a line of a spec file; line 0, negative, past the end,
         a string line and a path outside the spec set are left out."""
-        out = self.report(checked=["a.md"], questions=[{"id": "SPC-Q1", "evidence": [
+        out = self.report(checked=["a.md"], questions=[{"id": "WSP-Q1", "evidence": [
             {"path": "a.md", "line": 0, "text": "zero"}, {"path": "nope.md", "line": -4, "text": "neg"},
             {"path": "a.md", "line": "007", "text": "str"}, {"path": "a.md", "line": 11, "text": "past"},
             {"path": "../../etc/passwd", "line": 1, "text": "outside"}, {"path": "b.md", "line": 9, "text": "kept"}]}])
-        self.assertIn("- SPC-Q1 %s\n  Evidence: b.md:9 kept\n- SPC-Q2" % questions()["SPC-Q1"], out)
+        self.assertIn("- WSP-Q1 %s\n  Evidence: b.md:9 kept\n- WSP-Q2" % questions()["WSP-Q1"], out)
 
     def test_unreadable_listed(self):
         """AUD-42, AUD-35: render lists prepare's unreadable files under Not checked, also in workflow mode."""
@@ -1013,7 +1013,7 @@ class Render(Base):
         self.write("specs/x.md", "# X\n\nLarge orders ship free, etc.\n")
         base = {"repo_root": self.repo, "selected": ["specs/x.md"], "spec_files": ["specs/x.md"]}
         kept = self.json_cmd("filter", dict(base, findings=[
-            {"path": "specs/x.md", "line": 3, "rule": "SPC-2", "quote": ["Large orders ship free, etc."],
+            {"path": "specs/x.md", "line": 3, "rule": "WSP-2", "quote": ["Large orders ship free, etc."],
              "problem": "p", "rewrite": "r"}]))["findings"]
         data = dict(base, n=1, s=1, mode="session", checked=["specs/x.md"])
         # Round 4, defect 7: a mis-copied quote is repaired from the file, which `check` proves;
@@ -1027,7 +1027,7 @@ class Render(Base):
         self.write("specs/x.md", "# X\n\nAdded.\nAdded.\n\nLarge orders ship free, etc.\n")
         status, out, err = self.run_script("render", stdin=json.dumps(dict(data, findings=kept)).encode())
         self.assertEqual(status, 0, err)
-        self.assertIn("- specs/x.md:3 · SPC-2\n  > Large orders ship free, etc.\n", out)
+        self.assertIn("- specs/x.md:3 · WSP-2\n  > Large orders ship free, etc.\n", out)
 
     def test_paths_escaped(self):
         """AUD-31, AUD-8, AUD-30: a path with a line feed or `|` cannot add headings, items or table cells."""
@@ -1038,15 +1038,15 @@ class Render(Base):
             self.skipTest("the file system refuses a line feed in a name")
         self.write("a|b.md", "# AB\n")
         out = self.report(n=2, s=2, checked=[evil, "a|b.md"], findings=[
-            {"path": evil, "line": 1, "rule": "SPC-1", "quote": ["# X"], "problem": "p", "rewrite": "r",
+            {"path": evil, "line": 1, "rule": "WSP-1", "quote": ["# X"], "problem": "p", "rewrite": "r",
              "see_also": ["a|b.md:1"]}],
-            conditional=[{"rule": "SPC-17", "applies_to": ["a|b.md"], "why": "w"}])
+            conditional=[{"rule": "WSP-17", "applies_to": ["a|b.md"], "why": "w"}])
         shown = "x.md\\u000a\\u000a## Not checked\\u000a\\u000a- y.md"
         self.assertIn("### %s\n" % shown, out)
-        self.assertIn("- %s:1 · SPC-1\n" % shown, out)
+        self.assertIn("- %s:1 · WSP-1\n" % shown, out)
         self.assertEqual(out.count("\n## Not checked\n"), 1)
         self.assertNotIn("\n- y.md", out)
-        self.assertIn("| SPC-17 | a\\|b.md | w |", out)
+        self.assertIn("| WSP-17 | a\\|b.md | w |", out)
         self.assertIn("  See also: a|b.md:1\n", out)
 
     def test_mode_not_available(self):
@@ -1099,8 +1099,8 @@ class WorkflowScript(unittest.TestCase):
 
     def test_verify_refuses_findings_that_are_not_a_list(self):
         """AUD-43, SKILL.md 4b.4: findings given as a string or an empty list make the call fail; never zero verdicts."""
-        item = {"path": "specs/a.md", "line": 3, "lines": 1, "rule": "SPC-2", "see_also": [], "problem": "p"}
-        for bad in (json.dumps([item]), [], [dict(item, line="3")], [{"path": "specs/a.md", "line": 3, "rule": "SPC-2"}]):
+        item = {"path": "specs/a.md", "line": 3, "lines": 1, "rule": "WSP-2", "see_also": [], "problem": "p"}
+        for bad in (json.dumps([item]), [], [dict(item, line="3")], [{"path": "specs/a.md", "line": 3, "rule": "WSP-2"}]):
             out = self.verify(bad)
             self.assertIn("error", out, bad)
             self.assertEqual(out["prompts"], {})
@@ -1111,9 +1111,9 @@ class WorkflowScript(unittest.TestCase):
     def test_skeptic_judges_see_also_places_and_takes_applicability_as_given(self):
         """AUD-29 step 4, AUD-19, AUD-17: the skeptic judges the quote with the See also places, from the
         compact verify entry, and never refutes because a rule's "Applies when:" line does not hold."""
-        out = self.verify([{"path": "specs/a.md", "line": 3, "lines": 2, "rule": "SPC-3", "see_also": ["specs/b.md:5"],
+        out = self.verify([{"path": "specs/a.md", "line": 3, "lines": 2, "rule": "WSP-3", "see_also": ["specs/b.md:5"],
                             "problem": "p"},
-                           {"path": "specs/a.md", "line": 7, "lines": 1, "rule": "SPC-17", "see_also": [], "problem": "p"}])
+                           {"path": "specs/a.md", "line": 7, "lines": 1, "rule": "WSP-17", "see_also": [], "problem": "p"}])
         first, second = (out["prompts"][k] for k in sorted(out["prompts"]))
         self.assertIn("line 3 to 4 of \"specs/a.md\"", first)
         self.assertIn("specs/b.md:5", first)
@@ -1130,8 +1130,8 @@ class WorkflowScript(unittest.TestCase):
                   "gaps": [{"path": "specs/a.md", "line": 1, "text": "g"}]}
         out = self.run_workflow(dict(self.ARGS, stage="check"), {
             "checker": {"findings": [], "evidence": [],
-                        "conditional": {"SPC-%d" % i: {"applies": False, "why": "No."} for i in range(15, 21)}},
-            "across files": {"conditional": {"SPC-13": {"applies_to": [], "why": "w"}, "SPC-14": {"applies_to": [], "why": "w"}},
+                        "conditional": {"WSP-%d" % i: {"applies": False, "why": "No."} for i in range(15, 21)}},
+            "across files": {"conditional": {"WSP-13": {"applies_to": [], "why": "w"}, "WSP-14": {"applies_to": [], "why": "w"}},
                              "findings": [], "evidence": []},
             "reader": reader})
         self.assertEqual((out["result"]["checkers"][0]["ok"], out["result"]["cross"] is None), (True, False))
@@ -1259,7 +1259,7 @@ class RoundTwoFilter(Base):
         return self.json_cmd("filter", data)
 
     def f(self, **extra):
-        f = {"path": "specs/a.md", "line": 2, "rule": "SPC-3", "quote": ["Member: a person with a card."],
+        f = {"path": "specs/a.md", "line": 2, "rule": "WSP-3", "quote": ["Member: a person with a card."],
              "problem": "p", "rewrite": "r", "see_also": []}
         f.update(extra)
         return f
@@ -1271,7 +1271,7 @@ class RoundTwoFilter(Base):
         a = {"path": "specs/a.md", "line": 2, "quote": ["Member: a person with a card."], "rewrite": "r"}
 
         def across(*others):
-            return {"rule": "SPC-3", "problem": "p",
+            return {"rule": "WSP-3", "problem": "p",
                     "involved": [a] + [{"path": p, "line": n, "quote": ["x"], "rewrite": "r"} for p, n in others]}
         out = self.run_filter([across(("specs/b.md", 9)), across(("specs/b.md", 9), ("specs/b.md", 999)),
                                across(("./specs/b.md", 9)), across(("README.md", 1))])
@@ -1283,12 +1283,12 @@ class RoundTwoFilter(Base):
         so a quote that keeps the second one matches."""
         self.write("specs/c.md", b"\xef\xbb\xbf\xef\xbb\xbfdouble bom\n")
         out = self.run_filter([self.f(path="specs/c.md", line=1, quote=["﻿double bom"]),
-                               self.f(path="specs/c.md", line=1, rule="SPC-2", quote=["﻿﻿double bom"]),
-                               self.f(path="specs/c.md", line=1, rule="SPC-4", quote=["double bom"])],
+                               self.f(path="specs/c.md", line=1, rule="WSP-2", quote=["﻿﻿double bom"]),
+                               self.f(path="specs/c.md", line=1, rule="WSP-4", quote=["double bom"])],
                               selected=["specs/c.md"])
         # Round 4, defect 19: the term "Quote" leaves format characters (Cf), a BOM among them, out
         # on both sides, so the quote without the second BOM matches too; filter gives the file's line.
-        self.assertEqual([x["rule"] for x in out["findings"]], ["SPC-3", "SPC-2", "SPC-4"])
+        self.assertEqual([x["rule"] for x in out["findings"]], ["WSP-3", "WSP-2", "WSP-4"])
         self.assertEqual([x["quote"] for x in out["findings"]], [["\ufeffdouble bom"]] * 3)
 
     def test_verify_entry_holds_the_problem(self):
@@ -1296,27 +1296,27 @@ class RoundTwoFilter(Base):
         out = self.run_filter([self.f(problem="Member is called user in b.md.")])
         self.assertEqual(out["verify"][0]["problem"], "Member is called user in b.md.")
 
-    def test_spc14_placed_only_where_it_applies(self):
-        """AUD-19, AUD-17 (round 2, defect 14): an SPC-14 finding across files goes only to a file where SPC-14 applies."""
+    def test_wsp14_placed_only_where_it_applies(self):
+        """AUD-19, AUD-17 (round 2, defect 14): a WSP-14 finding across files goes only to a file where WSP-14 applies."""
         self.write("specs/b.md", "1\n2\n3\n4\n5\n6\nAs stated in section 3.2, second bullet.\n")
-        f = {"rule": "SPC-14", "problem": "p", "involved": [
+        f = {"rule": "WSP-14", "problem": "p", "involved": [
             {"path": "specs/a.md", "line": 2, "quote": ["Member: a person with a card."], "rewrite": "r"},
             {"path": "specs/b.md", "line": 7, "quote": ["As stated in section 3.2, second bullet."], "rewrite": "r"}]}
         sel = ["specs/a.md", "specs/b.md"]
-        got = self.run_filter([f], selected=sel, spc14_applies_to=["specs/b.md"])["findings"][0]
+        got = self.run_filter([f], selected=sel, wsp14_applies_to=["specs/b.md"])["findings"][0]
         self.assertEqual((got["path"], got["line"], got["see_also"]), ("specs/b.md", 7, ["specs/a.md:2"]))
-        out = self.run_filter([f], selected=sel, spc14_applies_to=[])
+        out = self.run_filter([f], selected=sel, wsp14_applies_to=[])
         self.assertEqual(out["findings"], [])
         status, _, err = self.run_script("filter", stdin=json.dumps(
             {"repo_root": self.repo, "selected": sel, "spec_files": self.SPEC, "findings": [f]}).encode())
         self.assertEqual(status, 2)
-        self.assertIn("spc14_applies_to", err)
+        self.assertIn("wsp14_applies_to", err)
 
     def test_distinct_problems_not_merged(self):
         """AUD-29 step 3, AUD-21 (round 2, defect 16): two missing-text findings of one rule at one heading
         are kept; the same finding given twice is merged."""
         self.write("specs/booking.md", "# Booking\nGuests reserve rooms.\n")
-        head = dict(path="specs/booking.md", line=1, rule="SPC-1", quote=["# Booking"])
+        head = dict(path="specs/booking.md", line=1, rule="WSP-1", quote=["# Booking"])
         out = self.run_filter([self.f(problem="No out-of-scope statement.", **head),
                                self.f(problem="No statement of what must never happen.", **head),
                                self.f(problem="No out-of-scope statement.", rewrite="other", **head)],
@@ -1344,7 +1344,7 @@ class RoundTwoRender(Base):
         """AUD-31, AUD-30 (round 2, defect 8): a CR inside a quote line is shown as \\u000d, so the
         skeleton keeps one `  > ` line per line."""
         out = self.json_cmd("render", self.data(findings=[
-            {"path": "a.md", "line": 1, "rule": "SPC-2", "quote": ["one\rtwo etc.\rthree"], "problem": "p", "rewrite": "r"}]))
+            {"path": "a.md", "line": 1, "rule": "WSP-2", "quote": ["one\rtwo etc.\rthree"], "problem": "p", "rewrite": "r"}]))
         self.assertIn("  > one\\u000dtwo etc.\\u000dthree\n", out)
         self.assertNotIn("\r", out)
 
@@ -1375,12 +1375,12 @@ class RoundTwoWorkflow(unittest.TestCase):
 
     ARGS, run_workflow, verify = WorkflowScript.ARGS, WorkflowScript.run_workflow, WorkflowScript.verify
 
-    CHECKER_ROWS = {"SPC-%d" % i: {"applies": False, "why": "No."} for i in range(15, 21)}
-    CROSS_ROWS = {"SPC-13": {"applies_to": [], "why": "Small."}, "SPC-14": {"applies_to": ["specs/a.md"], "why": "IDs."}}
+    CHECKER_ROWS = {"WSP-%d" % i: {"applies": False, "why": "No."} for i in range(15, 21)}
+    CROSS_ROWS = {"WSP-13": {"applies_to": [], "why": "Small."}, "WSP-14": {"applies_to": ["specs/a.md"], "why": "IDs."}}
 
     def test_skeptic_sees_the_problem(self):
         """AUD-23, AUD-29 step 4 (round 2, defect 13): the skeptic judges the stated problem."""
-        item = {"path": "specs/a.md", "line": 1, "lines": 1, "rule": "SPC-1", "see_also": [],
+        item = {"path": "specs/a.md", "line": 1, "lines": 1, "rule": "WSP-1", "see_also": [],
                 "problem": "The file has no out-of-scope statement."}
         out = self.verify([item])
         prompt = next(iter(out["prompts"].values()))
@@ -1391,26 +1391,26 @@ class RoundTwoWorkflow(unittest.TestCase):
     def test_one_conditional_row_per_rule(self):
         """AUD-17 (round 2, defect 15): a checker or pass whose rows do not decide each rule once fails;
         rows given one per rule are used."""
-        finding = {"line": 2, "rule": "SPC-20", "quote": ["x"], "problem": "p", "rewrite": "r"}
-        dup = [{"rule": r, "applies": True, "why": "w"} for r in ("SPC-15", "SPC-15", "SPC-16", "SPC-17", "SPC-18", "SPC-19")]
+        finding = {"line": 2, "rule": "WSP-20", "quote": ["x"], "problem": "p", "rewrite": "r"}
+        dup = [{"rule": r, "applies": True, "why": "w"} for r in ("WSP-15", "WSP-15", "WSP-16", "WSP-17", "WSP-18", "WSP-19")]
         out = self.run_workflow(dict(self.ARGS, stage="check"), {
             "checker": {"findings": [finding], "conditional": dup, "evidence": []},
-            "across files": {"conditional": [{"rule": "SPC-13", "applies_to": [], "why": "w"}] * 2,
+            "across files": {"conditional": [{"rule": "WSP-13", "applies_to": [], "why": "w"}] * 2,
                              "findings": [], "evidence": []},
             "reader": None})
         self.assertEqual(out["result"]["checkers"][0]["ok"], False)
         self.assertIsNone(out["result"]["cross"])
-        rows = dict(self.CHECKER_ROWS, **{"SPC-20": {"applies": True, "why": "A model writes the output."}})
+        rows = dict(self.CHECKER_ROWS, **{"WSP-20": {"applies": True, "why": "A model writes the output."}})
         out = self.run_workflow(dict(self.ARGS, stage="check"), {
             "checker": {"findings": [finding], "conditional": rows, "evidence": []},
             "across files": {"conditional": self.CROSS_ROWS, "findings": [], "evidence": []},
             "reader": None})
         checker = out["result"]["checkers"][0]
-        self.assertEqual((checker["ok"], [f["rule"] for f in out["result"]["findings"]]), (True, ["SPC-20"]))
-        self.assertEqual([c["rule"] for c in checker["conditional"]], ["SPC-%d" % i for i in range(15, 21)])
+        self.assertEqual((checker["ok"], [f["rule"] for f in out["result"]["findings"]]), (True, ["WSP-20"]))
+        self.assertEqual([c["rule"] for c in checker["conditional"]], ["WSP-%d" % i for i in range(15, 21)])
         # Round 5, defect 9: the files of a row are the items of the list applies_to.
-        self.assertEqual(out["result"]["cross"]["conditional"][1], {"rule": "SPC-14", "why": "IDs."})
-        self.assertEqual(out["result"]["applies_to"], [{"rule": "SPC-14", "path": "specs/a.md"}])
+        self.assertEqual(out["result"]["cross"]["conditional"][1], {"rule": "WSP-14", "why": "IDs."})
+        self.assertEqual(out["result"]["applies_to"], [{"rule": "WSP-14", "path": "specs/a.md"}])
 
 
 class EndToEnd(Base):
@@ -1422,18 +1422,18 @@ class EndToEnd(Base):
         self.write("specs/shipping.md", "\n".join(lines) + "\n")
         _, prep = self.prepare()
         kept = self.json_cmd("filter", {"repo_root": prep["repo_root"], "selected": prep["selected"], "findings": [
-            {"path": "specs/shipping.md", "line": 12, "rule": "SPC-2", "quote": ["Large orders get free shipping, etc."],
+            {"path": "specs/shipping.md", "line": 12, "rule": "WSP-2", "quote": ["Large orders get free shipping, etc."],
              "problem": "p", "rewrite": "r"},
-            {"path": "specs/shipping.md", "line": 7, "rule": "SPC-2", "quote": ["- Large orders get free shipping,", "  etc."],
+            {"path": "specs/shipping.md", "line": 7, "rule": "WSP-2", "quote": ["- Large orders get free shipping,", "  etc."],
              "problem": "p", "rewrite": "r"},
-            {"path": "specs/shipping.md", "line": 3, "rule": "SPC-2", "quote": ["invented"], "problem": "p", "rewrite": "r"},
+            {"path": "specs/shipping.md", "line": 3, "rule": "WSP-2", "quote": ["invented"], "problem": "p", "rewrite": "r"},
         ]})["findings"]
         out = self.json_cmd("render", {"repo_root": prep["repo_root"], "n": prep["n"], "s": prep["s"], "mode": prep["mode"],
                                        "checked": prep["selected"], "selected": prep["selected"],
                                        "spec_files": prep["spec_files"], "findings": kept,
                                        "conditional": [], "questions": [], "not_checked": []})
-        self.assertIn("- specs/shipping.md:7 · SPC-2\n  > - Large orders get free shipping,\n  >   etc.\n", out)
-        self.assertIn("- specs/shipping.md:12 · SPC-2\n  > Large orders get free shipping, etc.\n", out)
+        self.assertIn("- specs/shipping.md:7 · WSP-2\n  > - Large orders get free shipping,\n  >   etc.\n", out)
+        self.assertIn("- specs/shipping.md:12 · WSP-2\n  > Large orders get free shipping, etc.\n", out)
         self.assertNotIn("invented", out)
         self.assertIn(": 1 of 1 selected spec file checked, 2 findings. Spec set: 1 spec file. Mode: session.\n", out)
 
@@ -1544,8 +1544,8 @@ class RoundThreeFilterRender(Base):
 
     def test_cross_rewrite_follows_the_place(self):
         """AUD-19, AUD-20 (round 3, defect 5): the placed finding carries the rewrite of the place it is
-        reported at, never a rewrite written for another place (the live SPC-3 finding)."""
-        f = {"rule": "SPC-3", "problem": "A customer with a card is a synonym of member.", "involved": [
+        reported at, never a rewrite written for another place (the live WSP-3 finding)."""
+        f = {"rule": "WSP-3", "problem": "A customer with a card is a synonym of member.", "involved": [
             {"path": "specs/orders.md", "line": 5,
              "quote": ["A customer with a card gets 10% off an order of 100.00 EUR or more."],
              "rewrite": "A member must get 10% off an order of 100.00 EUR or more."},
@@ -1567,10 +1567,10 @@ class RoundThreeFilterRender(Base):
         return data
 
     def test_spc13_row_every_selected_file_or_none(self):
-        """AUD-17 (round 3, defect 7): an SPC-13 row that lists some selected files lists every selected file."""
+        """AUD-17 (round 3, defect 7): a WSP-13 row that lists some selected files lists every selected file."""
         out = self.json_cmd("render", self.report(conditional=[
-            {"rule": "SPC-13", "applies_to": ["specs/orders.md"], "why": "w"}]))
-        self.assertIn("| SPC-13 | specs/members.md, specs/orders.md | w |\n", out)
+            {"rule": "WSP-13", "applies_to": ["specs/orders.md"], "why": "w"}]))
+        self.assertIn("| WSP-13 | specs/members.md, specs/orders.md | w |\n", out)
 
     def test_rewrite_items_separator(self):
         """AUD-33, AUD-50 (round 3, defect 14): a rewrite's items are joined by ` ¶ `, which no item holds, so
@@ -1583,9 +1583,9 @@ class RoundThreeFilterRender(Base):
         index and reason, and a long report or filter output comes in parts of at most 25000 characters
         that join into the whole."""
         line = "A customer with a card gets 10% off an order of 100.00 EUR or more."
-        findings = [{"path": "specs/orders.md", "line": 5, "rule": "SPC-2", "quote": [line],
+        findings = [{"path": "specs/orders.md", "line": 5, "rule": "WSP-2", "quote": [line],
                      "problem": "p%d %s" % (i, "x" * 300), "rewrite": "r " + "y" * 300} for i in range(120)]
-        findings.append({"path": "specs/orders.md", "line": 99, "rule": "SPC-2", "quote": ["x"], "problem": "p",
+        findings.append({"path": "specs/orders.md", "line": 99, "rule": "WSP-2", "quote": ["x"], "problem": "p",
                          "rewrite": "r"})
         data = {"repo_root": self.repo, "spec_files": self.spec, "selected": self.spec, "findings": findings}
         status, out, err = self.run_script("filter", stdin=json.dumps(data).encode())
@@ -1635,34 +1635,34 @@ class RoundThreeWorkflow(unittest.TestCase):
     CHECKER_ROWS = RoundTwoWorkflow.CHECKER_ROWS
 
     def test_spc13_every_selected_file_or_none(self):
-        """AUD-17 (round 3, defect 7): an SPC-13 decision for some selected files holds for every selected
-        file, so no checker's SPC-13 finding is dropped for a file left out of the list."""
+        """AUD-17 (round 3, defect 7): a WSP-13 decision for some selected files holds for every selected
+        file, so no checker's WSP-13 finding is dropped for a file left out of the list."""
         args = dict(self.ARGS, stage="check", selected=["specs/a.md", "specs/b.md", "specs/c.md"])
-        finding = {"line": 1, "rule": "SPC-13", "quote": ["x"], "problem": "p", "rewrite": "r"}
+        finding = {"line": 1, "rule": "WSP-13", "quote": ["x"], "problem": "p", "rewrite": "r"}
         out = self.run_workflow(args, {
             "checker": {"findings": [finding], "conditional": self.CHECKER_ROWS, "evidence": []},
-            "across files": {"conditional": {"SPC-13": {"applies_to": ["/r/specs/a.md"], "why": "Large."},
-                                             "SPC-14": {"applies_to": [], "why": "No."}},
+            "across files": {"conditional": {"WSP-13": {"applies_to": ["/r/specs/a.md"], "why": "Large."},
+                                             "WSP-14": {"applies_to": [], "why": "No."}},
                              "findings": [], "evidence": []},
             "reader": None})
         # Round 5, defect 9: the files of a row are the items of the list applies_to.
-        self.assertEqual([x["path"] for x in out["result"]["applies_to"] if x["rule"] == "SPC-13"],
+        self.assertEqual([x["path"] for x in out["result"]["applies_to"] if x["rule"] == "WSP-13"],
                          ["specs/a.md", "specs/b.md", "specs/c.md"])
         self.assertEqual([f["path"] for f in out["result"]["findings"]], ["specs/a.md", "specs/b.md", "specs/c.md"])
 
     def test_cross_place_rewrite_and_prompts(self):
         """AUD-19 (round 3, defect 5): each involved place carries its own rewrite; AUD-17 (defect 8): a
-        reference in another file shows SPC-14's condition; AUD-8 (defect 13), the term "Non-binding text"
+        reference in another file shows WSP-14's condition; AUD-8 (defect 13), the term "Non-binding text"
         (defect 16), AUD-21 (defect 11) and the term "Involved place" (defect 9) reach the agents."""
         place = {"path": "/r/specs/a.md", "line": 1, "quote": ["x"], "rewrite": "rx"}
         out = self.run_workflow(dict(self.ARGS, stage="check"), {
             "checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
-            "across files": {"conditional": {"SPC-13": {"applies_to": [], "why": "w"},
-                                             "SPC-14": {"applies_to": [], "why": "w"}},
-                             "findings": [{"rule": "SPC-3", "problem": "p", "involved": [place]}], "evidence": []},
+            "across files": {"conditional": {"WSP-13": {"applies_to": [], "why": "w"},
+                                             "WSP-14": {"applies_to": [], "why": "w"}},
+                             "findings": [{"rule": "WSP-3", "problem": "p", "involved": [place]}], "evidence": []},
             "reader": None})
         self.assertEqual(out["result"]["findings"],
-                         [{"rule": "SPC-3", "problem": "p",
+                         [{"rule": "WSP-3", "problem": "p",
                            "involved": [{"path": "specs/a.md", "line": 1, "quote": ["x"], "rewrite": "rx"}]}])
         cross, checker = out["prompts"]["across files"], out["prompts"]["checker specs/a.md"]
         self.assertIn("refers to an individual statement of", cross)
@@ -1780,7 +1780,7 @@ class RoundFourFilterRender(Base):
 
     def across(self, a_quote=("Member: a person with a card.",), b_line=9, b_quote=("A user may borrow 5 books.",),
                c_line=2, c_quote=("A user pays fees.",)):
-        return {"rule": "SPC-3", "problem": "user is a synonym of member.", "involved": [
+        return {"rule": "WSP-3", "problem": "user is a synonym of member.", "involved": [
             {"path": "specs/a.md", "line": 4, "quote": list(a_quote), "rewrite": "Member: a person with a card."},
             {"path": "specs/b.md", "line": b_line, "quote": list(b_quote), "rewrite": "A member may borrow 5 books."},
             {"path": "specs/c.md", "line": c_line, "quote": list(c_quote), "rewrite": "A member pays fees."}]}
@@ -1788,7 +1788,7 @@ class RoundFourFilterRender(Base):
     def test_fabricated_findings_refused(self):
         """AUD-46, AUD-29 step 2 (round 4, defect 4): a made-up sha256 never lets a finding skip step 2;
         line 0 and an empty quote are always refused."""
-        base = {"path": "specs/a.md", "rule": "SPC-2", "problem": "p", "rewrite": "r"}
+        base = {"path": "specs/a.md", "rule": "WSP-2", "problem": "p", "rewrite": "r"}
         for f in (dict(base, line=0, quote=["text that is nowhere"], sha256=""),
                   dict(base, line=77, quote=[], sha256="abc"),
                   dict(base, line=4, quote=["Member: a person with no card."], sha256="0" * 64, check="0" * 64)):
@@ -1824,8 +1824,8 @@ class RoundFourFilterRender(Base):
         """AUD-31, term "Quote" (round 4, defect 6): the report shows each quote line as the file holds it,
         never a CR or a BOM that a matching quote added."""
         self.write("specs/a.md", b"\xef\xbb\xbf# A\r\nline two\r\n")
-        f = {"path": "specs/a.md", "rule": "SPC-2", "problem": "p", "rewrite": "r"}
-        out = self.filter([dict(f, line=2, quote=["line two\r"]), dict(f, line=1, rule="SPC-4", quote=["﻿# A", "line \r\r\rtwo"])])
+        f = {"path": "specs/a.md", "rule": "WSP-2", "problem": "p", "rewrite": "r"}
+        out = self.filter([dict(f, line=2, quote=["line two\r"]), dict(f, line=1, rule="WSP-4", quote=["﻿# A", "line \r\r\rtwo"])])
         self.assertEqual([x["quote"] for x in out["findings"]], [["line two"], ["# A", "line two"]])
         raw = [dict(f, line=2, quote=["line two\r"])]
         report = self.json_cmd("render", self.render_input(raw))
@@ -1837,12 +1837,12 @@ class RoundFourFilterRender(Base):
         only by a space separator such as U+00A0, a format character or the Unicode normalization form."""
         self.write("specs/a.md", "# Prix\n\nLes grosses commandes ont la livraison gratuite : etc.\n"
                    "Livraison en 5 jours.\nenvío y Añadir​.\n")
-        f = {"path": "specs/a.md", "rule": "SPC-2", "problem": "p", "rewrite": "r"}
+        f = {"path": "specs/a.md", "rule": "WSP-2", "problem": "p", "rewrite": "r"}
         out = self.filter([dict(f, line=3, quote=["Les grosses commandes ont la livraison gratuite : etc."]),
-                           dict(f, line=4, rule="SPC-4", quote=["Livraison en 5 jours."]),
-                           dict(f, line=5, rule="SPC-5", quote=["envío y Añadir."]),
-                           dict(f, line=5, rule="SPC-6", quote=["envio y Anadir."])])
-        self.assertEqual([x["rule"] for x in out["findings"]], ["SPC-2", "SPC-4", "SPC-5"])
+                           dict(f, line=4, rule="WSP-4", quote=["Livraison en 5 jours."]),
+                           dict(f, line=5, rule="WSP-5", quote=["envío y Añadir."]),
+                           dict(f, line=5, rule="WSP-6", quote=["envio y Anadir."])])
+        self.assertEqual([x["rule"] for x in out["findings"]], ["WSP-2", "WSP-4", "WSP-5"])
         self.assertEqual(out["findings"][0]["quote"], ["Les grosses commandes ont la livraison gratuite : etc."])
         self.assertEqual([d["reason"] for d in out["dropped"]], ["quote differs from the file"])
 
@@ -1852,7 +1852,7 @@ class RoundFourFilterRender(Base):
         self.write("specs/a.md", "# 訂單\n系統必須保存訂單。\n")
         status, out, err = self.run_script("filter", stdin=json.dumps(
             {"repo_root": self.repo, "spec_files": self.spec, "selected": ["specs/a.md"], "findings": [
-                {"path": "specs/a.md", "line": 2, "rule": "SPC-2", "quote": ["系統必須保存訂單。"],
+                {"path": "specs/a.md", "line": 2, "rule": "WSP-2", "quote": ["系統必須保存訂單。"],
                  "problem": "問題", "rewrite": "系統必須保存每張訂單。"}]}).encode())
         self.assertEqual(status, 0, err)
         self.assertIn("系統必須保存訂單。", out)
@@ -1868,10 +1868,10 @@ class RoundFourFilterRender(Base):
         rows = ["| row %d | value %d |" % (i, i) for i in range(1500)]
         self.write("specs/a.md", "# T\n" + "\n".join(rows) + "\n")
         rewrite = " ¶ ".join("- Row %d must have value %d." % (i, i) for i in range(1500))
-        small = {"path": "specs/a.md", "line": 1, "rule": "SPC-4", "quote": ["# T"], "problem": "p", "rewrite": "r"}
+        small = {"path": "specs/a.md", "line": 1, "rule": "WSP-4", "quote": ["# T"], "problem": "p", "rewrite": "r"}
         data = {"repo_root": self.repo, "spec_files": self.spec, "selected": ["specs/a.md"], "findings": [
-            small, {"path": "specs/a.md", "line": 2, "rule": "SPC-2", "quote": rows, "problem": "p", "rewrite": rewrite},
-            dict(small, rule="SPC-5")]}
+            small, {"path": "specs/a.md", "line": 2, "rule": "WSP-2", "quote": rows, "problem": "p", "rewrite": rewrite},
+            dict(small, rule="WSP-5")]}
         status, out, err = self.run_script("filter", stdin=json.dumps(data).encode())
         self.assertEqual(status, 0, err)
         first = json.loads(out)
@@ -1910,7 +1910,7 @@ class RoundFourFilterRender(Base):
     def test_parts_carry_the_run(self):
         """AUD-41 (round 4, defect 8): the parts of one output carry the same run, and the parts of an output
         computed after another session changed a file carry another, so they are never joined."""
-        findings = [{"path": "specs/a.md", "line": 4, "rule": "SPC-2", "quote": ["Member: a person with a card."],
+        findings = [{"path": "specs/a.md", "line": 4, "rule": "WSP-2", "quote": ["Member: a person with a card."],
                      "problem": "p%d %s" % (i, "x" * 300), "rewrite": "r " + "y" * 300} for i in range(100)]
         data = json.dumps({"repo_root": self.repo, "spec_files": self.spec, "selected": ["specs/a.md"],
                            "findings": findings}).encode()
@@ -1926,14 +1926,14 @@ class RoundFourWorkflow(unittest.TestCase):
 
     ARGS, run_workflow = WorkflowScript.ARGS, WorkflowScript.run_workflow
     CHECKER_ROWS = RoundTwoWorkflow.CHECKER_ROWS
-    CROSS = {"conditional": {"SPC-13": {"applies_to": [], "why": "w"}, "SPC-14": {"applies_to": [], "why": "w"}},
+    CROSS = {"conditional": {"WSP-13": {"applies_to": [], "why": "w"}, "WSP-14": {"applies_to": [], "why": "w"}},
              "findings": [], "evidence": []}
 
     def test_check_result_in_parts(self):
         """AUD-38 (round 4, defect 11): the check stage's result comes in parts of at most about 20000
         characters, each with the same run, that join list by list; a behaviour that one reader lists alone,
-        which is never SPC-Q2 evidence (AUD-26), is left out."""
-        findings = [{"line": 1, "rule": "SPC-2", "quote": ["x" * 200], "problem": "p" * 200, "rewrite": "r" * 200}] * 40
+        which is never WSP-Q2 evidence (AUD-26), is left out."""
+        findings = [{"line": 1, "rule": "WSP-2", "quote": ["x" * 200], "problem": "p" * 200, "rewrite": "r" * 200}] * 40
         a = {"behaviours": [{"path": "specs/a.md", "line": 1, "behaviour": "A"},
                             {"path": "specs/a.md", "line": 2, "behaviour": "only A"}], "two_readings": [], "gaps": []}
         b = {"behaviours": [{"path": "specs/a.md", "line": 1, "behaviour": "B"}], "two_readings": [], "gaps": []}
@@ -1957,7 +1957,7 @@ class RoundFourWorkflow(unittest.TestCase):
 
     def test_prompts(self):
         """Term "Involved place" (round 4, defects 15 and 16), AUD-21 (defect 14), AUD-18 (defect 18): the
-        agents get the extended list, the missing-text rule only where it applies, and SPC-T14 for non-binding text."""
+        agents get the extended list, the missing-text rule only where it applies, and WSP-T14 for non-binding text."""
         out = self.run_workflow(dict(self.ARGS, stage="check"), {
             "checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
             "across files": self.CROSS, "reader": None})
@@ -1967,13 +1967,13 @@ class RoundFourWorkflow(unittest.TestCase):
             self.assertIn(text, cross)
         self.assertNotIn("cites and quotes the heading line of the innermost section", cross)
         self.assertIn("cites and quotes the heading line of the innermost section", checker)
-        self.assertIn("SPC-9, SPC-12 and SPC-T14 (AUD-18)", checker)
+        self.assertIn("WSP-9, WSP-12 and WSP-T14 (AUD-18)", checker)
         item = {"path": "specs/a.md", "line": 3, "lines": 1, "see_also": [], "problem": "p"}
-        out = WorkflowScript.verify(self, [dict(item, rule="SPC-14"), dict(item, rule="SPC-1")])
+        out = WorkflowScript.verify(self, [dict(item, rule="WSP-14"), dict(item, rule="WSP-1")])
         across, one = (out["prompts"][k] for k in sorted(out["prompts"]))
         self.assertIn("AUD-21 does not apply to it", across)
         self.assertIn("the quote is only the heading of the section", one)
-        self.assertIn("SPC-3, SPC-9, SPC-12 or SPC-T14 (AUD-18)", one)
+        self.assertIn("WSP-3, WSP-9, WSP-12 or WSP-T14 (AUD-18)", one)
 
 
 
@@ -2053,9 +2053,9 @@ class RoundFiveFilterRender(Base):
         """AUD-29 step 5, AUD-38 (round 5, defect 4): a dropped list longer than a part never makes filter lose
         the kept findings; every part stays within 25000 characters."""
         self.write("s.md", "line one\nline two\n")
-        bad = [{"path": "s.md", "line": 1, "rule": "SPC-2", "quote": ["wrong %d" % i], "problem": "p", "rewrite": "r"}
+        bad = [{"path": "s.md", "line": 1, "rule": "WSP-2", "quote": ["wrong %d" % i], "problem": "p", "rewrite": "r"}
                for i in range(700)]
-        good = [{"path": "s.md", "line": 2, "rule": "SPC-2", "quote": ["line two"], "problem": "good %d" % i,
+        good = [{"path": "s.md", "line": 2, "rule": "WSP-2", "quote": ["line two"], "problem": "good %d" % i,
                  "rewrite": "r"} for i in range(5)]
         data = {"repo_root": self.repo, "spec_files": ["s.md"], "selected": ["s.md"], "findings": bad + good}
         joined = self.run_parts("filter", data)
@@ -2070,10 +2070,10 @@ class RoundFiveFilterRender(Base):
         self.write("specs/u16be.md", b"\xfe\xff" + "# Be\nSecond.\n".encode("utf-16-be"))
         sel = ["specs/u16.md", "specs/u16be.md"]
         data = {"repo_root": self.repo, "spec_files": sel, "selected": sel, "findings": [
-            {"path": "specs/u16.md", "line": 2, "rule": "SPC-4", "quote": ["The system should be fast."],
+            {"path": "specs/u16.md", "line": 2, "rule": "WSP-4", "quote": ["The system should be fast."],
              "problem": "p", "rewrite": "r"},
-            {"path": "specs/u16.md", "line": 1, "rule": "SPC-1", "quote": ["# Título"], "problem": "p", "rewrite": "r"},
-            {"path": "specs/u16be.md", "line": 2, "rule": "SPC-1", "quote": ["Second."], "problem": "p", "rewrite": "r"}]}
+            {"path": "specs/u16.md", "line": 1, "rule": "WSP-1", "quote": ["# Título"], "problem": "p", "rewrite": "r"},
+            {"path": "specs/u16be.md", "line": 2, "rule": "WSP-1", "quote": ["Second."], "problem": "p", "rewrite": "r"}]}
         out = self.json_cmd("filter", data)
         self.assertEqual(out["dropped"], [])
         self.assertEqual([f["quote"] for f in out["findings"]], [["The system should be fast."], ["# Título"], ["Second."]])
@@ -2084,7 +2084,7 @@ class RoundFiveFilterRender(Base):
         U+FFFD, as the Read tool shows it, so a quote copied from the Read tool matches and is shown that way."""
         self.write("specs/bytes.md", b"a\xe2\x82b\n\xf0\x9f\x98c\nd\xc0\x80e\n")
         shown = ["a�b", "�c", "d��e"]
-        findings = [{"path": "specs/bytes.md", "line": i + 1, "rule": "SPC-2", "quote": [q], "problem": "p", "rewrite": "r"}
+        findings = [{"path": "specs/bytes.md", "line": i + 1, "rule": "WSP-2", "quote": [q], "problem": "p", "rewrite": "r"}
                     for i, q in enumerate(shown)]
         data = {"repo_root": self.repo, "spec_files": ["specs/bytes.md"], "selected": ["specs/bytes.md"],
                 "findings": findings}
@@ -2102,7 +2102,7 @@ class RoundFiveFilterRender(Base):
         filter gives a finding of one file no See also places."""
         self.write("specs/a.md", "# A\nOne.\nIt is two.\n")
         data = {"repo_root": self.repo, "spec_files": ["specs/a.md"], "selected": ["specs/a.md"], "findings": [
-            {"path": "specs/a.md", "line": 3, "rule": "SPC-2", "quote": ["It is two."], "problem": "p", "rewrite": "r",
+            {"path": "specs/a.md", "line": 3, "rule": "WSP-2", "quote": ["It is two."], "problem": "p", "rewrite": "r",
              "see_also": ["specs/a.md:2"]}]}
         out = self.json_cmd("filter", data)
         self.assertEqual((out["findings"][0]["see_also"], out["verify"][0]["see_also"]), ([], []))
@@ -2111,7 +2111,7 @@ class RoundFiveFilterRender(Base):
         """AUD-34 (round 5, defect 15): two findings with the same rule and line are ordered by problem, then by
         rewrite, whatever the order they are given in."""
         self.write("specs/a.md", "# A\n")
-        base = {"path": "specs/a.md", "line": 1, "rule": "SPC-5", "quote": ["# A"]}
+        base = {"path": "specs/a.md", "line": 1, "rule": "WSP-5", "quote": ["# A"]}
         findings = [dict(base, problem="b", rewrite="r"), dict(base, problem="a", rewrite="z"),
                     dict(base, problem="a", rewrite="y")]
         data = {"repo_root": self.repo, "n": 1, "s": 1, "mode": "session", "spec_files": ["specs/a.md"],
@@ -2169,7 +2169,7 @@ class RoundFiveSkill(unittest.TestCase):
         how = self.section("## 3. How to check", "## 4a. Session mode")
         self.assertIn("every involved place of that finding", how)
         self.assertIn("each statement that the finding says lacks an identifier", how)
-        self.assertNotIn("lacks an identifier where SPC-14 applies", how)
+        self.assertNotIn("lacks an identifier where WSP-14 applies", how)
 
 
 def join_workflow_parts(test, run, args, answers, limit=20000):
@@ -2199,20 +2199,20 @@ class RoundFiveWorkflow(unittest.TestCase):
     CHECKER_ROWS = RoundTwoWorkflow.CHECKER_ROWS
 
     def test_conditional_rows_split_across_parts(self):
-        """AUD-38 (round 5, defect 9): the files of the SPC-13 and SPC-14 rows are list items, not copied into
+        """AUD-38 (round 5, defect 9): the files of the WSP-13 and WSP-14 rows are list items, not copied into
         every part, so a large spec set gives parts that each stay within the limit."""
         files = ["specs/billing/module-%04d.md" % i for i in range(600)]
         args = dict(self.ARGS, stage="check", spec_files=files, selected=files)
         answers = {"checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
-                   "across files": {"conditional": {"SPC-13": {"applies_to": [files[0]], "why": "Large."},
-                                                    "SPC-14": {"applies_to": files, "why": "IDs."}},
+                   "across files": {"conditional": {"WSP-13": {"applies_to": [files[0]], "why": "Large."},
+                                                    "WSP-14": {"applies_to": files, "why": "IDs."}},
                                     "findings": [], "evidence": []},
                    "reader": None}
         first, joined = join_workflow_parts(self, self.run_workflow, args, answers)
         self.assertLess(first["parts"], 40)
-        self.assertEqual(first["cross"], {"conditional": [{"rule": "SPC-13", "why": "Large."},
-                                                          {"rule": "SPC-14", "why": "IDs."}]})
-        self.assertEqual(joined["applies_to"], [{"rule": r, "path": p} for r in ("SPC-13", "SPC-14") for p in files])
+        self.assertEqual(first["cross"], {"conditional": [{"rule": "WSP-13", "why": "Large."},
+                                                          {"rule": "WSP-14", "why": "IDs."}]})
+        self.assertEqual(joined["applies_to"], [{"rule": r, "path": p} for r in ("WSP-13", "WSP-14") for p in files])
         self.assertEqual(len(joined["checkers"]), 600)
 
     def test_item_larger_than_a_part_in_pieces(self):
@@ -2223,14 +2223,14 @@ class RoundFiveWorkflow(unittest.TestCase):
                      "rewrite": "This sentence is written in English, as the rest of the spec set is."} for p in files]
         args = dict(self.ARGS, stage="check", spec_files=files, selected=files[:2])
         answers = {"checker": {"findings": [], "conditional": self.CHECKER_ROWS, "evidence": []},
-                   "across files": {"conditional": {"SPC-13": {"applies_to": [], "why": "w"},
-                                                    "SPC-14": {"applies_to": [], "why": "w"}},
-                                    "findings": [{"rule": "SPC-3", "problem": "p \"quoted\" \\ text", "involved": involved}],
+                   "across files": {"conditional": {"WSP-13": {"applies_to": [], "why": "w"},
+                                                    "WSP-14": {"applies_to": [], "why": "w"}},
+                                    "findings": [{"rule": "WSP-3", "problem": "p \"quoted\" \\ text", "involved": involved}],
                                     "evidence": []},
                    "reader": None}
         first, joined = join_workflow_parts(self, self.run_workflow, args, answers)
         self.assertGreater(first["parts"], 1)
-        self.assertEqual(joined["findings"], [{"rule": "SPC-3", "involved": involved, "problem": "p \"quoted\" \\ text"}])
+        self.assertEqual(joined["findings"], [{"rule": "WSP-3", "involved": involved, "problem": "p \"quoted\" \\ text"}])
 
     def test_involved_places_of_the_finding(self):
         """Term "Involved place", AUD-E13 (round 5, defect 12): the pass gives only the places its finding is
@@ -2241,7 +2241,7 @@ class RoundFiveWorkflow(unittest.TestCase):
         cross = out["prompts"]["across files"]
         self.assertIn("each statement that the finding says lacks an identifier", cross)
         self.assertIn("every involved place of that finding", cross)
-        self.assertNotIn("where SPC-14 applies. An involved place", cross)
+        self.assertNotIn("where WSP-14 applies. An involved place", cross)
 
 
 class LinksBetweenLayers(Base):
@@ -2348,7 +2348,7 @@ class LinksBetweenLayers(Base):
         report = self.json_cmd("render", data)
         self.assertIn("## Links between layers\n\nSkipped.\n\n## Conditional rules", report)
         self.assertTrue(report.endswith(
-            "## Not checked\n\n- specs/a.md — could not be read\n- readers (SPC-Q2, SPC-Q3) — a reader failed or did not finish\n"
+            "## Not checked\n\n- specs/a.md — could not be read\n- readers (WSP-Q2, WSP-Q3) — a reader failed or did not finish\n"
             "- links between layers — project.json is missing or does not have the form of ORC-20\n"))
 
     def reason(self, n):

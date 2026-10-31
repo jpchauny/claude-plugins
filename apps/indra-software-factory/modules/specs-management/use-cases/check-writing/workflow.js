@@ -43,15 +43,15 @@ function cmpCodePoints(a, b) {
 }
 
 // Term "Binding rule" (complete list).
-const BINDING = ['SPC-1', 'SPC-2', 'SPC-3', 'SPC-4', 'SPC-5', 'SPC-6', 'SPC-7', 'SPC-8', 'SPC-9', 'SPC-10',
-  'SPC-11', 'SPC-12', 'SPC-13', 'SPC-14', 'SPC-15', 'SPC-16', 'SPC-17', 'SPC-18', 'SPC-19', 'SPC-20',
-  'SPC-T4', 'SPC-T5', 'SPC-T11', 'SPC-T14', 'SPC-T15']
-// AUD-19, AUD-23: the pass across files checks SPC-3, SPC-11 and SPC-14; a checker every other binding rule.
-const ACROSS_RULES = ['SPC-3', 'SPC-11', 'SPC-14']
+const BINDING = ['WSP-1', 'WSP-2', 'WSP-3', 'WSP-4', 'WSP-5', 'WSP-6', 'WSP-7', 'WSP-8', 'WSP-9', 'WSP-10',
+  'WSP-11', 'WSP-12', 'WSP-13', 'WSP-14', 'WSP-15', 'WSP-16', 'WSP-17', 'WSP-18', 'WSP-19', 'WSP-20',
+  'WSP-T4', 'WSP-T5', 'WSP-T11', 'WSP-T14', 'WSP-T15']
+// AUD-19, AUD-23: the pass across files checks WSP-3, WSP-11 and WSP-14; a checker every other binding rule.
+const ACROSS_RULES = ['WSP-3', 'WSP-11', 'WSP-14']
 const CHECKER_RULES = BINDING.filter((r) => !ACROSS_RULES.includes(r))
-const CHECKER_CONDITIONAL = ['SPC-15', 'SPC-16', 'SPC-17', 'SPC-18', 'SPC-19', 'SPC-20']
-const CHECKER_QUESTIONS = ['SPC-Q1', 'SPC-Q5', 'SPC-Q6', 'SPC-Q7', 'SPC-Q8', 'SPC-Q9', 'SPC-Q10', 'SPC-Q11',
-  'SPC-Q13', 'SPC-Q14', 'SPC-Q15', 'SPC-Q16', 'SPC-Q17']
+const CHECKER_CONDITIONAL = ['WSP-15', 'WSP-16', 'WSP-17', 'WSP-18', 'WSP-19', 'WSP-20']
+const CHECKER_QUESTIONS = ['WSP-Q1', 'WSP-Q5', 'WSP-Q6', 'WSP-Q7', 'WSP-Q8', 'WSP-Q9', 'WSP-Q10', 'WSP-Q11',
+  'WSP-Q13', 'WSP-Q14', 'WSP-Q15', 'WSP-Q16', 'WSP-Q17']
 
 // ---------- texts shared by every prompt ----------
 
@@ -68,7 +68,7 @@ const LINES = [
   'Lines: line 1 is the first line of a file. A line is the bytes up to a line feed, without the line feed and without a carriage return just before it; the bytes after the last line feed are the last line; an empty file has one empty line 1. Use the line numbers the Read tool shows, and copy each line as the Read tool shows it (a byte order mark, a lone carriage return and a byte that is not UTF-8 may be left as it shows them).',
 ].join('\n')
 
-const MISSING_TEXT = '- Missing text (AUD-21): a finding about text that SPC-1 or SPC-9 requires of each spec cites and quotes line 1; that text is (complete list) the purpose, the audience, what the spec covers, the systems the component works with, what is out of scope, what must never happen, the convention for binding words. A finding about any other missing text cites and quotes the heading line of the innermost section that holds the statements the text belongs to, or line 1 when no heading holds them.'
+const MISSING_TEXT = '- Missing text (AUD-21): a finding about text that WSP-1 or WSP-9 requires of each spec cites and quotes line 1; that text is (complete list) the purpose, the audience, what the spec covers, the systems the component works with, what is out of scope, what must never happen, the convention for binding words. A finding about any other missing text cites and quotes the heading line of the innermost section that holds the statements the text belongs to, or line 1 when no heading holds them.'
 const FINDING_FORM = [
   'Each finding pairs one place of the file with one binding rule:',
   '- line: the first line of the text the finding is about.',
@@ -81,13 +81,13 @@ const FINDING_FORM = [
 ].join('\n')
 
 const NON_BINDING = [
-  'Non-binding text: text from a label that the spec set declares non-binding (SPC-9) to the end of the list item or paragraph that holds it, and examples that the spec set marks as illustrative. When the spec set declares no such label, the labels are `Rationale:`, `Why:`, `Accepted cost:` and each translation of one of them into the language of the file that holds it (complete list).',
+  'Non-binding text: text from a label that the spec set declares non-binding (WSP-9) to the end of the list item or paragraph that holds it, and examples that the spec set marks as illustrative. When the spec set declares no such label, the labels are `Rationale:`, `Why:`, `Accepted cost:` and each translation of one of them into the language of the file that holds it (complete list).',
 ].join('\n')
 
-const CONDITIONAL_HOW = 'Decide an "Applies when:" line from what the spec text states, beyond doubt: for SPC-14 to SPC-20 it holds for a file only when that file\'s own text shows the condition (for example an output that depends on the clock, a named standard, an external effect, a change of existing behaviour, a model that generates output, a reference to an individual statement), also where the line names the spec set or the component; what another file shows does not make it hold for this file, except for SPC-14: a statement of another spec file that refers to an individual statement of this file also shows the condition for this file (AUD-17). Never decide it from what the component might do or how it might be built.'
+const CONDITIONAL_HOW = 'Decide an "Applies when:" line from what the spec text states, beyond doubt: for WSP-14 to WSP-20 it holds for a file only when that file\'s own text shows the condition (for example an output that depends on the clock, a named standard, an external effect, a change of existing behaviour, a model that generates output, a reference to an individual statement), also where the line names the spec set or the component; what another file shows does not make it hold for this file, except for WSP-14: a statement of another spec file that refers to an individual statement of this file also shows the condition for this file (AUD-17). Never decide it from what the component might do or how it might be built.'
 // Term "Involved place" of check-writing.md.
-const INVOLVED = 'The involved places are exactly (complete list): for SPC-3, the definition of the term, or its first use in the spec set when it has none, and in each file the first line that uses a synonym of the term or the term in another meaning, or, for the one-language rule, in each file the first line, outside literal blocks and user-facing text, whose prose is in a language other than ' + LANG + '; for SPC-11, the first line of each statement of the fact or of one of its exceptions, and the first line of each of two statements that can collide with no stated winner; for SPC-14, each line that holds the identifier or the reference that breaks the rule, the first line of each statement that such a reference points to, and the first line of each statement that the finding says lacks an identifier. An involved place counts only when its quote matches the file (AUD-19).'
-const SPC13_HOW = 'SPC-13 is decided by the size of the spec set: its "Applies when:" line holds for every selected file or for none (AUD-17).'
+const INVOLVED = 'The involved places are exactly (complete list): for WSP-3, the definition of the term, or its first use in the spec set when it has none, and in each file the first line that uses a synonym of the term or the term in another meaning, or, for the one-language rule, in each file the first line, outside literal blocks and user-facing text, whose prose is in a language other than ' + LANG + '; for WSP-11, the first line of each statement of the fact or of one of its exceptions, and the first line of each of two statements that can collide with no stated winner; for WSP-14, each line that holds the identifier or the reference that breaks the rule, the first line of each statement that such a reference points to, and the first line of each statement that the finding says lacks an identifier. An involved place counts only when its quote matches the file (AUD-19).'
+const WSP13_HOW = 'WSP-13 is decided by the size of the spec set: its "Applies when:" line holds for every selected file or for none (AUD-17).'
 
 function fileList(paths) {
   return paths.map((p) => '- ' + JSON.stringify(abs(p)) + '  (path ' + JSON.stringify(p) + ')').join('\n')
@@ -108,7 +108,7 @@ const APPLIES_TO = {
   properties: { applies_to: { type: 'array', items: { type: 'string' } }, why: { type: 'string' } },
   required: ['applies_to', 'why'],
 }
-const CROSS_CONDITIONAL = ['SPC-13', 'SPC-14']
+const CROSS_CONDITIONAL = ['WSP-13', 'WSP-14']
 
 // AUD-17: whether `rows` decides each of `rules` exactly once, as `check` requires.
 function decidesEach(rows, rules, check) {
@@ -182,7 +182,7 @@ const CROSS_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          rule: { type: 'string', enum: ['SPC-3', 'SPC-11', 'SPC-14'] },
+          rule: { type: 'string', enum: ['WSP-3', 'WSP-11', 'WSP-14'] },
           involved: { type: 'array', items: PLACE, minItems: 1 },
           problem: { type: 'string' },
         },
@@ -195,7 +195,7 @@ const CROSS_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          question: { type: 'string', enum: ['SPC-Q4', 'SPC-Q12'] },
+          question: { type: 'string', enum: ['WSP-Q4', 'WSP-Q12'] },
           path: { type: 'string' },
           line: LINE,
           text: { type: 'string' },
@@ -254,14 +254,14 @@ function checkerPrompt(path) {
     '',
     LINES,
     '',
-    'Report only on the spec file you check. The other files are context for what the guideline decides over the whole spec set: the convention for binding words and the labels it declares (SPC-9), the terms and facts that a statement may rely on or refer to (SPC-2, SPC-T11), and whether the file\'s convention differs from the one the spec set declares.',
+    'Report only on the spec file you check. The other files are context for what the guideline decides over the whole spec set: the convention for binding words and the labels it declares (WSP-9), the terms and facts that a statement may rely on or refer to (WSP-2, WSP-T11), and whether the file\'s convention differs from the one the spec set declares.',
     '',
     'Do this for the spec file you check (AUD-16 to AUD-18, AUD-21, AUD-22):',
-    '1. Check it against every rule of the guideline SPC-1 to SPC-12 except SPC-3 and SPC-11, and against the decisions SPC-T4, SPC-T5, SPC-T11, SPC-T14 and SPC-T15. Another agent checks SPC-3, SPC-11 and SPC-14 across files: do not report them.',
-    '2. For each of SPC-15 to SPC-20, decide whether its "Applies when:" line holds for this file, with one sentence why (in ' + LANG + '), and check the rule only where it holds. Give "conditional" as an object with one key per rule, each rule once: {"SPC-15": {"applies": true or false, "why": "..."}, ..., "SPC-20": {...}}. ' + CONDITIONAL_HOW,
-    '3. SPC-13: another agent decides whether it applies. Report an SPC-13 finding only for a place of this file that breaks SPC-13 if it applies; it is kept only where the other agent decides that SPC-13 applies to this file.',
-    '4. ' + NON_BINDING + ' Check non-binding text only against SPC-9, SPC-12 and SPC-T14 (AUD-18).',
-    '5. For each of SPC-Q1, SPC-Q5 to SPC-Q11 and SPC-Q13 to SPC-Q17 (the guideline\'s checklist), list the places of this file that bear on the question, each with its line and one sentence (in ' + LANG + ') on what the place shows. Never answer a question. A question without evidence gets no entry.',
+    '1. Check it against every rule of the guideline WSP-1 to WSP-12 except WSP-3 and WSP-11, and against the decisions WSP-T4, WSP-T5, WSP-T11, WSP-T14 and WSP-T15. Another agent checks WSP-3, WSP-11 and WSP-14 across files: do not report them.',
+    '2. For each of WSP-15 to WSP-20, decide whether its "Applies when:" line holds for this file, with one sentence why (in ' + LANG + '), and check the rule only where it holds. Give "conditional" as an object with one key per rule, each rule once: {"WSP-15": {"applies": true or false, "why": "..."}, ..., "WSP-20": {...}}. ' + CONDITIONAL_HOW,
+    '3. WSP-13: another agent decides whether it applies. Report a WSP-13 finding only for a place of this file that breaks WSP-13 if it applies; it is kept only where the other agent decides that WSP-13 applies to this file.',
+    '4. ' + NON_BINDING + ' Check non-binding text only against WSP-9, WSP-12 and WSP-T14 (AUD-18).',
+    '5. For each of WSP-Q1, WSP-Q5 to WSP-Q11 and WSP-Q13 to WSP-Q17 (the guideline\'s checklist), list the places of this file that bear on the question, each with its line and one sentence (in ' + LANG + ') on what the place shows. Never answer a question. A question without evidence gets no entry.',
     '',
     FINDING_FORM,
     '',
@@ -284,10 +284,10 @@ function crossPrompt() {
     LINES,
     '',
     'Do this (AUD-17 to AUD-19, AUD-22). Give every path as the repository path shown in (path \"...\") above, never the absolute path.',
-    '1. For SPC-13 and for SPC-14, give the selected files for which its "Applies when:" line holds (applies_to; empty when none), with one sentence why, in ' + LANG + ', as an object with one key per rule: {"SPC-13": {"applies_to": [...], "why": "..."}, "SPC-14": {...}}. ' + SPC13_HOW + ' ' + CONDITIONAL_HOW,
-    '2. Check SPC-3 and SPC-11 across the whole spec set, and SPC-14 too when SPC-14 applies to at least one selected file. For each finding, give in "involved" every involved place of that finding, in any spec file, and no place that the finding is not about, each as {path, line, quote, rewrite}, the rewrite being a rewrite of that place\'s own quoted text (its quote unchanged when that place needs no change), and give no rewrite of the finding itself. ' + INVOLVED + ' Report a finding only when at least one involved place is in a selected file. Do not choose where it is reported and give no path, line or see_also of the finding itself: the session\'s filter places it from "involved" (AUD-19).',
-    '3. ' + NON_BINDING + ' Non-binding text is checked against SPC-3, but not against SPC-11 or SPC-14 (AUD-18).',
-    '4. Gather the evidence for SPC-Q4 and SPC-Q12 of the guideline\'s checklist: places of the spec set, each with path, line and one sentence (in ' + LANG + ') on what the place shows. Never answer a question.',
+    '1. For WSP-13 and for WSP-14, give the selected files for which its "Applies when:" line holds (applies_to; empty when none), with one sentence why, in ' + LANG + ', as an object with one key per rule: {"WSP-13": {"applies_to": [...], "why": "..."}, "WSP-14": {...}}. ' + WSP13_HOW + ' ' + CONDITIONAL_HOW,
+    '2. Check WSP-3 and WSP-11 across the whole spec set, and WSP-14 too when WSP-14 applies to at least one selected file. For each finding, give in "involved" every involved place of that finding, in any spec file, and no place that the finding is not about, each as {path, line, quote, rewrite}, the rewrite being a rewrite of that place\'s own quoted text (its quote unchanged when that place needs no change), and give no rewrite of the finding itself. ' + INVOLVED + ' Report a finding only when at least one involved place is in a selected file. Do not choose where it is reported and give no path, line or see_also of the finding itself: the session\'s filter places it from "involved" (AUD-19).',
+    '3. ' + NON_BINDING + ' Non-binding text is checked against WSP-3, but not against WSP-11 or WSP-14 (AUD-18).',
+    '4. Gather the evidence for WSP-Q4 and WSP-Q12 of the guideline\'s checklist: places of the spec set, each with path, line and one sentence (in ' + LANG + ') on what the place shows. Never answer a question.',
     '',
     FINDING_FORM.replace('Each finding pairs one place of the file with one binding rule:', 'Each finding names one binding rule and its involved places; each place has a path, a line, a quote and a rewrite as below:')
       .replace(MISSING_TEXT, '- Missing text: a finding of yours cites its involved places, the statements themselves, never a section heading or line 1 for missing text: AUD-21 does not apply to a finding across files.'),
@@ -298,7 +298,7 @@ function crossPrompt() {
 // listed by one reader alone shows an omission, not a difference.
 const BEHAVIOUR = 'each statement of the selected files that makes the system do, refuse, produce or keep something, one entry per statement, with its path and line and one sentence on exactly the behaviour you would build'
 // AUD-23: the readers have the guideline's convention for must, should and may,
-// so a spec set that adopts it by reference (SPC-9) is not a gap.
+// so a spec set that adopts it by reference (WSP-9) is not a gap.
 const CONVENTION = 'A spec set may adopt the convention of writing-specs.md for binding words by reference. Its meaning is: "must" and "must not" state an obligation, "should" a recommendation, "may" a permission, and a sentence without one of these words is information. Such a reference is not a gap or a second reading.'
 
 function readerPrompt(which) {
@@ -366,13 +366,13 @@ function skepticPrompt(finding) {
       ? 'This is a finding across files (AUD-19): its quote and See also places are its involved places, the statements themselves, never a section heading put for missing text (AUD-21 does not apply to it).'
       : 'When the problem says that text is missing, the quote is only the heading of the section where it is missing, or line 1 for the whole file (AUD-21): judge whether that text is missing, not the heading line itself.'),
     '',
-    'Check the finding once more against its rule, its quote and the lines of its See also places (AUD-29 step 4). Judge the quote and the See also places together: a finding across files (SPC-3, SPC-11, SPC-14) stands when those places together break the rule, even when the quoted line alone follows it, for example a term defined at the quote and used under another name at a See also place.',
+    'Check the finding once more against its rule, its quote and the lines of its See also places (AUD-29 step 4). Judge the quote and the See also places together: a finding across files (WSP-3, WSP-11, WSP-14) stands when those places together break the rule, even when the quoted line alone follows it, for example a term defined at the quote and used under another name at a See also place.',
     'Whether the rule applies to the file is already decided (AUD-17): never refute because a rule\'s "Applies when:" line does not hold.',
     'Answer `refuted` when any of these holds:',
     '- the stated problem is not true of the quoted text and the lines of its See also places;',
     '- the quoted text, with the lines of its See also places, does not break the cited rule as the guideline words it, or already follows it;',
-    '- the quoted text is non-binding and the rule is not SPC-3, SPC-9, SPC-12 or SPC-T14 (AUD-18). ' + NON_BINDING,
-    '- the finding claims text is missing, and the text is present where the rule asks for it, another file of the spec set included when the rule allows a reference (SPC-T11).',
+    '- the quoted text is non-binding and the rule is not WSP-3, WSP-9, WSP-12 or WSP-T14 (AUD-18). ' + NON_BINDING,
+    '- the finding claims text is missing, and the text is present where the rule asks for it, another file of the spec set included when the rule allows a reference (WSP-T11).',
     'Otherwise answer `confirmed`. Judge the stated problem, the places and the rule only.',
   ].join('\n')
 }
@@ -409,25 +409,25 @@ async function runCheck() {
   // Pass across files (AUD-19). null when it failed (AUD-42).
   let cross = null
   if (crossRaw && !decidesEach(crossRaw.conditional, CROSS_CONDITIONAL, isAppliesTo)) {
-    log('the pass across files did not decide SPC-13 and SPC-14 once each: counted as failed (AUD-17)')
+    log('the pass across files did not decide WSP-13 and WSP-14 once each: counted as failed (AUD-17)')
   } else if (crossRaw) {
     const conditional = CROSS_CONDITIONAL.map((rule) => {
       const row = crossRaw.conditional[rule]
       let applies = row.applies_to.map(rel).filter((p) => SELECTED_SET.has(p))
-      // AUD-17: SPC-13 holds for every selected file or for none; a decision for some holds for all.
-      if (rule === 'SPC-13' && applies.length > 0 && new Set(applies).size < SELECTED.length) {
-        log('SPC-13 was decided for some selected files only: it holds for every selected file (AUD-17)')
+      // AUD-17: WSP-13 holds for every selected file or for none; a decision for some holds for all.
+      if (rule === 'WSP-13' && applies.length > 0 && new Set(applies).size < SELECTED.length) {
+        log('WSP-13 was decided for some selected files only: it holds for every selected file (AUD-17)')
         applies = SELECTED.slice()
       }
       return { rule, applies_to: Array.from(new Set(applies)).sort(cmpCodePoints), why: row.why }
     })
-    const spc14Applies = conditional[1].applies_to.length > 0
+    const wsp14Applies = conditional[1].applies_to.length > 0
     // AUD-19: each finding keeps its "involved" places, unplaced; the session
     // gives it to check_writing.py filter, which places it under the first selected
     // file that was checked, and drops it when there is none (AUD-35).
     const findings = []
     for (const f of crossRaw.findings || []) {
-      if (f.rule === 'SPC-14' && !spc14Applies) { log('dropped an SPC-14 finding: SPC-14 applies to no selected file'); continue }
+      if (f.rule === 'WSP-14' && !wsp14Applies) { log('dropped a WSP-14 finding: WSP-14 applies to no selected file'); continue }
       const involved = f.involved.map((p) => ({ path: rel(p.path), line: p.line, quote: p.quote, rewrite: p.rewrite }))
       findings.push({ rule: f.rule, involved, problem: f.problem })
     }
@@ -440,7 +440,7 @@ async function runCheck() {
     const r = checkerResults[i]
     if (!r) return { path, ok: false, findings: [], conditional: [], evidence: [] }
     if (!decidesEach(r.conditional, CHECKER_CONDITIONAL, isApplies)) {
-      log(`checker ${path} did not decide SPC-15 to SPC-20 once each: counted as failed (AUD-17)`)
+      log(`checker ${path} did not decide WSP-15 to WSP-20 once each: counted as failed (AUD-17)`)
       return { path, ok: false, findings: [], conditional: [], evidence: [] }
     }
     const conditional = CHECKER_CONDITIONAL.map((rule) => ({ rule, applies: r.conditional[rule].applies, why: r.conditional[rule].why }))
@@ -449,7 +449,7 @@ async function runCheck() {
     for (const f of r.findings || []) {
       // AUD-17: a conditional rule is checked only where it holds.
       if (CHECKER_CONDITIONAL.includes(f.rule) && !applies.has(f.rule)) { log(`dropped ${f.rule} on ${path}: does not apply`); continue }
-      if (f.rule === 'SPC-13' && !spc13Files.has(path)) { log(`dropped SPC-13 on ${path}: not decided to apply`); continue }
+      if (f.rule === 'WSP-13' && !spc13Files.has(path)) { log(`dropped WSP-13 on ${path}: not decided to apply`); continue }
       findings.push({ path, line: f.line, rule: f.rule, quote: f.quote, problem: f.problem, rewrite: f.rewrite })
     }
     const evidence = (r.evidence || []).map((e) => ({ question: e.question, path, line: e.line, text: e.text }))
@@ -458,8 +458,8 @@ async function runCheck() {
 
   const failed = checkers.filter((a) => !a.ok).length
   log(`checkers: ${checkers.length - failed} finished, ${failed} failed; across files: ${cross ? 'finished' : 'failed'}; readers: ${readers.filter(Boolean).length} of 2`)
-  // AUD-26: a behaviour is evidence for SPC-Q2 only at a place where both readers state one, so a
-  // place that one reader lists alone is left out here; SPC-Q3 takes the lines and gaps of either.
+  // AUD-26: a behaviour is evidence for WSP-Q2 only at a place where both readers state one, so a
+  // place that one reader lists alone is left out here; WSP-Q3 takes the lines and gaps of either.
   const placeOf = (x) => x.path + ':' + x.line
   const both = readers[0] && readers[1]
     ? new Set(readers[0].behaviours.map(placeOf).filter((k) => readers[1].behaviours.some((y) => placeOf(y) === k)))
@@ -467,7 +467,7 @@ async function runCheck() {
   const behaviours = []
   readers.forEach((r, reader) => { if (r) for (const b of r.behaviours) if (both.has(placeOf(b))) behaviours.push({ reader, ...b }) })
   // One flat result, so that its parts join list by list (AUD-38, SKILL.md 4b.2). The single values
-  // are of fixed size, repeated in every part; the files of the rows SPC-13 and SPC-14 are list items.
+  // are of fixed size, repeated in every part; the files of the rows WSP-13 and WSP-14 are list items.
   return parts({
     cross: cross ? { conditional: cross.conditional.map((c) => ({ rule: c.rule, why: c.why })) } : null,
     readers_ok: readers.map(Boolean),

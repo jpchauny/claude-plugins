@@ -7,7 +7,7 @@ This guideline says how to word a good spec. Its goal is that the implementing a
 ## Purpose and scope
 
 - This guideline is for the people who write specs and for the approver.
-- It applies to any spec. Whether it binds or only recommends is stated by whoever cites it: the specs of this marketplace must follow it ([development.md](https://github.com/jpchauny/claude-plugins/blob/main/specs/development.md)), and the module `specs-management` of Indra Software Factory uses it to recommend improvements to the specs of a project.
+- It applies to the specs of this marketplace, which must follow it ([development.md](https://github.com/jpchauny/claude-plugins/blob/main/specs/development.md)). It does not apply to the specs of a project that uses an app of this marketplace: the module `specs-management` of Indra Software Factory has its own guide for those, with its own prefix, and neither guide cites the other.
 - Where specs live and how they change is outside this guideline.
 - This guideline covers what a spec must say and how the spec words it. This includes results that a test can check.
 - No rule in this guideline requires a particular tool, template or folder structure.

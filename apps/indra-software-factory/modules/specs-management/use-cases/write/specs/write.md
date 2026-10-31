@@ -15,7 +15,7 @@ A use case of the module `specs-management`, specified in [module.md](../../../s
 | Intent | What the user wants the draft to say, in their own words. |
 | Paraphrase | The skill's restatement of the intent: the narrative `In order to <benefit>`, `As a <role>`, `I want <what>`, followed by the rules, the examples of each rule, and the open questions. |
 | Neighbour | A file of layer 0 or of layer 1 that the draft links to, that links to the draft, or that holds a term defined in the draft. |
-| Inconsistency | A statement of the draft that contradicts a statement of the draft or of another file of layers 0 and 1; a fact that the draft states and another file already states ([SPC-11](../../../writing-specs.md)); a term that the draft defines with a meaning other than its meaning in another file ([SPC-3](../../../writing-specs.md)); a link of the draft whose link target does not exist. |
+| Inconsistency | A statement of the draft that contradicts a statement of the draft or of another file of layers 0 and 1; a fact that the draft states and another file already states ([WSP-11](../../../writing-specs.md)); a term that the draft defines with a meaning other than its meaning in another file ([WSP-3](../../../writing-specs.md)); a link of the draft whose link target does not exist. |
 
 The terms path, link, link target, absent link and plain link are those of [module.md](../../../specs/module.md#terms). Promote and demote are the use cases [promote.md](../../promote/specs/promote.md) and [demote.md](../../demote/specs/demote.md).
 
@@ -118,7 +118,7 @@ Feature: Write a draft spec
     Scenario: Writing the draft
       Given the user accepted the paraphrase
       Then the skill writes the draft from the paraphrase, following writing-specs.md
-      And every open question of the paraphrase is in the draft, marked as open (SPC-8)
+      And every open question of the paraphrase is in the draft, marked as open (WSP-8)
 
   Rule: ORC-65 After each change of the draft, the skill checks it cheaply against layers 0 and 1, and only reports
 

@@ -44,7 +44,7 @@ every repository of a project.
 | `code-implementation` | Layer 4: code built from the norms and the derived norms, and its traceability to the acceptance units it implements and to the derived norms it is built from, and through them to their norms | [module.md](../modules/code-implementation/specs/module.md) |
 | `drift-management` | A drift found while defining acceptance in layer 3 or implementing in layer 4, sent back to where it is fixed: layer 1, or the plugin of the derived-norms generator that made a defect of a derived-norms generator | [module.md](../modules/drift-management/specs/module.md) |
 | `workflow-orchestration` | Runs the flow across the modules from the orchestration repository: a person starts and controls a run there; each step runs as a headless session in the repository of its layer; the evidence run of the acceptance tests; the queue of the requester | [module.md](../modules/workflow-orchestration/specs/module.md) |
-| `utilities` | Tools usable in any layer: exploring, the issue tree, explanations, a recap of the session | not yet specified |
+| `utilities` | Tools usable in any project, and in any layer of a project of Indra Software Factory: exploring, the issue tree, explanations, a recap of the session | not yet specified |
 
 ## Rules
 

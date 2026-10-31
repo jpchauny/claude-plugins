@@ -58,8 +58,8 @@ const SAFETY = [
 const INCONSISTENCY = [
   'An inconsistency is exactly one of (complete list):',
   '- contradiction: a statement of the checked spec that contradicts another statement of the checked spec or a statement of another file;',
-  '- repeated fact: a fact that the checked spec states and another file already states (SPC-11 of writing-specs.md: one fact, one place; a term definition repeated in each spec that uses the term is not one);',
-  '- term: a term that the checked spec defines with a meaning other than its meaning in another file (SPC-3);',
+  '- repeated fact: a fact that the checked spec states and another file already states (WSP-11 of writing-specs.md: one fact, one place; a term definition repeated in each spec that uses the term is not one);',
+  '- term: a term that the checked spec defines with a meaning other than its meaning in another file (WSP-3);',
   '- broken link: a link of the checked spec whose link target exists in neither layer 0 nor layer 1. A link target is the path that the destination resolves to from the folder of the file, without "absent:" at its start and without its #anchor.',
   'Layer 0 holds draft specs and layer 1 the specs, the source of truth; the same path names the same place in both. A file of layer 0 and a file of layer 1 at the same path are two files.',
   'Report only an inconsistency in which the checked spec takes part: every inconsistency has at least one place in the checked spec. Report nothing else: no style remarks, no improvements.',
@@ -148,7 +148,7 @@ function skepticPrompt(f) {
     '<inconsistency>',
     JSON.stringify(f),
     '</inconsistency>',
-    'Answer `refuted` when any of these holds: a quoted line is not at its place; the statements can both hold, or one states the exception of the other; the two statements state different facts; the term has the same meaning in both files, or the checked spec only repeats the definition (SPC-3); the link target exists in layer 0 or in layer 1; the inconsistency is not one of the kinds above, or no place is in the checked spec.',
+    'Answer `refuted` when any of these holds: a quoted line is not at its place; the statements can both hold, or one states the exception of the other; the two statements state different facts; the term has the same meaning in both files, or the checked spec only repeats the definition (WSP-3); the link target exists in layer 0 or in layer 1; the inconsistency is not one of the kinds above, or no place is in the checked spec.',
     'Otherwise answer `confirmed`.',
   ].join('\n')
 }

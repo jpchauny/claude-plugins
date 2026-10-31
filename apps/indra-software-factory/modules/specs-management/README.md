@@ -6,10 +6,10 @@ help ([LAY-2](../development-methodology/specs/layers.md#rules)).
 
 ## Guideline
 
-[writing-specs.md](writing-specs.md): how every spec is worded. It is a copy, made by hand for now, of
-[specs/writing-specs.md](../../../../specs/writing-specs.md) at the root of the marketplace: edit that
-file, then copy it here byte for byte. The tools of
-this module apply it.
+[writing-specs.md](writing-specs.md) (prefix WSP): how the draft specs and the specs of a project are
+worded. The tools of this module apply it. It is this module's own guide, not a copy of the guide of the
+marketplace (`specs/writing-specs.md`, prefix SPC), which applies only to the specs of the marketplace:
+the two evolve apart, and an improvement that fits both is copied on purpose.
 
 ## Tools
 
