@@ -1,14 +1,18 @@
 ---
 name: create-project
-description: Start a new project from scratch in five layers - ask for its name and components, create on GitHub the repositories <project>-drafts, <project>-specs, <project>-norms, <project>-acceptance and <project>-code (or one <project>-code-<component> per component), enable in each the modules of its layer, write the same project.json in all of them, and push the initial documents. Use when the user types /project-management:create-project, or says in words that they want to start a new project ("nuevo proyecto", "crear proyecto", "start a new project").
+description: Start a new project from scratch in five layers - ask for its name and components, create on GitHub the repositories <project>-drafts, <project>-specs, <project>-norms, <project>-acceptance and <project>-code (or one <project>-code-<component> per component), and the orchestration repository <project>-orchestration and the tooling repository <project>-tooling, enable in each the modules of its layer, write the same project.json in all of them, and push the initial documents. Use when the user types /project-management:create-project, or says in words that they want to start a new project ("nuevo proyecto", "crear proyecto", "start a new project").
 argument-hint: "[project name]"
 ---
 
 # create-project
 
 Creates the repositories of the five layers of a new project, as
-[specs/layers.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md) requires (LAY-1), each with `development-methodology`, `utilities` and the module of its layer enabled (APP-6), and the
-`project.json` of the project in every one (ORC-20). Its specification is
+[specs/layers.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md) requires (LAY-1), each with `development-methodology`, `utilities` and the module of its layer enabled (APP-6);
+its orchestration repository, with `development-methodology`, `utilities` and
+`workflow-orchestration` (LAY-11, ORC-5); and its tooling repository, an empty
+Claude Code marketplace with `utilities` alone, developed with the meta
+methodology, not with this app (LAY-14, CRP-4). The
+`project.json` of the project is in every one (ORC-20). Its specification is
 [specs/create-project.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md).
 
 ## 1. Ask
@@ -57,7 +61,9 @@ Repositories  0 <owner>/<project>-drafts      specs-management
               2 <owner>/<project>-norms       norms-management
               3 <owner>/<project>-acceptance  acceptance-management
               4 <owner>/<project>-code[-<c>]  code-implementation
-              (development-methodology and utilities enabled in every one)
+              - <owner>/<project>-orchestration  workflow-orchestration
+              (development-methodology and utilities enabled in every one above)
+              - <owner>/<project>-tooling     the project's own plugins: a marketplace, utilities only
 Folder:       <project folder>/<name of each repository>
 Profile:      <default done profile> (acceptance.json of <project>-acceptance)
 CI:           acceptance tests in <project>-acceptance, run every hour and on each push to its main
@@ -71,14 +77,19 @@ CI:           acceptance tests in <project>-acceptance, run every hour and on ea
      --project <project> --owner <owner> --folder <project folder> \
      --profile <prototype|product|critical> [--components <a,b>]
    ```
-   It prints, for each repository, a line `<layer> <name>` and then the files
-   it wrote for it. It also writes the rules `deny` of ACU-13, level 1, in
+   It prints, for each repository, a line `<layer> <name>`, or `orchestration
+   <name>` and `tooling <name>` for the two repositories that are no layer, and
+   then the files it wrote for it. It also writes the rules `deny` of ACU-13, level 1, in
    `.claude/settings.json`: the acceptance repository may not read or edit a
    code repository, and a code repository may not edit the acceptance
    repository (ORC-5). It writes `acceptance.json` in the acceptance repository
    (CRP-2), and the workflow of GitHub Actions of ACU-34 (CRP-1),
    `.github/workflows/acceptance.yml`, in the acceptance repository only: no
-   code repository gets a workflow.
+   code repository gets a workflow. The tooling repository gets
+   `.claude-plugin/marketplace.json`, a marketplace named as the repository
+   that lists no plugin yet (CRP-4); no repository of a layer names it in its
+   `.claude/settings.json` until a person adds a plugin that the layer uses
+   (LAY-14).
 2. For each repository, in the order printed, in its folder:
    ```sh
    git init -b main    # the default branch is main (ORC-5)
@@ -87,6 +98,10 @@ CI:           acceptance tests in <project>-acceptance, run every hour and on ea
    gh repo create <owner>/<name> --<visibility> --source . --push \
      --description "Layer <layer> of <project>: <what it holds>"
    ```
+   For the two repositories that are no layer, the message is
+   `chore: start <name> (<orchestration|tooling> repository of <project>)`,
+   and the description `Orchestration repository of <project>: runs across
+   the layers` or `Tooling repository of <project>: its own plugins`.
 
 If any command of this step fails, stop at once: do not retry, do not go on
 to another repository, and remove nothing, neither on GitHub nor locally.

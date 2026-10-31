@@ -16,7 +16,9 @@ the target, and keeps every other rule, and gives
 "settings_state": "differs", "same" or "skipped" with "settings_reason"; when
 it differs, "settings_file" is a temporary file with the whole new
 .claude/settings.json, its rules "deny" replaced and every other setting
-kept. Writes nothing in any repository.
+kept. The orchestration repository and the tooling repository, the entries
+with "role", are targets of project.json only (SNC-2, SNC-3). Writes nothing
+in any repository.
 """
 
 import argparse
@@ -45,6 +47,20 @@ def temporary(data: bytes, suffix: str) -> str:
     tmp.write(data)
     tmp.close()
     return tmp.name
+
+
+ROLES = ("orchestration", "tooling")  # ORC-20
+
+
+def has_the_form_of_orc_20(repos) -> bool:
+    """The entries of project.json as ORC-20 lists them: each names its owner,
+    name and path, and has either a layer or a role, "orchestration" or
+    "tooling", each role at most once (SNC-2, SNC-3)."""
+    if not isinstance(repos, list) or not all(isinstance(r, dict) for r in repos):
+        return False
+    roles = [r["role"] for r in repos if "role" in r]
+    return (all({"owner", "name", "path"} <= set(r) and (("layer" in r) != ("role" in r)) for r in repos)
+            and all(role in ROLES for role in roles) and len(roles) == len(set(roles)))
 
 
 def repos_of(text: bytes | str) -> list[dict]:
@@ -114,7 +130,7 @@ def main(argv: list[str]) -> int:
     try:
         data = json.loads(source)
         repos = data["repositories"]
-        assert isinstance(repos, list) and all({"owner", "name", "layer", "path"} <= set(r) for r in repos)
+        assert has_the_form_of_orc_20(repos)
     except (ValueError, KeyError, TypeError, AssertionError):
         print(json.dumps({"error": "project.json at HEAD does not have the form of ORC-20"}))
         return 1
@@ -125,8 +141,8 @@ def main(argv: list[str]) -> int:
         print(json.dumps({"error": "this repository is not in project.json (ORC-21)"}))
         return 1
     self_entry = entries[0]
-    if self_entry["layer"] != 1:
-        print(json.dumps({"error": "sync runs only in the repository of layer 1 (ORC-28)", "layer": self_entry["layer"]}))
+    if self_entry.get("layer") != 1:
+        print(json.dumps({"error": "sync runs only in the repository of layer 1 (ORC-28)", "layer": self_entry.get("layer")}))
         return 1
     rel = Path(self_entry["path"])
     folder = repo
@@ -155,7 +171,7 @@ def main(argv: list[str]) -> int:
                 current = path / "project.json"
                 same = current.is_file() and current.read_bytes() == source
                 t |= {"state": "same" if same else "differs", "branch": default}
-                if r["layer"] in (3, 4):
+                if r.get("layer") in (3, 4):
                     t |= settings_plan(path, data["repositories"], r)
         targets.append(t)
     print(json.dumps({"source_commit": commit, "source_file": source_file, "targets": targets}, indent=2))

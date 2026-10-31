@@ -22,7 +22,7 @@ The module `norms-management` of the app Indra Software Factory, listed in [app.
 | Record of the types of derived norms | The file `specs-derived/types-of-derived-norms.json` that the step of layer 2 writes: the types of `derived_norms` whose derived-norms generators it ran, in their order (NRM-16). |
 | Types of derived norms of a commit | The types of its record of the types of derived norms, when it holds one that meets NRM-16, and otherwise those of `derived_norms` of its `project.json` (NRM-1), in their order. |
 | Norms generator | The program of this plugin that `/norms-management:build` and `/norms-management:verify` run, which writes `data/` and `specs-repo-annotated/`. |
-| Derived-norms generator | The use case that a `derived_norms` entry of `project.json` names for one type ([ORC-20](../../project-management/specs/module.md#where-the-repositories-are)): a use case of a plugin that the project installs in its repository of layer 2. |
+| Derived-norms generator | The use case that a `derived_norms` entry of `project.json` names for one type ([ORC-20](../../project-management/specs/module.md#where-the-repositories-are)): a use case of a plugin of the tooling repository of the project, which the repository of layer 2 installs from there ([LAY-14](../../development-methodology/specs/layers.md#the-tooling-repository)). |
 | Output of a type | Every file under `specs-derived/<type>/` of the repository of layer 2. |
 | Status file | The one file of the output of a type, named by the spec of its derived-norms generator, that records how the output was made and the state of each item it derives. |
 | Pending item | An item of the output of a type that the norms leave open ([LAY-5](../../development-methodology/specs/layers.md#rules)). |
@@ -57,20 +57,22 @@ that every derived-norms generator follows, whatever it derives.
 - **NRM-1.** The types of derived norms of a project are the `type` of each entry of `derived_norms` in its `project.json`, in their order: each entry names one type and the use case of its derived-norms generator. A project without `derived_norms` has no type of derived norms, and so no derived norm. Every script that reads a `project.json` for NRM-11 or NRM-16 reads it and its `derived_norms` by these rules (complete list):
   1. the `project.json` cannot be read when it does not exist, is not UTF-8, is not JSON, or its value is not a JSON object;
   2. its `derived_norms` meets [ORC-20](../../project-management/specs/module.md#where-the-repositories-are) when it is absent, or is a list whose every entry is a JSON object with a `type` of the form of ORC-20, no `type` twice in the list, and a `use_case` of the form `/<module>:<use case>`, where `<module>` and `<use case>` are each one or more lower-case ASCII letters, digits and `-`;
-  3. such a script does not check that the use case of `use_case` exists in the marketplace: the step of layer 2 finds out when it runs it (NRM-2).
+  3. such a script does not check that the use case of `use_case` exists in the tooling repository of the project ([LAY-14](../../development-methodology/specs/layers.md#the-tooling-repository)): the step of layer 2 finds out when it runs it (NRM-2).
 
   Rationale: a `derived_norms` that names a type without a use case that could generate it is not the one by which the step of layer 2 runs the derived-norms generators, so neither the record of NRM-16 nor the comparison of NRM-11 may take its types; whether the use case exists depends on the plugins installed in a session, which a script that reads a commit cannot see.
 - **NRM-2.** When `/norms-management:build` and `/norms-management:verify` succeed, the step of layer 2 (ORC-8) runs the derived-norms generator of each type in the order of NRM-1, with no question to the user, also when the build changed no norm. A derived-norms generator that stops with an error does not stop the next one. A check that fails (NRM-5) is no error of its generator.
 - **NRM-3.** A derived-norms generator takes the norms only from `data/tree.jsonl`, `specs-repo-annotated/` and the versions of `data/tree.jsonl` in the history of the repository, and never reads a file of layer 1. Besides the norms it reads only (complete list): the output of its type; the output of a type listed before its own in `derived_norms` (NRM-1), when the spec of its derived-norms generator names that output; its own list before the run, from the history of the repository (NRM-13, NRM-15); the files of its own plugin; the record of the installed plugins of Claude Code and the git data of the checkout that holds its plugin (NRM-4); the issues of the repositories where it opens issues (NRM-7). Rationale: a generator that read layer 1 or any other file could derive what the norms of layer 2 do not say, and its output would no longer follow from them alone; it reads its own list before the run so that a derived norm keeps its derived norm ID across runs (NRM-13), and reads it from the history, never from the working tree, so that a list left half written by a stopped run gives no ID.
 - **NRM-4.** A derived-norms generator writes in the repository only the output of its type.
 - **NRM-5.** The first line of the status file is a JSON object with these fields, and with others only when the spec of its derived-norms generator names them (complete list of the fields every status file has):
-  - `"type": "meta"`;
-  - `"specs_commit"`: the commit of layer 1 that the meta line of `data/tree.jsonl` records;
-  - `"generator"`: an object with exactly `"plugin"`, the name of the plugin of the derived-norms generator; `"version"`, the `version` of the plugin's `.claude-plugin/plugin.json`; and `"marketplace_commit"`, the commit of the marketplace that the plugin was installed from, as the spec of the derived-norms generator says how it is found, or `"none"`;
+  - `"type": "header"`: the first line is the header line of the status file;
+  - `"specs_commit"`: the commit of layer 1 that the header line of `data/tree.jsonl` records ([R61](norms-versions.md#data-and-outputs));
+  - `"generator"`: an object with exactly, in this order, `"plugin"`, the name of the plugin of the derived-norms generator; `"version"`, the `version` of the plugin's `.claude-plugin/plugin.json`; and `"tooling_commit"`, the commit of the tooling repository of the project that the plugin was installed from ([LAY-14](../../development-methodology/specs/layers.md#the-tooling-repository)), as the spec of the derived-norms generator says how it is found, or `"none"`;
   - `"model"`: the exact model ID that ran the derived-norms generator;
   - one field `"<name>_sha256"` for each other file of the output, whose `<name>` the spec of the derived-norms generator gives, with the SHA-256 of that file; for the list of derived norms (NRM-12), `<name>` is `derived_norms`.
 
   Every plugin with a derived-norms generator has a `version` in its `plugin.json`.
+
+  A status file written before its first line was named the header line has `"type": "meta"` there, and `"marketplace_commit"` in the place of `"tooling_commit"`. Every script that reads the status file of a commit reads those two as `"header"` and `"tooling_commit"`. A derived-norms generator always writes the header line above, and its check (NRM-6) takes only that form as meeting NRM-5; a status file of the older form names an older `version`, so the next run derives the whole output again and writes it again (NRM-7).
 
   Rationale: the status file records from which norms, with which generator and version, and with which model the output was made, so that a later run knows what to derive again and a reader can tell an output that is behind; the SHA-256 of each other file of the output, the list of derived norms among them, lets the check (NRM-6) see a file that was changed after its generator wrote it.
 - **NRM-6.** Each derived-norms generator has a check, which fails when its output does not follow from the current `data/tree.jsonl`, when NRM-5 does not hold, when its list of derived norms does not meet NRM-12 to NRM-14 (complete list: what NRM-12 says that the list alone shows, what NRM-12 to NRM-14 say of the list against the other files of its output, and what NRM-13 says of the list against its list before the run, which the generator reads from the history (NRM-3): that a derived norm that is the same as one of the list before the run keeps its derived norm ID, that a derived norm ID of the list before the run names no other derived norm, that no derived norm ID is given again, that new derived norm IDs follow the order of NRM-13, and that `last_derived_norm_number` does not decrease), or when its output holds a pending item. Rationale: layers 3 and 4 take the list of derived norms as it is, without reading the files of the output that it names (NRM-12), so a list whose derived norm IDs, lines, cited norms or derived norm fingerprints do not match the output would make them cite the wrong derived norm or miss a change; only the check of the generator knows the form of its output and can see it; and a derived norm ID that moved to another derived norm, or was given again, shows only against the list before the run, while every citation of layers 3 and 4 would then name what it was not written for (NRM-13).
@@ -121,12 +123,12 @@ that every derived-norms generator follows, whatever it derives.
      |---|---|---|
      | 1 | its bytes are not UTF-8 | `not UTF-8` |
      | 2 | it starts with a byte order mark (U+FEFF) | `a byte order mark` |
-     | 3 | it is empty | `no meta line` |
+     | 3 | it is empty | `no header line` |
      | 4 | its last character is not a line feed | `its last line is not followed by a line feed` |
      | 5 | it holds a carriage return (U+000D) | `a carriage return` |
      | 6 | line `<n>`, the first such line, is not one JSON text, `NaN`, `Infinity` and `-Infinity` not being JSON | `line <n>: not a JSON object` |
-     | 7 | line 1 is not a JSON object with exactly the fields of the meta line, in their order, each once | `line 1: not the fields kind, type, last_derived_norm_number, in this order` |
-     | 8 | its `kind` is not `"meta"` | `line 1: not the meta line` |
+     | 7 | line 1 is not a JSON object with exactly the fields of the header line, in their order, each once | `line 1: not the fields kind, type, last_derived_norm_number, in this order` |
+     | 8 | its `kind` is neither `"header"` nor `"meta"`, the `kind` of a list written before the header line was named so (NRM-12) | `line 1: not the header line` |
      | 9 | its `type` is not the type compared | `line 1: its type is not <type>` |
      | 10 | its `last_derived_norm_number` is not an integer 0 or greater; `true`, `false` and a number with a fraction or an exponent are none | `line 1: last_derived_norm_number is not an integer, 0 or greater` |
      | 11 | line `<n>` is not a JSON object with exactly the fields of a derived norm, in their order, each once | `line <n>: not the fields kind, derived_norm_id, derived_norm_fingerprint, name, path, first_line, last_line, cited_norms, in this order` |
@@ -169,7 +171,7 @@ when it changes, without knowing its type
 ([LAY-12](../../development-methodology/specs/layers.md#rules)).
 
 - **NRM-12.** Each derived-norms generator writes, in the output of its type, the list of derived norms: the file `specs-derived/<type>/derived-norms.jsonl`, in UTF-8 without a byte order mark, one JSON object per line, each line followed by one line feed (LF), and no other line.
-  - Its first line, the meta line, has exactly these fields, in this order: `"kind": "meta"`; `"type"`, the `type` of its entry of `derived_norms` ([ORC-20](../../project-management/specs/module.md#where-the-repositories-are)); `"last_derived_norm_number"`, an integer, 0 or greater, the number of the latest derived norm ID ever given in the type (NRM-13).
+  - Its first line, the header line, has exactly these fields, in this order: `"kind": "header"`; `"type"`, the `type` of its entry of `derived_norms` ([ORC-20](../../project-management/specs/module.md#where-the-repositories-are)); `"last_derived_norm_number"`, an integer, 0 or greater, the number of the latest derived norm ID ever given in the type (NRM-13).
   - Each other line is one derived norm of the output, with exactly these fields, in this order (complete list):
     - `"kind": "derived_norm"`;
     - `"derived_norm_id"`: its derived norm ID (NRM-13);
@@ -179,7 +181,8 @@ when it changes, without knowing its type
     - `"first_line"` and `"last_line"`: the numbers, from 1, of the first and the last of its lines in that file, the file split into lines at each line feed; `first_line` is not greater than `last_line`, and its lines hold all its citation lines;
     - `"cited_norms"`: one object per norm that its citation lines cite, with exactly the fields `"norm_id"` and `"norm_hash"`, in this order, as its citation line gives them; at least one object; no norm ID twice; in the order of the norm IDs, compared code point by code point.
   - The lines of the derived norms are in the ascending order of the numbers of their derived norm IDs. No two of them have the same derived norm ID, and the lines of two derived norms of one file have no line in common.
-  - A type whose output holds no derived norm has a list with its meta line only.
+  - A type whose output holds no derived norm has a list with its header line only.
+  - A list written before its first line was named the header line has `"kind": "meta"` there. Every script that reads a list of derived norms, the check of its generator (NRM-6) among them, reads that `kind` as `"header"`, so the list before the run keeps its derived norm IDs (NRM-13); a derived-norms generator always writes `"kind": "header"` (NRM-15).
   - A list meets NRM-12 when it holds all that NRM-12 says that the list alone shows, read with no other file: its encoding and its lines, the fields of each line, their order and the form of their values, the order of the derived norm IDs, and that no two derived norms of one `path` share a line. A script of layer 3 or 4 checks only that; the comparison of NRM-11, in `/norms-management:build` and in the orchestrator, also checks that no derived norm of a list of the commit of layer 2 of the run is behind its norms (NRM-11, rule 5); none of them reads a file that `path` names to check it. What NRM-12 to NRM-14 say of the list against the other files of the output (that `path` names a file of the output that is not the status file, that the lines from `first_line` to `last_line` hold all the citation lines of the derived norm, that `cited_norms` is what they cite, and that `name` and `derived_norm_fingerprint` are those of NRM-15 and NRM-14), and what NRM-13 says of the list against the list before the run, only the check of its generator checks (NRM-6), which knows the form of that output.
 
   Binding example; what binds is the fields, their order, their nesting and the types of the values, not the values: the list of a type `grammar` whose grammar holds, at its lines 40 to 42, the rule `power` below, with the derived norm ID `grammar:12`, and whose latest derived norm ID given is `grammar:41`.
@@ -191,7 +194,7 @@ when it changes, without knowing its type
   ```
 
   ```json
-  {"kind": "meta", "type": "grammar", "last_derived_norm_number": 41}
+  {"kind": "header", "type": "grammar", "last_derived_norm_number": 41}
   {"kind": "derived_norm", "derived_norm_id": "grammar:12", "derived_norm_fingerprint": "0ced57c3", "name": "power", "path": "specs-derived/grammar/clean.lark", "first_line": 40, "last_line": 42, "cited_norms": [{"norm_id": "EXP-11", "norm_hash": "e105eaa8"}, {"norm_id": "EXP-8", "norm_hash": "a0b54578"}]}
   ```
 
@@ -199,7 +202,7 @@ when it changes, without knowing its type
 
 - **NRM-13.** The derived norm ID of a derived norm is `<type>:<n>`, where `<type>` is the `type` of its entry of `derived_norms`, and `<n>` a number from 1, without leading zeros. Example (illustrative): `grammar:12`. A norm ID never has this form, since it holds no `:` ([R61](norms-versions.md#data-and-outputs)).
   - A derived norm keeps its derived norm ID from one run of its derived-norms generator to the next while it is the same derived norm, as the spec of its generator says (NRM-15), even when its content, the norms it cites or its place in its file change.
-  - A derived norm that is not the same as one of the list before the run gets the derived norm ID `<type>:<last_derived_norm_number + 1>`, the next one for each new derived norm, in the order of their place in the output: by `path`, compared code point by code point, then by `first_line`. The meta line then holds the number of the last one given.
+  - A derived norm that is not the same as one of the list before the run gets the derived norm ID `<type>:<last_derived_norm_number + 1>`, the next one for each new derived norm, in the order of their place in the output: by `path`, compared code point by code point, then by `first_line`. The header line then holds the number of the last one given.
   - A derived norm ID is never given again, even after its derived norm is gone. `last_derived_norm_number` never decreases, and is never lower than the number of a derived norm ID of the list. A type whose list does not exist yet starts from 0.
 
   Example (illustrative): with `last_derived_norm_number` 41, a run that adds the rules `call` and `index` of the grammar, in this order in the file, gives them `grammar:42` and `grammar:43`, and sets it to 43; a later run that removes `index` leaves it at 43, and the next new rule is `grammar:44`.

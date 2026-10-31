@@ -103,7 +103,9 @@ RECORD_OF_THE_TYPES_OF_DERIVED_NORMS_PATH = "specs-derived/types-of-derived-norm
 RECORD_OF_THE_TYPES_OF_DERIVED_NORMS_FIELDS = ["types_of_derived_norms"]  # NRM-16
 DERIVED_NORM_FINGERPRINT = re.compile(r"[0-9a-f]{8}")  # NRM-14
 NORM_HASH = re.compile(r"[0-9a-f]{8}")  # layers.md, Norm hash
-META_LINE_FIELDS = ["kind", "type", "last_derived_norm_number"]  # NRM-12
+HEADER_LINE_FIELDS = ["kind", "type", "last_derived_norm_number"]  # NRM-12
+# NRM-12: "header", or "meta", the kind of a list written before the header line was named so.
+KINDS_OF_HEADER_LINE = ("header", "meta")
 DERIVED_NORM_LINE_FIELDS = ["kind", "derived_norm_id", "derived_norm_fingerprint", "name", "path", "first_line",
                             "last_line", "cited_norms"]  # NRM-12
 CITED_NORM_FIELDS = ["norm_id", "norm_hash"]  # NRM-12
@@ -283,10 +285,10 @@ def derived_norms_of_list(data, type_of_derived_norms):
             objects.append(json.loads(line, object_pairs_hook=_Object, parse_constant=_reject_constant))
         except RecursionError:
             raise ValueError("too deep")
-    meta = _fields(objects[0], META_LINE_FIELDS)
-    if (meta["kind"] != "meta" or meta["type"] != type_of_derived_norms
-            or not _an_integer(meta["last_derived_norm_number"], 0)):
-        raise ValueError("meta line")
+    header = _fields(objects[0], HEADER_LINE_FIELDS)
+    if (header["kind"] not in KINDS_OF_HEADER_LINE or header["type"] != type_of_derived_norms
+            or not _an_integer(header["last_derived_norm_number"], 0)):
+        raise ValueError("header line")
     derived_norm_id_form = re.compile(re.escape(type_of_derived_norms) + r":([1-9][0-9]*)")
     found, derived_norm_number_of_line_before, lines_by_path = [], 0, {}
     for value in objects[1:]:
@@ -297,7 +299,7 @@ def derived_norms_of_list(data, type_of_derived_norms):
             raise ValueError("derived norm ID")
         derived_norm_number = int(matched.group(1))
         if (derived_norm_number <= derived_norm_number_of_line_before
-                or derived_norm_number > meta["last_derived_norm_number"]):
+                or derived_norm_number > header["last_derived_norm_number"]):
             raise ValueError("order of the derived norm IDs")
         derived_norm_number_of_line_before = derived_norm_number
         derived_norm_fingerprint = line["derived_norm_fingerprint"]

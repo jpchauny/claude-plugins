@@ -18,7 +18,7 @@ A use case of the module `acceptance-management`, specified in [module.md](../..
 | Order of ACU-78 | The order of the derived norm citations of `## Derived norms`: by the place of the type of the derived norm ID in the types of derived norms of the norms commit, a type that they do not hold coming after every type they hold, in the order of the types compared code point by code point; then by the number of the derived norm ID (ACU-61, ACU-78). |
 | Change | One item of the proposal: to add, change or delete one acceptance area or one acceptance unit, with every other file that ACU-10 and ACU-70 make it touch, and the file of each acceptance unit out of which it moves a scenario or a norm citation (ACU-67); or to fill `test_command` and `product` of `acceptance.json` (ACU-77). |
 | Proposal | The numbered list of changes that the skill shows to the requester (ACU-64). |
-| Marketplace repository | Of a defect of a derived-norms generator: the GitHub repository, `<owner>/<name>`, of the marketplace that holds the plugin that `generator` of the status file of the type of the derived norm names, as the script finds it (ACU-79). |
+| Marketplace repository | Of a defect of a derived-norms generator: the GitHub repository, `<owner>/<name>`, of the marketplace that holds the plugin that `generator` of the status file of the type of the derived norm names, as the script finds it (ACU-79): for a plugin of the project, its tooling repository ([LAY-14](../../../../development-methodology/specs/layers.md#the-tooling-repository)). |
 | Acceptance unit with evidence | An acceptance unit whose record holds at least one line. |
 | Expected head | Of a command of ACU-71: the commit from which the requester saw the acceptance repository, which the command must find at `HEAD`: `acceptance_commit` of the inventory for the first command of the invocation, and for each later one the commit that the command before it pushed, whose 40 hex digits that command prints as its last line. |
 
@@ -584,12 +584,12 @@ Feature: Define the acceptance areas and acceptance units
     Scenario: What the script prints for the issue
       When the skill runs the command "derived-norms-generator" of the script with the norms commit and "grammar:7"
       Then the script prints one JSON object with exactly these fields: "derived_norm_id", "derived_norm_fingerprint", "type", "name", "path", "first_line", "last_line" and "cited_norms", as the list of derived norms of its type, "grammar", at the norms commit gives them; "status_file", the path of the status file of the type at the norms commit, or null; "generator", the object "generator" of its first line, or null; "marketplace_repository", or null; "issue_body_start"; and "no_issue_message", null or the line that says why no issue can be opened
-      And the status file of the type is the one file under "specs-derived/<type>/" at the norms commit, other than its list of derived norms, whose first line is a JSON object with "type" "meta" and with "generator" an object of exactly "plugin", "version" and "marketplace_commit", each a string (NRM-5); when no file, or more than one, is such a file, "status_file", "generator" and "marketplace_repository" are null
+      And the status file of the type is the one file under "specs-derived/<type>/" at the norms commit, other than its list of derived norms, whose first line, its header line, is a JSON object with "type" "header" and with "generator" an object of exactly "plugin", "version" and "tooling_commit", each a string (NRM-5); or, a status file written before its first line was named the header line, with "type" "meta" and with "generator" an object of exactly "plugin", "version" and "marketplace_commit", each a string, whose "marketplace_commit" the script gives as "tooling_commit" (NRM-5); when no file, or more than one, is such a file, "status_file", "generator" and "marketplace_repository" are null
       And "issue_body_start" is these four lines, each ended by a line feed, which bind byte for byte once filled, the cited norms in the order of "cited_norms", joined by ", ":
         """
         Derived norm: <derived norm ID>@<derived norm fingerprint>, of the type <type>, lines <first_line> to <last_line> of <path>
         Cited norms: <norm ID>@<norm hash>, <norm ID>@<norm hash>
-        Generator: <plugin> <version>, marketplace commit <marketplace_commit>
+        Generator: <plugin> <version>, tooling commit <tooling_commit>
         Norms commit: <norms commit, 40 hex digits>
         """
       And when "generator" is null, its third line is "Generator: no status file with a generator (NRM-5)"
@@ -610,7 +610,7 @@ Feature: Define the acceptance areas and acceptance units
         | that list holds no line with "derived_norm_id" "grammar:7" | grammar:7 is not a derived norm of the norms commit |
 
     Scenario Outline: The marketplace repository
-      Given "generator" names the plugin "clean-derived-norms" with the marketplace commit "<sha>"
+      Given "generator" names the plugin "clean-derived-norms" with the tooling commit "<sha>"
       And <installed>
       Then "marketplace_repository" is <result>
 

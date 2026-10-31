@@ -69,7 +69,8 @@ class Base(unittest.TestCase):
                 + "The modules of the app, each one a plugin, and where each is installed:\n"
                 + "".join(line + "\n" for line in module_lines)
                 + "Read for detail, before answering about the process:\n"
-                "- The five layers, the orchestration repository, their rules, their terms, and where each module is "
+                "- The five layers, the orchestration repository, the tooling repository, their rules, their terms, and "
+                "where each module is "
                 "installed: %s/specs/layers.md\n"
                 "- The flow across the layers (a run, its steps and hand-offs): %s/specs/flow.md\n"
                 "- What carries the methodology to every repository: %s/specs/module.md\n"

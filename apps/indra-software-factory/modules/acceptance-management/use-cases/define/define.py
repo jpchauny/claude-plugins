@@ -453,27 +453,35 @@ def derived_norms_of_scope(where, norms_commit, unit_id):
 
 # ---------------------------------------------------------------- a defect of a derived-norms generator (ACU-79)
 
-GENERATOR_FIELDS = ["plugin", "version", "marketplace_commit"]  # NRM-5
+GENERATOR_FIELDS = ["plugin", "version", "tooling_commit"]  # NRM-5
+# NRM-5: a status file written before its first line was named the header line has "type" "meta", and
+# "marketplace_commit" in the place of "tooling_commit"; both are read as the current ones.
+TYPES_OF_HEADER_LINE = ("header", "meta")
+GENERATOR_FIELDS_BEFORE_THE_HEADER_LINE = ["plugin", "version", "marketplace_commit"]
 PLUGINS_OF_CLAUDE_CODE = os.path.join("~", ".claude", "plugins")
 
 
 def status_file_of(where, norms_commit, type_of_derived_norms):
     """ACU-79, NRM-5: the path and the "generator" of the one file under specs-derived/<type>/ at the norms commit,
-    other than its list of derived norms, whose first line is a JSON object with "type" "meta" and a "generator" of
-    exactly the fields of NRM-5, each a string; (None, None) when no file, or more than one, is such a file."""
+    other than its list of derived norms, whose first line, its header line, is a JSON object with "type" "header" and
+    a "generator" of exactly the fields of NRM-5, each a string, or the older form of NRM-5, read as the current one;
+    (None, None) when no file, or more than one, is such a file."""
     found = []
     for path in ls_tree(where["norms_repository_path"], norms_commit, f"specs-derived/{type_of_derived_norms}/"):
         if path == path_of_list_of_derived_norms(type_of_derived_norms):
             continue
         data = show(where["norms_repository_path"], norms_commit, path) or b""
         try:
-            meta = json.loads(data.split(b"\n", 1)[0].decode("utf-8"))
+            header = json.loads(data.split(b"\n", 1)[0].decode("utf-8"))
         except (ValueError, RecursionError):
             continue
-        generator = meta.get("generator") if isinstance(meta, dict) and meta.get("type") == "meta" else None
-        if (isinstance(generator, dict) and sorted(generator) == sorted(GENERATOR_FIELDS)
-                and all(isinstance(generator[k], str) for k in GENERATOR_FIELDS)):
-            found.append((path, {k: generator[k] for k in GENERATOR_FIELDS}))
+        generator = (header.get("generator") if isinstance(header, dict) and header.get("type") in TYPES_OF_HEADER_LINE
+                     else None)
+        for fields in (GENERATOR_FIELDS, GENERATOR_FIELDS_BEFORE_THE_HEADER_LINE):
+            if (isinstance(generator, dict) and sorted(generator) == sorted(fields)
+                    and all(isinstance(generator[k], str) for k in fields)):
+                found.append((path, dict(zip(GENERATOR_FIELDS, (generator[k] for k in fields)))))
+                break
     return found[0] if len(found) == 1 else (None, None)
 
 
@@ -489,7 +497,7 @@ def _json_object_of(path):
 def marketplace_repository_of(generator):
     """ACU-79: the <owner>/<name> on GitHub of the one marketplace that holds the plugin of `generator`, as Claude Code
     records the installed plugins and the known marketplaces; when several hold a plugin of that name, the one whose
-    entry was installed from its "marketplace_commit"; otherwise None."""
+    entry was installed from its "tooling_commit"; otherwise None."""
     installed = _json_object_of(os.path.join(PLUGINS_OF_CLAUDE_CODE, "installed_plugins.json"))
     known = _json_object_of(os.path.join(PLUGINS_OF_CLAUDE_CODE, "known_marketplaces.json"))
     if installed is None or known is None or not isinstance(installed.get("plugins"), dict):
@@ -500,7 +508,7 @@ def marketplace_repository_of(generator):
     if len(candidates) > 1:
         candidates = {marketplace: entries for marketplace, entries in candidates.items()
                       if isinstance(entries, list) and any(
-                          isinstance(entry, dict) and entry.get("gitCommitSha") == generator["marketplace_commit"]
+                          isinstance(entry, dict) and entry.get("gitCommitSha") == generator["tooling_commit"]
                           for entry in entries)}
     if len(candidates) != 1:
         return None
@@ -532,7 +540,7 @@ def derived_norms_generator(where, norms_commit, derived_norm_id):
                             f"(NRM-5); no issue is opened for {derived_norm_id}")
     else:
         generator_line = (f"Generator: {generator['plugin']} {generator['version']}, "
-                          f"marketplace commit {generator['marketplace_commit']}")
+                          f"tooling commit {generator['tooling_commit']}")
         no_issue_message = None if marketplace_repository is not None else (
             f"{PREFIX}no installed marketplace on GitHub holds the plugin {checks.text_of(generator['plugin'])}; "
             f"no issue is opened for {derived_norm_id}")

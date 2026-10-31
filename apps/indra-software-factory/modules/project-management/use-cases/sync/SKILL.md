@@ -27,6 +27,9 @@ managed rules (`Read` or `Edit` of the folder of a repository of layer 3 or
 4 of the source, of the target's `project.json` before the sync, or of any
 version of it committed in the target) are
 replaced; any other rule `deny` is kept unchanged (SNC-1).
+The orchestration repository and the tooling repository, the entries with
+`role`, are targets of `project.json` only: their `.claude/settings.json` is
+never changed (SNC-2, SNC-3).
 
 ## 2. Confirm
 

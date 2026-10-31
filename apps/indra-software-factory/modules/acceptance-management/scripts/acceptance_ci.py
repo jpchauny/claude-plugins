@@ -95,7 +95,7 @@ def run(cmd, **kw) -> subprocess.CompletedProcess:
 
 def code_repositories(repo: Path) -> list[dict]:
     data = json.loads((repo / "project.json").read_text(encoding="utf-8"))
-    return [r for r in data["repositories"] if r["layer"] == 4]
+    return [r for r in data["repositories"] if r.get("layer") == 4]  # PRJ-2: an entry with "role" has no layer
 
 
 def auth(token: str) -> list[str]:

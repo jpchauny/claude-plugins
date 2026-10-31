@@ -13,7 +13,10 @@ from the norms and people approve, and code built from the norms and the
 derived norms by agents. Every project also has one orchestration
 repository, which is no layer, from which a person starts and controls a run
 across the layers
-([LAY-11](../modules/development-methodology/specs/layers.md#the-orchestration-repository)).
+([LAY-11](../modules/development-methodology/specs/layers.md#the-orchestration-repository)),
+and may have one tooling repository, which is no layer either and holds the
+project's own plugins, such as its derived-norms generators
+([LAY-14](../modules/development-methodology/specs/layers.md#the-tooling-repository)).
 A person installs each module where
 [APP-6](../modules/development-methodology/specs/layers.md#where-each-module-is-installed)
 says, and then invokes its use cases, if it has any.

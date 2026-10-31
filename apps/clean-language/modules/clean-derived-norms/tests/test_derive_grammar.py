@@ -91,8 +91,8 @@ def base_nodes():
 FRAGMENTS = ["TST-1", "TST-2", "TST-3", "TST-4", "TST-5"]
 
 
-def write_tree(root, nodes, meta=None):
-    rows = [meta or {"type": "meta", "specs_commit": SPECS, "generator_version": "0.1.0", "retired_prefixes": []}]
+def write_tree(root, nodes, header=None):
+    rows = [header or {"type": "meta", "specs_commit": SPECS, "generator_version": "0.1.0", "retired_prefixes": []}]
     rows += [{"type": "file", "path": "specs/a.md", "prefix": "TST", "sha256": "0" * 64, "insertions": []}]
     rows += nodes
     (root / "data").mkdir(parents=True, exist_ok=True)
@@ -158,13 +158,13 @@ def good_status(nodes):
     return [status_line(nodes, i) for i in FRAGMENTS]
 
 
-def write_outputs(root, grammar, lines, meta_first=True):
+def write_outputs(root, grammar, lines, header_first=True):
     folder = root / "specs-derived" / "grammar"
     folder.mkdir(parents=True, exist_ok=True)
     (root / derived_norms.GRAMMAR_REL).write_text(grammar)
     text = ""
-    if meta_first:
-        text = json.dumps({"type": "meta", "specs_commit": "", "generator": {}, "model": "",
+    if header_first:
+        text = json.dumps({"type": "header", "specs_commit": "", "generator": {}, "model": "",
                            "grammar_sha256": "", "status_sha256": ""}) + "\n"
     text += "".join(json.dumps(l, ensure_ascii=False, separators=(",", ":")) + "\n" for l in lines)
     (root / dg.STATUS_REL).write_text(text)
@@ -247,25 +247,25 @@ def main_in(root, monkeypatch, *argv):
     return dg.main(list(argv))
 
 
-def meta_of(root):
+def header_of(root):
     return json.loads((root / dg.STATUS_REL).read_text().split("\n")[0])
 
 
-def set_meta(root, key, value=None, drop=False):
-    """Write a value of the meta line, or drop the key, keeping the status hash valid."""
+def set_header(root, key, value=None, drop=False):
+    """Write a value of the header line, or drop the key, keeping the status hash valid."""
     path = root / dg.STATUS_REL
     head, _, body = path.read_text().partition("\n")
-    meta = json.loads(head)
+    header = json.loads(head)
     if drop:
-        del meta[key]
+        del header[key]
     else:
-        meta[key] = value
-    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+        header[key] = value
+    path.write_text(json.dumps(header, separators=(",", ":")) + "\n" + body)
 
 
-def meta_problems(root):
+def header_problems(root):
     problems, _ = run_check(root)
-    return [p for p in problems if p[0] == "meta"]
+    return [p for p in problems if p[0] == "header"]
 
 
 def add_fragment(root, nodes, own, state="derived", reason=None, issue=None):
@@ -340,17 +340,17 @@ def test_dgr3_the_folder_holds_only_the_two_files(repo):
 def test_dgr4_seal_writes_the_meta_line_first(repo):
     root, _ = repo
     lines = (root / dg.STATUS_REL).read_text().split("\n")
-    meta = json.loads(lines[0])
-    assert list(meta) == ["type", "specs_commit", "generator", "model", "grammar_sha256", "derived_norms_sha256",
+    header = json.loads(lines[0])
+    assert list(header) == ["type", "specs_commit", "generator", "model", "grammar_sha256", "derived_norms_sha256",
                           "status_sha256"]
-    assert list(meta["generator"]) == ["plugin", "version", "marketplace_commit"]
-    assert meta["type"] == "meta" and meta["specs_commit"] == SPECS
-    assert meta["generator"] == {"plugin": "clean-derived-norms", "version": VERSION, "marketplace_commit": "none"}
-    assert meta["model"] == MODEL
-    assert meta["grammar_sha256"] == hashlib.sha256((root / derived_norms.GRAMMAR_REL).read_bytes()).hexdigest()
-    assert meta["derived_norms_sha256"] == hashlib.sha256((root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
-    assert meta["status_sha256"] == hashlib.sha256("\n".join(lines[1:]).encode()).hexdigest()
-    assert lines[0] == json.dumps(meta, separators=(",", ":"))
+    assert list(header["generator"]) == ["plugin", "version", "tooling_commit"]
+    assert header["type"] == "header" and header["specs_commit"] == SPECS
+    assert header["generator"] == {"plugin": "clean-derived-norms", "version": VERSION, "tooling_commit": "none"}
+    assert header["model"] == MODEL
+    assert header["grammar_sha256"] == hashlib.sha256((root / derived_norms.GRAMMAR_REL).read_bytes()).hexdigest()
+    assert header["derived_norms_sha256"] == hashlib.sha256((root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
+    assert header["status_sha256"] == hashlib.sha256("\n".join(lines[1:]).encode()).hexdigest()
+    assert lines[0] == json.dumps(header, separators=(",", ":"))
 
 
 def test_dgr4_the_plugin_root_is_two_levels_above_the_folder_of_the_script():
@@ -365,22 +365,22 @@ def test_dgr4_seal_records_the_version_of_the_plugin_json(repo, plugin):
     root, _ = repo
     (plugin / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "clean-derived-norms", "version": "2.3.4"}))
     dg.seal(root, MODEL)
-    assert meta_of(root)["generator"]["version"] == "2.3.4"
+    assert header_of(root)["generator"]["version"] == "2.3.4"
 
 
 def installed(path, entries):
     path.write_text(json.dumps({"version": 2, "plugins": entries}))
 
 
-def test_dgr4_the_marketplace_commit_of_the_installed_plugins(tmp_path, plugin):
+def test_dgr4_the_tooling_commit_of_the_installed_plugins(tmp_path, plugin):
     installed(tmp_path / "installed_plugins.json", {
         "other@m": [{"installPath": str(tmp_path / "elsewhere"), "gitCommitSha": "b" * 40}],
         "clean-derived-norms@m": [{"scope": "project", "installPath": str(plugin), "gitCommitSha": SHA}],
     })
-    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == SHA
+    assert derived_norms.tooling_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == SHA
 
 
-def test_dgr4_the_marketplace_commit_of_the_checkout_that_holds_the_plugin(tmp_path, monkeypatch):
+def test_dgr4_the_tooling_commit_of_the_checkout_that_holds_the_plugin(tmp_path, monkeypatch):
     market = tmp_path / "market"
     head = git_init(market)
     root = market / "apps" / "x" / "modules" / "clean-derived-norms"
@@ -388,38 +388,38 @@ def test_dgr4_the_marketplace_commit_of_the_checkout_that_holds_the_plugin(tmp_p
     (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"version": VERSION}))
     monkeypatch.setattr(dg, "PLUGIN_ROOT", root)
     installed(tmp_path / "installed_plugins.json", {"p@m": [{"installPath": str(tmp_path / "elsewhere"), "gitCommitSha": "b" * 40}]})
-    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == head
+    assert derived_norms.tooling_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == head
     (root / "dirty").write_text("x\n")
-    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == head
+    assert derived_norms.tooling_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == head
 
 
 @pytest.mark.parametrize("record", [None, "{not json", "[]", '{"plugins": {"p@m": [{"installPath": 5}]}}'])
-def test_dgr4_an_unknown_marketplace_commit_is_none(repo, tmp_path, monkeypatch, record):
+def test_dgr4_an_unknown_tooling_commit_is_none(repo, tmp_path, monkeypatch, record):
     root, _ = repo
     if record is not None:
         (tmp_path / "installed_plugins.json").write_text(record)
-    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == "none"
+    assert derived_norms.tooling_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == "none"
     assert main_in(root, monkeypatch, "seal", "--model", MODEL) == 0
-    assert meta_of(root)["generator"]["marketplace_commit"] == "none"
+    assert header_of(root)["generator"]["tooling_commit"] == "none"
 
 
 def test_dgr4_an_entry_with_a_sha_that_is_not_40_hex_is_skipped(tmp_path, plugin):
     installed(tmp_path / "installed_plugins.json", {"p@m": [{"installPath": str(plugin), "gitCommitSha": "abc+dirty"}]})
-    assert derived_norms.marketplace_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == "none"
+    assert derived_norms.tooling_commit(dg.PLUGIN_ROOT, dg.INSTALLED_PLUGINS) == "none"
 
 
 def test_dgr4_seal_writes_the_model_it_is_given(repo, monkeypatch, capsys):
     root, _ = repo
     assert main_in(root, monkeypatch, "seal", "--model", "claude-sonnet-4.5_x") == 0
-    assert meta_of(root)["model"] == "claude-sonnet-4.5_x"
+    assert header_of(root)["model"] == "claude-sonnet-4.5_x"
     assert capsys.readouterr().out.strip() == (root / dg.STATUS_REL).read_text().split("\n")[0]
 
 
 def test_dgr4_seal_records_a_bad_model_as_given(repo, monkeypatch):
     root, _ = repo
     assert main_in(root, monkeypatch, "seal", "--model", "claude opus") == 0
-    assert meta_of(root)["model"] == "claude opus"
-    assert ("meta", "model") in names(meta_problems(root))
+    assert header_of(root)["model"] == "claude opus"
+    assert ("header", "model") in names(header_problems(root))
 
 
 def test_dgr4_seal_without_model_exits_2_and_writes_nothing(repo, monkeypatch, capsys):
@@ -464,14 +464,14 @@ def test_dgr4_seal_without_a_status_file_writes_only_the_meta_line(repo):
     (root / dg.STATUS_REL).unlink()
     dg.seal(root, MODEL)
     text = (root / dg.STATUS_REL).read_text()
-    assert text.count("\n") == 1 and json.loads(text)["type"] == "meta"
+    assert text.count("\n") == 1 and json.loads(text)["type"] == "header"
 
 
 def test_dgr4_seal_reads_the_foundation_commit_of_an_older_tree(repo):
     root, nodes = repo
     write_tree(root, nodes, {"type": "meta", "foundation_commit": "e" * 40})
     dg.seal(root, MODEL)
-    assert meta_of(root)["specs_commit"] == "e" * 40
+    assert header_of(root)["specs_commit"] == "e" * 40
 
 
 # ------------------------------------------------------------------ DGR-5
@@ -589,23 +589,23 @@ def test_dgr5_a_pending_reason_that_is_not_text(repo):
 
 def test_dgr5_the_first_line_must_be_the_meta_line(repo):
     root, nodes = repo
-    write_outputs(root, good_grammar(nodes), good_status(nodes), meta_first=False)
+    write_outputs(root, good_grammar(nodes), good_status(nodes), header_first=False)
     problems, _ = run_check(root)
-    assert any(p[0] == "meta" and "not the meta line" in p[2] for p in problems)
+    assert any(p[0] == "header" and "not the header line" in p[2] for p in problems)
 
 
 def test_dgr5_a_second_meta_line_fails(repo):
     root, nodes = repo
-    write_outputs(root, good_grammar(nodes), good_status(nodes) + [{"type": "meta"}])
+    write_outputs(root, good_grammar(nodes), good_status(nodes) + [{"type": "header"}])
     dg.seal(root, MODEL)
     path = root / dg.STATUS_REL
     head, _, body = path.read_text().partition("\n")
-    body += '{"type":"meta"}\n'
-    meta = json.loads(head)
-    meta["status_sha256"] = hashlib.sha256(body.encode()).hexdigest()
-    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+    body += '{"type":"header"}\n'
+    header = json.loads(head)
+    header["status_sha256"] = hashlib.sha256(body.encode()).hexdigest()
+    path.write_text(json.dumps(header, separators=(",", ":")) + "\n" + body)
     problems, _ = run_check(root)
-    assert any(p[0] == "meta" and "not the first line" in p[2] for p in problems)
+    assert any(p[0] == "header" and "not the first line" in p[2] for p in problems)
 
 
 def test_dgr5_the_states_of_the_spec():
@@ -1081,13 +1081,30 @@ def test_dgr12_a_status_file_of_the_local_skill_is_taken_as_absent(repo):
     root, nodes = repo
     path = root / dg.STATUS_REL
     head, _, body = path.read_text().partition("\n")
-    old_meta = {"type": "meta", "foundation_commit": SPECS, "generators_commit": SHA, "model": MODEL,
+    old_header = {"type": "meta", "foundation_commit": SPECS, "generators_commit": SHA, "model": MODEL,
                 "grammar_sha256": "", "status_sha256": ""}
     gone = json.dumps(status_line(nodes, "TST-1", hash8="00000000") | {"id": "GONE-1"}, separators=(",", ":"))
-    path.write_text(json.dumps(old_meta) + "\n" + body + gone + "\n")
+    path.write_text(json.dumps(old_header) + "\n" + body + gone + "\n")
     next(n for n in nodes if n["id"] == "PRO-3")["tree_hash"] = "44444444" + "0" * 56
     write_tree(root, nodes)
     assert [(i["kind"], i["id"]) for i in dg.worklist(root)] == [("new", i) for i in FRAGMENTS]
+
+
+def test_nrm5_a_status_file_written_before_the_header_line_was_named_so(repo):
+    """NRM-5: the header line of "type" "meta" and "marketplace_commit" of an older status file are read: its version
+    calls for a new version (NRM-7), and seal writes the header line of "type" "header" with "tooling_commit"."""
+    root, nodes = repo
+    path = root / dg.STATUS_REL
+    head, _, body = path.read_text().partition("\n")
+    older = json.loads(head)
+    older["type"] = "meta"
+    older["generator"] = {"plugin": "clean-derived-norms", "version": "0.0.1", "marketplace_commit": SHA}
+    path.write_text(json.dumps(older, separators=(",", ":")) + "\n" + body)
+    assert {i["kind"] for i in dg.worklist(root)} >= {"version"}
+    dg.seal(root, MODEL)
+    lines = path.read_text().splitlines()
+    assert json.loads(lines[0])["type"] == "header" and list(json.loads(lines[0])["generator"]) == ["plugin", "version", "tooling_commit"]
+    assert all(json.loads(line)["type"] == "fragment" for line in lines[1:])
 
 
 @pytest.mark.parametrize("bad", ["{bad", "42", '["x"]'])
@@ -1104,15 +1121,15 @@ def test_dgr12_exit_status_2(tmp_path, repo, monkeypatch, bad):
 
 
 def set_version_in_status(root, status_rel, version):
-    """Write another version of the generator in the meta line of a status file, or none when version is None."""
+    """Write another version of the generator in the header line of a status file, or none when version is None."""
     path = root / status_rel
     head, _, body = path.read_text().partition("\n")
-    meta = json.loads(head)
+    header = json.loads(head)
     if version is None:
-        meta["generator"].pop("version")
+        header["generator"].pop("version")
     else:
-        meta["generator"]["version"] = version
-    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+        header["generator"]["version"] = version
+    path.write_text(json.dumps(header, separators=(",", ":")) + "\n" + body)
 
 
 def plugin_with_version(tmp_path, version):
@@ -1390,34 +1407,34 @@ def test_dgr13_the_specs_commit_must_match(repo):
     root, nodes = repo
     write_tree(root, nodes, {"type": "meta", "specs_commit": "e" * 40})
     problems, _ = run_check(root)
-    assert ("meta", "specs_commit") in names(problems)
+    assert ("header", "specs_commit") in names(problems)
 
 
 @pytest.mark.parametrize("recorded,problem,words", [
-    ({"plugin": "clean-derived-norms", "version": VERSION, "marketplace_commit": SHA}, False, []),
-    ({"plugin": "clean-derived-norms", "version": VERSION, "marketplace_commit": "none"}, False, []),
-    ({"plugin": "clean-derived-norms", "version": "0.0.9", "marketplace_commit": SHA}, True, ["'0.0.9'", "'0.1.0'"]),
-    ({"plugin": "derive-grammar", "version": VERSION, "marketplace_commit": SHA}, True, ["'derive-grammar'", "'clean-derived-norms'"]),
-    ({"plugin": "clean-derived-norms", "version": VERSION}, True, ["exactly the fields plugin, version, marketplace_commit"]),
+    ({"plugin": "clean-derived-norms", "version": VERSION, "tooling_commit": SHA}, False, []),
+    ({"plugin": "clean-derived-norms", "version": VERSION, "tooling_commit": "none"}, False, []),
+    ({"plugin": "clean-derived-norms", "version": "0.0.9", "tooling_commit": SHA}, True, ["'0.0.9'", "'0.1.0'"]),
+    ({"plugin": "derive-grammar", "version": VERSION, "tooling_commit": SHA}, True, ["'derive-grammar'", "'clean-derived-norms'"]),
+    ({"plugin": "clean-derived-norms", "version": VERSION}, True, ["exactly the fields plugin, version, tooling_commit"]),
     ("clean-derived-norms", True, ["not an object"]),
 ])
 def test_dgr13_the_generator_at_check_time(repo, monkeypatch, recorded, problem, words):
     root, _ = repo
-    set_meta(root, "generator", recorded)
-    problems = meta_problems(root)
+    set_header(root, "generator", recorded)
+    problems = header_problems(root)
     if not problem:
         assert problems == []
         return
-    assert names(problems) == [("meta", "generator")]
+    assert names(problems) == [("header", "generator")]
     assert all(w in problems[0][2] for w in words), problems
     assert main_in(root, monkeypatch, "check") == 1
 
 
 def test_dgr13_a_meta_line_without_generator(repo, monkeypatch):
     root, _ = repo
-    set_meta(root, "generator", drop=True)
-    problems = meta_problems(root)
-    assert ("meta", "generator") in names(problems)
+    set_header(root, "generator", drop=True)
+    problems = header_problems(root)
+    assert ("header", "generator") in names(problems)
     assert any("exactly the fields" in p[2] for p in problems)
     assert main_in(root, monkeypatch, "check") == 1
 
@@ -1425,23 +1442,23 @@ def test_dgr13_a_meta_line_without_generator(repo, monkeypatch):
 def test_dgr13_check_runs_from_the_version_of_the_plugin(repo, plugin):
     root, _ = repo
     (plugin / ".claude-plugin" / "plugin.json").write_text(json.dumps({"version": "0.2.0"}))
-    problems = meta_problems(root)
-    assert names(problems) == [("meta", "generator")] and "'0.2.0'" in problems[0][2]
+    problems = header_problems(root)
+    assert names(problems) == [("header", "generator")] and "'0.2.0'" in problems[0][2]
 
 
 @pytest.mark.parametrize("value", ["", None, 5, "claude opus", "claude/opus", "modèle", "claude-opus-5-5\n"])
 def test_dgr13_an_empty_or_malformed_model_fails(repo, monkeypatch, value):
     root, _ = repo
-    set_meta(root, "model", value)
-    assert names(meta_problems(root)) == [("meta", "model")]
+    set_header(root, "model", value)
+    assert names(header_problems(root)) == [("header", "model")]
     assert main_in(root, monkeypatch, "check") == 1
 
 
 def test_dgr13_a_missing_model_fails(repo, monkeypatch):
     root, _ = repo
-    set_meta(root, "model", drop=True)
-    problems = meta_problems(root)
-    assert ("meta", "model") in names(problems)
+    set_header(root, "model", drop=True)
+    problems = header_problems(root)
+    assert ("header", "model") in names(problems)
     assert any("exactly the fields" in p[2] for p in problems)
     assert main_in(root, monkeypatch, "check") == 1
 
@@ -1449,8 +1466,8 @@ def test_dgr13_a_missing_model_fails(repo, monkeypatch):
 @pytest.mark.parametrize("value", ["claude-opus-5-5", "claude-sonnet-4.5", "gpt_5", "M1"])
 def test_dgr13_a_good_model_passes(repo, value):
     root, _ = repo
-    set_meta(root, "model", value)
-    assert meta_problems(root) == []
+    set_header(root, "model", value)
+    assert header_problems(root) == []
 
 
 ISSUE_12 = "https://github.com/Ivan-Pasco/clean-language-foundation/issues/12"
@@ -1488,7 +1505,7 @@ def test_dgr13_null_issues_are_not_compared(repo):
 def test_dgr13_the_unique_issue_check_names_every_repeat():
     rows = [(n, "", {"type": "fragment", "id": i, "issue": u}, None)
             for n, (i, u) in enumerate([("A-1", ISSUE_12), ("B-1", ISSUE_13), ("C-1", ISSUE_12), ("D-1", ISSUE_12)], 2)]
-    rows.insert(0, (1, "", {"type": "meta"}, None))
+    rows.insert(0, (1, "", {"type": "header"}, None))
     rows.append((9, "{bad", None, "not JSON"))
     found = derived_norms.check_unique_issues(rows)
     assert [(p[0], p[1]) for p in found] == [("issue", "C-1"), ("issue", "D-1")]
@@ -1529,7 +1546,7 @@ def test_dgr13_no_fragment_yet_still_checks_the_meta_line_and_the_script(tmp_pat
     (root / derived_norms.GRAMMAR_REL).write_text("changed\n")
     code = [("script.py", "# LEX-21@11111111: mixing tabs and spaces for indentation is not allowed\n")]
     problems, _ = dg.check(root, code)
-    assert names(problems) == [("meta", "grammar_sha256"), ("script-citation", "LEX-21")]
+    assert names(problems) == [("header", "grammar_sha256"), ("script-citation", "LEX-21")]
     assert main_in(root, monkeypatch, "check") == 1
 
 
@@ -1543,8 +1560,9 @@ def test_dgr13_no_fragment_yet_with_a_status_file_of_the_local_skill(tmp_path, m
     path.write_text(json.dumps(old, separators=(",", ":")) + "\n" + body)
     assert dg.worklist(root) == []
     problems, _ = run_check(root)
-    assert ("meta", "generator") in names(problems) and ("meta", "specs_commit") in names(problems)
-    assert any("exactly the fields" in p[2] for p in problems)
+    # NRM-5: its first line, of "type" "meta", is read as a header line, and check takes only the header line of
+    # "type" "header" as meeting NRM-5.
+    assert any(p[0] == "header" and "not the header line" in p[2] for p in problems)
     assert main_in(root, monkeypatch, "check") == 1
 
 
@@ -1556,7 +1574,7 @@ def test_dgr17_a_change_by_hand_after_seal_fails(repo, monkeypatch):
     path = root / derived_norms.GRAMMAR_REL
     path.write_text(path.read_text() + "\n")
     problems, _ = run_check(root)
-    assert ("meta", "grammar_sha256") in names(problems)
+    assert ("header", "grammar_sha256") in names(problems)
     assert main_in(root, monkeypatch, "check") == 1
 
 
@@ -1565,7 +1583,7 @@ def test_dgr17_a_status_line_changed_after_seal_fails(repo):
     path = root / dg.STATUS_REL
     path.write_text(path.read_text().replace('"TST-1","hash"', '"TST-1", "hash"'))
     problems, _ = run_check(root)
-    assert ("meta", "status_sha256") in names(problems)
+    assert ("header", "status_sha256") in names(problems)
 
 
 # ------------------------------------------------------------------ DGR-18
@@ -1995,7 +2013,7 @@ POWER_LINES = ["// EXP-11@e105eaa8: ^ is right-associative", "// EXP-8@a0b54578:
 def test_dgr20_seal_writes_the_list_and_check_passes(repo, monkeypatch):
     root, nodes = repo
     rows = list_rows(root)
-    assert rows[0] == {"kind": "meta", "type": "grammar", "last_derived_norm_number": len(rows) - 1}
+    assert rows[0] == {"kind": "header", "type": "grammar", "last_derived_norm_number": len(rows) - 1}
     keys = [s.key for s in derived_norms.parse_grammar(good_grammar(nodes))[0]]
     assert [r["name"] for r in rows[1:]] == keys
     assert [r["derived_norm_id"] for r in rows[1:]] == [f"grammar:{n}" for n in range(1, len(keys) + 1)]
@@ -2050,7 +2068,7 @@ def test_dgr12_an_empty_work_list_leaves_the_list_as_it_was(repo):
 
 
 def rehash_the_list(root):
-    set_meta(root, "derived_norms_sha256", hashlib.sha256((root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest())
+    set_header(root, "derived_norms_sha256", hashlib.sha256((root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest())
 
 
 def change_list_row(root, name, **fields):
@@ -2088,9 +2106,9 @@ def test_dgr20_the_problems_of_the_list_are_printed(repo, monkeypatch, capsys):
 def test_dgr17_a_change_by_hand_of_the_list_fails(repo, monkeypatch):
     root, _ = repo
     path = root / dg.PATH_OF_LIST_OF_DERIVED_NORMS
-    path.write_text(path.read_text().replace('"kind": "meta"', '"kind":  "meta"'))
+    path.write_text(path.read_text().replace('"kind": "header"', '"kind":  "header"'))
     problems, _ = run_check(root)
-    assert ("meta", "derived_norms_sha256") in names(problems)
+    assert ("header", "derived_norms_sha256") in names(problems)
     assert main_in(root, monkeypatch, "check") == 1
 
 
@@ -2101,8 +2119,8 @@ def test_dgr13_a_missing_list_exits_2(repo, monkeypatch):
 
 
 @pytest.mark.parametrize("data,line", [
-    (b'{"kind": "meta", "type": "grammar"}\n', 1),
-    (b'{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n\xff\n', 2),
+    (b'{"kind": "header", "type": "grammar"}\n', 1),
+    (b'{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}\n\xff\n', 2),
 ])
 def test_dgr4_seal_with_a_list_before_the_run_that_cannot_be_read_exits_2_and_writes_nothing(repo, monkeypatch, capsys, data, line):
     root, _ = repo
@@ -2182,13 +2200,13 @@ def test_dgr20_a_name_that_is_a_json_array_is_reported_and_check_exits_1(repo, m
 def test_dgr13_no_fragment_yet_the_list_holds_its_meta_line_only(tmp_path):
     root = tmp_path / "repo"
     no_fragment_repo(root)
-    assert list_rows(root) == [{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}]
+    assert list_rows(root) == [{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}]
 
 
 def test_dgr13_no_fragment_yet_still_checks_the_list(tmp_path):
     root = tmp_path / "repo"
     no_fragment_repo(root)
-    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_text('{"kind": "meta", "type": "semantics", "last_derived_norm_number": 0}\n')
+    (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_text('{"kind": "header", "type": "semantics", "last_derived_norm_number": 0}\n')
     rehash_the_list(root)
     problems, _ = run_check(root)
     assert names(problems) == [("derived-norms", "derived-norms.jsonl:1")]
@@ -2272,13 +2290,13 @@ def test_cdn8_the_check_reports_a_derived_norm_of_one_name_that_does_not_keep_it
     reseal_with(root, nodes, grammar)
     commit_the_list(root)
     rows = list_rows(root)
-    meta, entries = rows[0], rows[1:]
+    header, entries = rows[0], rows[1:]
     second = max((r for r in entries if r["name"] == "%ignore COMMENT"), key=lambda r: r["first_line"])
-    last_derived_norm_number = meta["last_derived_norm_number"] + 1
+    last_derived_norm_number = header["last_derived_norm_number"] + 1
     entries = [dict(r, derived_norm_id=f"grammar:{last_derived_norm_number}") if r is second else r for r in entries]
     entries.sort(key=lambda r: int(r["derived_norm_id"].split(":")[1]))
     (root / dg.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(
-        json.dumps(r, ensure_ascii=False) + "\n" for r in [dict(meta, last_derived_norm_number=last_derived_norm_number)] + entries))
+        json.dumps(r, ensure_ascii=False) + "\n" for r in [dict(header, last_derived_norm_number=last_derived_norm_number)] + entries))
     problems = [p for p in run_check(root)[0] if p[0] == "derived-norms"]
     assert any(p[1] == "%ignore COMMENT" and "the k-th derived norm of a name keeps the k-th derived norm ID of that name" in p[2]
                for p in problems), problems

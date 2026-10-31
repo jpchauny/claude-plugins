@@ -18,7 +18,7 @@ JSONL format, one JSON object per line, keys sorted,
      "tree_hash": ..., "status": "active" | "retired",
      "to_review": bool, "changed_since": commit | null}
 
-Order: meta; files by path; active nodes by file path, then pre-order;
+Order: the header line (type meta); files by path; active nodes by file path, then pre-order;
 retired nodes after, by file path, then prefix, then number. Text is
 stored as `str` (the UTF-8 bytes decoded); offsets are byte offsets.
 
@@ -169,7 +169,7 @@ class StoredNode:
 
 @dataclass
 class Store:
-    """The whole JSONL: meta, files and nodes. `Store()` is the empty store.
+    """The whole JSONL: the header line, files and nodes. `Store()` is the empty store.
 
     Spec: R23, R61
     """
@@ -599,7 +599,7 @@ def _read_line(store: Store, obj: dict[str, Any]) -> None:
     if not isinstance(obj, dict):
         raise ValueError("not a JSON object")
     kind = obj.get("type")
-    # R61: a second meta line, or a second file or copy line for one path, replaces the first
+    # R61: a second header line, or a second file or copy line for one path, replaces the first
     if kind == "meta":
         # R61: "foundation_commit" is the name of "specs_commit" before the rename
         legacy = _field(obj, "foundation_commit", _is_str, "")

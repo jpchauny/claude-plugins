@@ -1586,9 +1586,9 @@ def derived_norm_line(type_of_derived_norms, derived_norm_number, derived_norm_f
 
 
 def list_of_derived_norms(type_of_derived_norms, last, *lines):
-    """NRM-12: a list of derived norms, its meta line first."""
-    meta = json.dumps({"kind": "meta", "type": type_of_derived_norms, "last_derived_norm_number": last})
-    return "".join(line + "\n" for line in (meta,) + lines)
+    """NRM-12: a list of derived norms, its header line first."""
+    header = json.dumps({"kind": "header", "type": type_of_derived_norms, "last_derived_norm_number": last})
+    return "".join(line + "\n" for line in (header,) + lines)
 
 
 GRAMMAR = list_of_derived_norms(
@@ -1884,7 +1884,7 @@ class DerivedNorms(DerivedNormsFixture):
     def test_acu58_a_list_that_does_not_meet_nrm12(self):
         good = derived_norm_line("grammar", 2, "2b2b2b2b", "customer", "specs-derived/grammar/billing.lark", 1, 2,
                                  [("CUS-1", "c0c0c0c0")])
-        meta = '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 7}'
+        header = '{"kind": "header", "type": "grammar", "last_derived_norm_number": 7}'
         bad_lists = {
             "a byte order mark": "﻿" + GRAMMAR,
             "not UTF-8": GRAMMAR.encode() + b"\xff\n",
@@ -1892,9 +1892,10 @@ class DerivedNorms(DerivedNormsFixture):
             "an empty line": GRAMMAR + "\n",
             "a carriage return": GRAMMAR.replace("\n", "\r\n"),
             "empty": "",
-            "the meta line of another type": GRAMMAR.replace('"type": "grammar"', '"type": "semantics"'),
-            "the fields of the meta line in another order":
-                '{"type": "grammar", "kind": "meta", "last_derived_norm_number": 7}\n',
+            "the header line of another type": GRAMMAR.replace('"type": "grammar"', '"type": "semantics"'),
+            "the fields of the header line in another order":
+                '{"type": "grammar", "kind": "header", "last_derived_norm_number": 7}\n',
+            "a header line of another kind": GRAMMAR.replace('"kind": "header"', '"kind": "other"'),
             "a negative last number": GRAMMAR.replace('"last_derived_norm_number": 7', '"last_derived_norm_number": -1'),
             "a boolean last number": GRAMMAR.replace('"last_derived_norm_number": 7',
                                                      '"last_derived_norm_number": true'),
@@ -1925,9 +1926,9 @@ class DerivedNorms(DerivedNormsFixture):
             "a norm hash of 7 digits": GRAMMAR.replace('"norm_hash": "5a627175"', '"norm_hash": "5a62717"'),
             "a field more": GRAMMAR.replace('"kind": "derived_norm",', '"kind": "derived_norm", "x": 1,', 1),
             "a field given twice": GRAMMAR.replace('"name": "row",', '"name": "row", "name": "row",'),
-            "a line of another kind": meta + "\n" + good.replace('"derived_norm"', '"rule"') + "\n",
+            "a line of another kind": header + "\n" + good.replace('"derived_norm"', '"rule"') + "\n",
             "a constant": GRAMMAR.replace('"first_line": 4', '"first_line": NaN'),
-            "not JSON": meta + "\nnot json\n",
+            "not JSON": header + "\nnot json\n",
         }
         for case, text in bad_lists.items():
             with self.subTest(case=case):
@@ -1951,6 +1952,14 @@ class DerivedNorms(DerivedNormsFixture):
         au3 = self.unit_of(self.inventory(), "AU-3")
         self.assertEqual([c["citation_status"] for c in au3["derived_norm_citations"]], ["retired", "retired"])
         self.assertEqual(au3["derived_norms_not_cited"], [])
+
+    def test_nrm12_a_list_written_before_the_header_line_was_named_so(self):
+        """NRM-12: a header line of kind "meta" is read as "header"."""
+        self.set_lists({"grammar": GRAMMAR.replace('"kind": "header"', '"kind": "meta"')})
+        write(os.path.join(self.acc, "units", "AU-3.md"), with_derived_norms(AU3))
+        r = self.run_script("derived-norms", self.acc, "--norms-commit", self.norms_commit(), "AU-3")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("grammar:7", [d["derived_norm_id"] for d in json.loads(r.stdout)])
 
     def test_acu78_the_derived_norms_of_the_scope(self):
         write(os.path.join(self.norms, "specs-derived", "grammar", "billing.lark"),
@@ -1980,9 +1989,12 @@ class DerivedNorms(DerivedNormsFixture):
         self.assertEqual(json.loads(r.stdout), [])
 
 
-STATUS_LINE_OF_GRAMMAR = ('{"type":"meta","specs_commit":"' + "a" * 40 + '","generator":{"plugin":"clean-derived-norms",'
-                          '"version":"0.4.0","marketplace_commit":"' + "b" * 40 + '"},"model":"m"}\n'
+STATUS_LINE_OF_GRAMMAR = ('{"type":"header","specs_commit":"' + "a" * 40 + '","generator":{"plugin":"clean-derived-norms",'
+                          '"version":"0.5.0","tooling_commit":"' + "b" * 40 + '"},"model":"m"}\n'
                           '{"type":"rule","name":"row"}\n')
+# NRM-5: a status file written before its first line was named the header line.
+STATUS_LINE_OF_GRAMMAR_BEFORE_THE_HEADER_LINE = (STATUS_LINE_OF_GRAMMAR.replace('"type":"header"', '"type":"meta"')
+                                                 .replace('"tooling_commit"', '"marketplace_commit"'))
 
 
 class DefectOfDerivedNormsGenerator(DerivedNormsFixture):
@@ -2024,15 +2036,15 @@ class DefectOfDerivedNormsGenerator(DerivedNormsFixture):
                                        "first_line", "last_line", "cited_norms", "status_file", "generator",
                                        "marketplace_repository", "issue_body_start", "no_issue_message"])
         self.assertEqual(found["status_file"], "specs-derived/grammar/status.jsonl")
-        self.assertEqual(found["generator"], {"plugin": "clean-derived-norms", "version": "0.4.0",
-                                              "marketplace_commit": "b" * 40})
+        self.assertEqual(found["generator"], {"plugin": "clean-derived-norms", "version": "0.5.0",
+                                              "tooling_commit": "b" * 40})
         self.assertEqual(found["marketplace_repository"], "jpchauny/claude-plugins")
         self.assertIsNone(found["no_issue_message"])
         self.assertEqual(found["issue_body_start"],
                          "Derived norm: grammar:7@3a4b5c6d, of the type grammar, lines 4 to 6 of "
                          "specs-derived/grammar/billing.lark\n"
                          "Cited norms: INV-7@5a627175\n"
-                         f"Generator: clean-derived-norms 0.4.0, marketplace commit {'b' * 40}\n"
+                         f"Generator: clean-derived-norms 0.5.0, tooling commit {'b' * 40}\n"
                          f"Norms commit: {self.norms_commit()}\n")
         self.assertEqual(self.generator_of("semantics:31")["issue_body_start"].splitlines()[1],
                          "Cited norms: INV-12@7d6e5f40, INV-15@9e8d7c6b")
@@ -2058,9 +2070,26 @@ class DefectOfDerivedNormsGenerator(DerivedNormsFixture):
                 write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"), STATUS_LINE_OF_GRAMMAR)
                 self.set_lists({})
 
+    def test_acu79_a_status_file_written_before_the_header_line(self):
+        """NRM-5: "type" "meta" and "marketplace_commit" are read as "header" and "tooling_commit"."""
+        expected = self.generator_of()
+        write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"),
+              STATUS_LINE_OF_GRAMMAR_BEFORE_THE_HEADER_LINE)
+        self.set_lists({})
+        found = self.generator_of()
+        self.assertEqual(found["generator"], expected["generator"])
+        self.assertEqual(found["issue_body_start"].splitlines()[2], expected["issue_body_start"].splitlines()[2])
+        for mixed in (STATUS_LINE_OF_GRAMMAR.replace('"tooling_commit"', '"marketplace_commit"').replace(
+                          '"version"', '"tooling_commit":"x","version"'),
+                      STATUS_LINE_OF_GRAMMAR.replace('"type":"header"', '"type":"other"')):
+            with self.subTest(mixed=mixed):
+                write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"), mixed)
+                self.set_lists({})
+                self.assertIsNone(self.generator_of()["generator"])
+
     def test_acu79_a_generator_that_does_not_meet_nrm5(self):
         write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"),
-              STATUS_LINE_OF_GRAMMAR.replace('"version":"0.4.0",', ""))
+              STATUS_LINE_OF_GRAMMAR.replace('"version":"0.5.0",', ""))
         self.set_lists({})
         self.assertIsNone(self.generator_of()["generator"])
 

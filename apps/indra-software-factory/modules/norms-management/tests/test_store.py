@@ -170,7 +170,7 @@ def test_rerun_identical_keeps_ids_and_reports_nothing(tmp_path: Path) -> None:
 
 
 def test_meta_foundation_commit_reads_as_specs_commit(tmp_path: Path) -> None:
-    """A meta line written before the rename gives its foundation_commit as specs_commit.
+    """A header line written before the rename gives its foundation_commit as specs_commit.
 
     Spec: R61
     """

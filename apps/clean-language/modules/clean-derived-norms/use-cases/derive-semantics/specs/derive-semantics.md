@@ -8,7 +8,7 @@
 
 A use case of the module `clean-derived-norms`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
 
-The use case has two parts. The script does what is deterministic: the work list, the case of each fragment, its parse tree, the fixed files of the Lake project, the list of derived norms, the meta line, and the checks, which build the semantics and run every fragment. The deriver, following `SKILL.md`, does the derivation: it writes the Lean code and the status lines. The script never writes a declaration of the Lean code, never decides a state, and holds nothing specific to Clean.
+The use case has two parts. The script does what is deterministic: the work list, the case of each fragment, its parse tree, the fixed files of the Lake project, the list of derived norms, the header line, and the checks, which build the semantics and run every fragment. The deriver, following `SKILL.md`, does the derivation: it writes the Lean code and the status lines. The script never writes a declaration of the Lean code, never decides a state, and holds nothing specific to Clean.
 
 ## Terms
 
@@ -32,7 +32,7 @@ The use case has two parts. The script does what is deterministic: the work list
 | Declaration | A command of the Lean code that defines something, with all its lines: a line that starts at column 1 with one of the words `def`, `theorem`, `abbrev`, `inductive`, `structure`, `class`, `instance`, `opaque`, `example`, `macro`, `macro_rules`, `syntax`, `notation`, `infix`, `infixl`, `infixr`, `prefix`, `postfix` or `deriving instance` (complete list), after any attributes `@[...]` and modifiers `private`, `protected`, `noncomputable`, `partial`, `unsafe` and `nonrec` (complete list), and the lines after it up to the next line at column 1 that starts another declaration, a structural line or a citation. A line at column 1 that starts with `|`, `where`, `deriving`, `termination_by` or `decreasing_by` continues its declaration. |
 | Structural line | A line of the Lean code at column 1 that starts with `import`, `namespace`, `end`, `open`, `section`, `mutual`, `variable`, `universe` or `set_option` (complete list). It is no declaration and needs no citation. |
 | Key of a declaration | `<path>:<name>`: its path in the semantics folder, and the name after its first word, qualified by the `namespace` lines around it, such as `Clean/Typing.lean:Clean.typeOf`; for a declaration with no name, such as `instance : ToString Value`, `<path>:<its first line>`, without its trailing blanks. The work list and the check name a declaration by its key. |
-| Norm, norm hash, model ID, plugin version, marketplace commit, first words of a norm, text of a norm, HEAD, blank, foundation | As [derive-grammar.md](../../derive-grammar/specs/derive-grammar.md#terms) defines them. |
+| Norm, norm hash, model ID, plugin version, tooling commit, first words of a norm, text of a norm, HEAD, blank, foundation | As [derive-grammar.md](../../derive-grammar/specs/derive-grammar.md#terms) defines them. |
 | Fragment | As [module.md](../../../specs/module.md#terms) defines it: a norm of `data/tree.jsonl` of kind `code_block`, active, whose code block is a Clean example. |
 | Opening line, info string, code | As [clean-examples](../../../../clean-examples/specs/module.md#terms) defines them. |
 | Semantic fragment | A fragment whose info string is not of the form `clean-language expect=syntax-error code=<error code> line=<n>` of [CEX-4](../../../../clean-examples/specs/module.md#the-opening-line). A fragment whose opening line is none of the forms of CEX-4 is a semantic fragment. |
@@ -128,7 +128,7 @@ Feature: Derive the semantics of Clean from the norms
       And it reports nothing about its place: CEX-27 and CEX-28 are rules of the examples, checked in layers 0 and 1 (CDN-4)
 
   Rule: DSM-3 The output is one Lake project, one list of derived norms and one status file in the semantics folder
-    Rationale: a fixed set of files, each with one role, lets the meta line hash each file (NRM-5) and lets an agent of layer 4 find the typing or the evaluation at once; the fixed files are where the script and the Lean code meet, and one text of them, in the script, keeps both sides in step. Deliberate design: the version of Lean is pinned, so that the same Lean code builds and runs the same way in every run; another version of Lean is a new version of the plugin.
+    Rationale: a fixed set of files, each with one role, lets the header line hash each file (NRM-5) and lets an agent of layer 4 find the typing or the evaluation at once; the fixed files are where the script and the Lean code meet, and one text of them, in the script, keeps both sides in step. Deliberate design: the version of Lean is pinned, so that the same Lean code builds and runs the same way in every run; another version of Lean is a new version of the plugin.
 
     Scenario: The layout
       When the use case has run
@@ -156,18 +156,18 @@ Feature: Derive the semantics of Clean from the norms
   Rule: DSM-4 The first line of the status file records the specs commit, the generator, the model and the hashes of the output (NRM-5)
     Rationale: NRM-5 asks for the hash of each file of the output; with them a change by hand shows (DSM-16), and the specs commit, the generator and the model tell where the semantics comes from.
 
-    Scenario: The meta line
+    Scenario: The header line
       When the script runs "seal --model claude-opus-5-5"
-      Then the first line of the status file is one line of compact JSON with exactly these fields, in this order: "type" ("meta"), "specs_commit", "generator", "model", "lakefile_sha256", "lean_toolchain_sha256", "fragment_sha256", "main_sha256", "clean_sha256", "ast_sha256", "syntax_sha256", "typing_sha256", "evaluation_sha256", "derived_norms_sha256", "status_sha256"
+      Then the first line of the status file is one line of compact JSON with exactly these fields, in this order: "type" ("header"), "specs_commit", "generator", "model", "lakefile_sha256", "lean_toolchain_sha256", "fragment_sha256", "main_sha256", "clean_sha256", "ast_sha256", "syntax_sha256", "typing_sha256", "evaluation_sha256", "derived_norms_sha256", "status_sha256"
       And "specs_commit", "generator" and "model" are as DGR-4 says, with the plugin "clean-derived-norms"
       And each "<name>_sha256" is the SHA-256 of one file, in this order: "lakefile.toml", "lean-toolchain", "Fragment.lean", "Main.lean", "Clean.lean", "Clean/Ast.lean", "Clean/Syntax.lean", "Clean/Typing.lean", "Clean/Evaluation.lean", the list of derived norms that the same "seal" writes (DSM-18), and the status file without its first line
       And the script computes each value itself, except "model", which it takes from "--model"
 
-    Scenario: seal without a model, with a missing or malformed input, or with an unknown marketplace commit
+    Scenario: seal without a model, with a missing or malformed input, or with an unknown tooling commit
       When the script runs "seal" as the scenarios of DGR-4 say
       Then it behaves as they say, with the five files of the Lean code in place of the grammar: when one of them does not exist or is not UTF-8, or the list before the run cannot be read as DGR-20 "A list that cannot be read" says, "seal" prints the error and exits with 2, and writes nothing
 
-  Rule: DSM-5 After the meta line, the status file has one line for each semantic fragment, and no other
+  Rule: DSM-5 After the header line, the status file has one line for each semantic fragment, and no other
     Rationale: one line per semantic fragment is the index of what the semantics covers and of what waits for layer 1, and its expected output and parse tree hash tell the work list that a fragment must be checked again. The grammar runs first and opens the issue of each fragment that it cannot take; a second issue for the same fragment and the same fix would split one decision of layer 1 in two.
 
     Scenario: The fields of a status line
@@ -180,7 +180,7 @@ Feature: Derive the semantics of Clean from the norms
       And "reason" is null if and only if the state is "derived"
       And "issue" is null unless the state is "pending", and then null or "https://github.com/Ivan-Pasco/clean-language-foundation/issues/<n>"
       And no two status lines hold the same issue URL
-      And the meta line is first, and the fragment lines follow the order of "data/tree.jsonl" ("seal" orders them)
+      And the header line is first, and the fragment lines follow the order of "data/tree.jsonl" ("seal" orders them)
 
     Scenario Outline: The states
       Given the semantic fragment "<id>", where only the fields and the reasons bind, and the hashes are illustrative
@@ -474,14 +474,14 @@ Feature: Derive the semantics of Clean from the norms
         | "EXP-29", a fragment with "expect=syntax-error", has a status line                                    | "EXP-29" as "gone" |
         | "FUN-16" has a status line and is no longer a fragment                                                | "FUN-16" as "gone" |
         | "Clean/Typing.lean:Clean.typeOf" cites "TYP-12@4be10a7e", and "TYP-12" now has another norm hash, or is retired or gone | that declaration as "norm", with the citation |
-        | the meta line of the status file names, in "generator", another "version" than the plugin version of the plugin that runs "worklist", or none (a new version, NRM-7) | every semantic fragment that has a status line as "changed", and every declaration of the Lean code as "version" |
+        | the header line of the status file names, in "generator", another "version" than the plugin version of the plugin that runs "worklist", or none (a new version, NRM-7) | every semantic fragment that has a status line as "changed", and every declaration of the Lean code as "version" |
 
     Scenario: The output of the work list
       When the script runs "worklist"
       Then it prints one JSON line per item, the fragments in the order of "data/tree.jsonl", then the "gone" ones, then the "norm" ones in the order of the Lean code, then the "version" ones in the order of the Lean code
       And a fragment item has exactly "kind" ("new", "changed" or "gone"), "id", "old_hash", "new_hash", "cases", "expected_output", "parse_tree_hash", "parse_error" and "file"; a "gone" one has the "cases", "expected_output" and "parse_tree_hash" of its old status line, "new_hash" and "parse_error" null, and the "file" of its node, or null when the node no longer exists
       And a "norm" item has exactly "kind", "declaration" (its key), "old_hash", "new_hash" (null when the norm is retired or gone) and "citation"
-      And a "version" item has exactly "kind", "declaration" (its key), "old_version" (the "version" of "generator" in the meta line of the status file, null when there is none) and "new_version" (the plugin version of the plugin that runs "worklist")
+      And a "version" item has exactly "kind", "declaration" (its key), "old_version" (the "version" of "generator" in the header line of the status file, null when there is none) and "new_version" (the plugin version of the plugin that runs "worklist")
       And it exits with 0, whether the list is empty or not
       And it exits with 2 when "data/tree.jsonl" or the grammar does not exist, a line of the status file or of "data/tree.jsonl" is not JSON, the grammar does not build, Lark cannot be loaded, or the plugin has no "version" in its "plugin.json"
 
@@ -499,7 +499,7 @@ Feature: Derive the semantics of Clean from the norms
       When the script runs "check"
       Then the semantics folder holds exactly the files of DSM-3, each fixed file holds the text that the script holds, and "Clean.lean" imports the four files of "Clean/"
       And the Lean code meets DSM-8, DSM-9 and DSM-10 "No shortcut"
-      And the meta line is first and meets DSM-4: its specs commit is the one of "data/tree.jsonl", its generator names the plugin "clean-derived-norms" and the plugin version of the plugin that runs "check", its model is of the form of a model ID, and its hashes are those of the files (DSM-16)
+      And the header line is first and meets DSM-4: its specs commit is the one of "data/tree.jsonl", its generator names the plugin "clean-derived-norms" and the plugin version of the plugin that runs "check", its model is of the form of a model ID, and its hashes are those of the files (DSM-16)
       And the list of derived norms meets DSM-18
       And every status line meets DSM-5, and every semantic fragment has exactly one status line, with its current norm hash, cases, expected output and parse tree hash
       And every fragment with no form of CEX-4 and every fragment that the grammar does not parse is "pending", with its fixed reason of DSM-5 and a null issue
@@ -517,7 +517,7 @@ Feature: Derive the semantics of Clean from the norms
       Given a check fails
       When the script runs "check"
       Then it prints one line per problem, "<check>: <norm ID, key or path>: <what is wrong>", before the last line
-      And the checks are named "layout", "fixed", "comment", "citation", "declaration", "shortcut", "status", "meta", "reason-citation", "opening line", "parse", "pending", "issue", "build", "run", "script-citation" and "derived-norms"
+      And the checks are named "layout", "fixed", "comment", "citation", "declaration", "shortcut", "status", "header", "reason-citation", "opening line", "parse", "pending", "issue", "build", "run", "script-citation" and "derived-norms"
 
     Scenario Outline: Exit statuses
       Given <fact>
@@ -543,7 +543,7 @@ Feature: Derive the semantics of Clean from the norms
     Scenario: No semantic fragment yet
       Given "data/tree.jsonl" holds no semantic fragment
       When the script runs "check"
-      Then it does what DGR-13 "No fragment yet" says: it checks only the meta line, the fixed files, the list of derived norms (DSM-18) and the citations of the script, builds nothing, and exits with 0 when they pass
+      Then it does what DGR-13 "No fragment yet" says: it checks only the header line, the fixed files, the list of derived norms (DSM-18) and the citations of the script, builds nothing, and exits with 0 when they pass
 
   Rule: DSM-14 Each pending fragment that is a gap, or an example that is not a whole program, gets its own issue in layer 1 at once (NRM-8), and the derivation goes on
     Rationale: a gap and an example that is not a whole program are fixed in layer 1 (LAY-5); one issue per fragment, opened at once, is how layer 1 learns of it, as for the grammar.
@@ -579,12 +579,12 @@ Feature: Derive the semantics of Clean from the norms
       And then the output of the check, and its exit status
 
   Rule: DSM-16 The output, the list of derived norms among it, changes only through a run of the use case
-    Rationale: layer 2 is never edited by hand (LAY-3); the hashes of the meta line show a change that no run made.
+    Rationale: layer 2 is never edited by hand (LAY-3); the hashes of the header line show a change that no run made.
 
     Scenario: A change by hand
       Given a person or another session changed a file of the semantics folder, such as the list of derived norms, after the last "seal"
       When the script runs "check"
-      Then it reports that the file does not match the hash of its meta line, and exits with 1, as DGR-17 says
+      Then it reports that the file does not match the hash of its header line, and exits with 1, as DGR-17 says
 
   Rule: DSM-17 Each stale cited norm of the script gets its own issue in jpchauny/claude-plugins at once (CDN-5), and check still fails
     Rationale: a stale citation of the script means that the script may no longer follow its norm, and only a new version of the plugin fixes the script (CDN-5).

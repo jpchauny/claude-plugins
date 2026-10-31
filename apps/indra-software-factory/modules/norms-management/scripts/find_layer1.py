@@ -35,7 +35,9 @@ def main(argv: list[str]) -> int:
     try:
         data = json.loads((repo / "project.json").read_text(encoding="utf-8"))
         repos = data["repositories"]
-        assert isinstance(repos, list) and all({"owner", "name", "layer", "path"} <= set(r) for r in repos)
+        # ORC-20, PRJ-2: an entry has a layer, or a role and no layer (the orchestration and the tooling repository).
+        assert isinstance(repos, list) and all(isinstance(r, dict) and {"owner", "name", "path"} <= set(r)
+                                               and ("layer" in r) != ("role" in r) for r in repos)
     except FileNotFoundError:
         return fail(f"no project.json in {repo}")
     except (ValueError, KeyError, TypeError, AssertionError):
@@ -47,12 +49,13 @@ def main(argv: list[str]) -> int:
     mine = [r for r in repos if f"{r['owner']}/{r['name']}" == me]
     if not mine:
         return fail("this repository is not in project.json (ORC-21)")
-    if mine[0]["layer"] != 2:
-        return fail(f"this repository is of layer {mine[0]['layer']}, not of layer 2 (ORC-34)")
+    if mine[0].get("layer") != 2:
+        what = f"of layer {mine[0]['layer']}" if "layer" in mine[0] else f"the {mine[0]['role']} repository"
+        return fail(f"this repository is {what}, not of layer 2 (ORC-34)")
     folder = repo
     for _ in Path(mine[0]["path"]).parts:
         folder = folder.parent
-    layer1 = [r for r in repos if r["layer"] == 1]
+    layer1 = [r for r in repos if r.get("layer") == 1]
     if len(layer1) != 1:
         return fail("project.json must list exactly one repository of layer 1 (ORC-20)")
     r = layer1[0]

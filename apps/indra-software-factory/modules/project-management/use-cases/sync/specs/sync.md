@@ -14,7 +14,7 @@ A use case of the module `project-management`, specified in [module.md](../../..
 |---|---|
 | Skill | The skill `sync` of the plugin `project-management`, invoked as `/project-management:sync`; the actor of every rule that names no other. |
 | Source | The `project.json` of the repository of layer 1, at its commit `HEAD` (ORC-23). |
-| Target | Every repository of the project other than the one of layer 1, as the source lists them, the orchestration repository included (SNC-2). |
+| Target | Every repository of the project other than the one of layer 1, as the source lists them, the orchestration repository and the tooling repository included (SNC-2, SNC-3). |
 | Managed rule | A rule `deny` of the exact form `Read(//**/<path>/**)` or `Edit(//**/<path>/**)`, where `<path>` is the `path` of a repository of layer 3 or 4 in the source, in the `project.json` of the target before the sync, or in any version of `project.json` committed in the target. Every other rule `deny` was written by a person. |
 | Rules of ORC-5 | The rules `deny` that [ORC-5](../../create-project/specs/create-project.md#create-a-project) writes in the `.claude/settings.json` of a repository of layer 3 or 4, computed for the repositories that the source lists. |
 
@@ -46,11 +46,16 @@ Feature: Sync project.json
         | 3     |
         | 4     |
 
-    Scenario: Invoked in the orchestration repository
-      Given the entry of "project.json" for the repository of the working directory has the "role" "orchestration" and no layer
+    Scenario Outline: Invoked in a repository that is no layer
+      Given the entry of "project.json" for the repository of the working directory has the "role" "<role>" and no layer
       When the user types "/project-management:sync"
       Then the skill writes nothing
       And it says that it runs only in the repository of layer 1
+
+      Examples:
+        | role          |
+        | orchestration |
+        | tooling       |
 
   Rule: ORC-29 The skill copies the source as it is committed
 
@@ -119,6 +124,27 @@ Feature: Sync project.json
       Given the source has no entry with "role", as a project.json written before the orchestration repository existed (PRJ-2)
       When the sync starts
       Then the targets are the repositories of the layers 0, 2, 3 and 4 that the source lists
+
+  Rule: SNC-3 The tooling repository is a target, and its rules "deny" are not kept in step
+    Rationale: every repository of a project holds the same project.json (ORC-20); the tooling repository holds no layer (LAY-14), and the rules "deny" of ORC-5 keep layers 3 and 4 apart, so none is managed there.
+
+    Scenario: The project.json of the tooling repository
+      Given the source lists "billing-tooling" with the "role" "tooling"
+      And the "project.json" of "billing-tooling" differs from the source
+      When the user confirms the sync
+      Then the skill writes, commits and pushes the "project.json" of "billing-tooling" as ORC-31 says
+
+    Scenario: The settings of the tooling repository
+      Given the source lists "billing-tooling" with the "role" "tooling"
+      When the sync writes the targets
+      Then the skill does not change the ".claude/settings.json" of "billing-tooling"
+      And it reports no rules "deny" for "billing-tooling" (ORC-33)
+
+    Scenario: A source with an entry with "role" and with "layer"
+      Given the source has an entry with both "role" and "layer", or with "role" "tooling" twice, or with a "role" other than "orchestration" and "tooling"
+      When the sync starts
+      Then the skill writes nothing
+      And it says that the "project.json" of layer 1 does not have the form of ORC-20
 
   Rule: SNC-1 The skill keeps the rules "deny" of the repositories of layers 3 and 4 in step with project.json
 

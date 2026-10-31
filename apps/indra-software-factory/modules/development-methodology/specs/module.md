@@ -24,7 +24,7 @@ Its purpose: a Claude Code session in any repository of a project, of one of the
 ## The methodology
 
 - **MTH-1.** The methodology is these specs of this module (complete list):
-  - [layers.md](layers.md): the five layers, the orchestration repository, their rules (the clauses LAY-n), their terms, and where each module is installed (APP-6);
+  - [layers.md](layers.md): the five layers, the orchestration repository, the tooling repository, their rules (the clauses LAY-n), their terms, and where each module is installed (APP-6);
   - [flow.md](flow.md): the run, its steps in order and their hand-offs (ORC-15), and the terms run, step and hand-off.
 - **MTH-2.** The reason of a rule of the methodology is written with that rule, and in no other place ([DEV-4](https://github.com/jpchauny/claude-plugins/blob/main/specs/development.md#method)). The methodology states only the reasons that its rules state; a rule without a stated reason is an open question of this spec.
 - **MTH-3.** In every spec of this module, a link to a file inside the folder of the module is relative. A link to any other file of the marketplace is its absolute URL `https://github.com/jpchauny/claude-plugins/blob/main/<path from the root of the repository>`, followed by its anchor when it has one. Deliberate design. Rationale: Claude Code installs only the folder of the plugin in the repository's sessions, so a relative link that leaves that folder points to no file there. The templates of [create-project](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md) link to the marketplace in the same form.
@@ -43,7 +43,7 @@ Its purpose: a Claude Code session in any repository of a project, of one of the
   The modules of the app, each one a plugin, and where each is installed:
   - <Module>: <Where>
   Read for detail, before answering about the process:
-  - The five layers, the orchestration repository, their rules, their terms, and where each module is installed: <plugin root>/specs/layers.md
+  - The five layers, the orchestration repository, the tooling repository, their rules, their terms, and where each module is installed: <plugin root>/specs/layers.md
   - The flow across the layers (a run, its steps and hand-offs): <plugin root>/specs/flow.md
   - What carries the methodology to every repository: <plugin root>/specs/module.md
   - What each module of the app does: https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/app.md

@@ -52,7 +52,10 @@ Each line is `<type> /<module>:<use case>`. Invoke each use case, in that
 order, with the Skill tool (`<module>:<use case>`), and follow it to its end
 before the next one. When a use case stops with an error, note it and go on
 with the next one; a check that fails is no error (NRM-2). No line: the
-project has no derived norms.
+project has no derived norms. Each `<module>` is a plugin of the tooling
+repository of the project, which `.claude/settings.json` of this repository
+enables (LAY-14); when its use case is not available in the session, that is
+an error of its generator: note it and go on.
 
 Then, also when the project has no derived norms and when a use case
 stopped with an error, write the record of the types of derived norms
@@ -85,7 +88,7 @@ git push origin "$B" || { git pull --no-rebase --no-edit origin "$B" && git push
 Before the commit, `git diff --cached --stat` lists only those three folders;
 take anything else out with `git restore --staged <file>`. The message names
 the commit of layer 1, the plugin and version of each derived-norms generator
-(from the meta line of its status file), the norms that changed (from
+(from the header line of its status file), the norms that changed (from
 `data/report.md`) and the issues opened. Never `git stash`, `git reset
 --hard`, `git clean` or `git pull --rebase` (NRM-10). When nothing is staged,
 make no commit, and push anyway. Note the value of `COMMIT` for step 5,

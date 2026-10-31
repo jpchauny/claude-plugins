@@ -218,26 +218,26 @@ def test_nrm12_the_binding_example():
     item = derived_norms.DerivedNorm("power", G, 40, 42, [("EXP-11", "e105eaa8"), ("EXP-8", "a0b54578")], "0ced57c3")
     last, entries = derived_norms.give_derived_norm_ids("grammar", before(41, ("grammar:12", "power")), [item])
     assert derived_norms.text_of_list_of_derived_norms("grammar", last, entries) == (
-        '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 41}\n'
+        '{"kind": "header", "type": "grammar", "last_derived_norm_number": 41}\n'
         '{"kind": "derived_norm", "derived_norm_id": "grammar:12", "derived_norm_fingerprint": "0ced57c3", "name": "power", '
         '"path": "specs-derived/grammar/clean.lark", "first_line": 40, "last_line": 42, "cited_norms": '
         '[{"norm_id": "EXP-11", "norm_hash": "e105eaa8"}, {"norm_id": "EXP-8", "norm_hash": "a0b54578"}]}\n')
 
 
-def test_nrm12_a_type_with_no_derived_norm_has_its_meta_line_only():
-    assert derived_norms.text_of_list_of_derived_norms("grammar", 0, []) == '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n'
+def test_nrm12_a_type_with_no_derived_norm_has_its_header_line_only():
+    assert derived_norms.text_of_list_of_derived_norms("grammar", 0, []) == '{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}\n'
 
 
 @pytest.mark.parametrize("text", [
     "{bad\n",
     "",
-    '{"kind": "meta", "type": "semantics", "last_derived_norm_number": 0}\n',
-    '{"kind": "meta", "type": "grammar", "last_derived_norm_number": -1}\n',
-    '{"kind": "meta", "type": "grammar", "last_derived_norm_number": true}\n',
-    '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n[1]\n',
-    '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n\n',
-    '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n   \n',
-    '\n{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n',
+    '{"kind": "header", "type": "semantics", "last_derived_norm_number": 0}\n',
+    '{"kind": "header", "type": "grammar", "last_derived_norm_number": -1}\n',
+    '{"kind": "header", "type": "grammar", "last_derived_norm_number": true}\n',
+    '{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}\n[1]\n',
+    '{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}\n\n',
+    '{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}\n   \n',
+    '\n{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}\n',
     '\n',
 ])
 def test_dgr20_a_list_that_cannot_be_read(text):
@@ -247,20 +247,28 @@ def test_dgr20_a_list_that_cannot_be_read(text):
 
 def test_dgr20_an_empty_line_cannot_be_read_and_the_error_names_it():
     with pytest.raises(derived_norms.InputError, match=r"^the list:2: not JSON$"):
-        derived_norms.read_list_of_derived_norms(b'{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n\n', "grammar", "the list")
+        derived_norms.read_list_of_derived_norms(b'{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}\n\n', "grammar", "the list")
 
 
 @pytest.mark.parametrize("data", [
-    b'{"kind": "meta", "type": "grammar", "last_derived_norm_number": 3}\n',
-    b'{"kind": "meta", "type": "grammar", "last_derived_norm_number": 3}',
+    b'{"kind": "header", "type": "grammar", "last_derived_norm_number": 3}\n',
+    b'{"kind": "header", "type": "grammar", "last_derived_norm_number": 3}',
 ])
 def test_dgr20_only_the_empty_text_after_the_last_line_feed_is_no_line(data):
     assert derived_norms.read_list_of_derived_norms(data, "grammar", "the list") == (3, [])
 
 
+def test_nrm12_a_list_written_before_the_header_line_was_named_so_is_read():
+    """NRM-12: the kind "meta" of an older header line is read as "header", so the list before the run keeps its IDs."""
+    data = b'{"kind": "meta", "type": "grammar", "last_derived_norm_number": 3}\n'
+    assert derived_norms.read_list_of_derived_norms(data, "grammar", "the list") == (3, [])
+    with pytest.raises(derived_norms.InputError):
+        derived_norms.read_list_of_derived_norms(data.replace(b'"meta"', b'"other"'), "grammar", "the list")
+
+
 def test_dgr20_a_list_that_is_not_utf8_cannot_be_read_and_the_error_names_the_line():
     with pytest.raises(derived_norms.InputError, match=r"^the list:2: not UTF-8$"):
-        derived_norms.read_list_of_derived_norms(b'{"kind": "meta", "type": "grammar", "last_derived_norm_number": 0}\n\xff\n', "grammar", "the list")
+        derived_norms.read_list_of_derived_norms(b'{"kind": "header", "type": "grammar", "last_derived_norm_number": 0}\n\xff\n', "grammar", "the list")
 
 
 # ------------------------------------------------------------------ the check of the list (DGR-20)
@@ -299,9 +307,9 @@ def test_dgr20_a_list_that_checks(tmp_path, monkeypatch):
 def entry_change(root, change):
     path = root / PATH_OF_LIST_OF_DERIVED_NORMS
     lines = path.read_text().splitlines()
-    meta, entry = json.loads(lines[0]), json.loads(lines[1])
-    change(meta, entry)
-    path.write_text(json.dumps(meta) + "\n" + json.dumps(entry, ensure_ascii=False) + "\n")
+    header, entry = json.loads(lines[0]), json.loads(lines[1])
+    change(header, entry)
+    path.write_text(json.dumps(header) + "\n" + json.dumps(entry, ensure_ascii=False) + "\n")
 
 
 @pytest.mark.parametrize("change,subject,words", [
@@ -318,8 +326,8 @@ def entry_change(root, change):
     (lambda m, e: e.update(derived_norm_id="grammar:012"), "derived-norms.jsonl:2", "not a derived norm ID"),
     (lambda m, e: e.update(derived_norm_id="semantics:12"), "derived-norms.jsonl:2", "not a derived norm ID"),
     (lambda m, e: e.pop("path"), "derived-norms.jsonl:2", "exactly the fields"),
-    (lambda m, e: m.update(type="semantics"), "derived-norms.jsonl:1", "meta line"),
-    (lambda m, e: m.pop("kind"), "derived-norms.jsonl:1", "meta line"),
+    (lambda m, e: m.update(type="semantics"), "derived-norms.jsonl:1", "header line"),
+    (lambda m, e: m.pop("kind"), "derived-norms.jsonl:1", "header line"),
 ])
 def test_dgr20_a_list_that_does_not_check(tmp_path, monkeypatch, change, subject, words):
     no_commit_yet(tmp_path, monkeypatch)
@@ -422,7 +430,7 @@ def test_cdn8_seal_reads_the_list_before_the_run_at_head(committed):
     assert json.loads(text.splitlines()[0])["last_derived_norm_number"] == 42
 
 
-@pytest.mark.parametrize("data", [b"{bad\n", b'{"kind": "meta", "type": "grammar", "last_derived_norm_number": 41}\n\xff\n'])
+@pytest.mark.parametrize("data", [b"{bad\n", b'{"kind": "header", "type": "grammar", "last_derived_norm_number": 41}\n\xff\n'])
 def test_dgr20_seal_with_a_list_before_the_run_that_cannot_be_read(committed, data):
     root, p, _ = committed
     (root / PATH_OF_LIST_OF_DERIVED_NORMS).write_bytes(data)

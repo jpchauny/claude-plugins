@@ -1,6 +1,6 @@
 """Tests of use-cases/sync/scripts/plan.py.
 
-Spec: use-cases/sync/specs/sync.md (ORC-28, ORC-30, SNC-1). Each test names the clause
+Spec: use-cases/sync/specs/sync.md (ORC-28, ORC-30, SNC-1, SNC-2, SNC-3). Each test names the clause
 it checks. Run with:
 
     python3 -m unittest discover -s apps/indra-software-factory/modules/project-management/tests
@@ -236,6 +236,49 @@ class Plan(unittest.TestCase):
             self.assertEqual(got["permissions"]["deny"], ["Edit(//**/billing-acceptance/**)"])
             self.assertEqual(got["enabledPlugins"], data["enabledPlugins"])
             self.assertEqual(got["permissions"].get("ask"), data.get("permissions", {}).get("ask"))
+
+    def with_roles(self):
+        """The source with the orchestration repository and the tooling repository (ORC-20), each a clone."""
+        repos = [{"owner": "acme", "name": n, "layer": l, "path": n} for n, l in LAYERS]
+        repos += [{"owner": "acme", "name": "billing-orchestration", "role": "orchestration", "path": "billing-orchestration"},
+                  {"owner": "acme", "name": "billing-tooling", "role": "tooling", "path": "billing-tooling"}]
+        source = self.change_source(repos)
+        self.make_repo("billing-orchestration", "{}\n")
+        self.make_repo("billing-tooling", "{}\n")
+        return repos, source
+
+    def test_snc2_snc3_the_repositories_with_a_role_are_targets_of_project_json_only(self):
+        self.with_roles()
+        code, out = self.plan("billing-specs")
+        self.assertEqual(code, 0, out)
+        targets = {t["name"]: t for t in out["targets"]}
+        for name in ("acme/billing-orchestration", "acme/billing-tooling"):
+            self.assertEqual(targets[name]["state"], "differs", name)
+            self.assertNotIn("settings_state", targets[name], name)
+        self.assertEqual(targets["acme/billing-acceptance"]["settings_state"], "same")
+
+    def test_orc28_refused_in_a_repository_with_a_role(self):
+        self.with_roles()
+        for name in ("billing-orchestration", "billing-tooling"):
+            path = os.path.join(self.folder, name)
+            with open(os.path.join(self.folder, "billing-specs", "project.json"), encoding="utf-8") as f:
+                source = f.read()
+            with open(os.path.join(path, "project.json"), "w", encoding="utf-8") as f:
+                f.write(source)
+            git(path, "commit", "-q", "-am", "sync")
+            code, out = self.plan(name)
+            self.assertEqual(code, 1, name)
+            self.assertEqual(out["error"], "sync runs only in the repository of layer 1 (ORC-28)", name)
+
+    def test_snc3_a_source_whose_roles_do_not_have_the_form_of_orc_20(self):
+        base = [{"owner": "acme", "name": n, "layer": l, "path": n} for n, l in LAYERS]
+        tooling = {"owner": "acme", "name": "billing-tooling", "role": "tooling", "path": "billing-tooling"}
+        for extra in ([dict(tooling, layer=2)], [tooling, dict(tooling, name="other-tooling", path="other-tooling")],
+                      [dict(tooling, role="builder")]):
+            self.change_source(base + extra)
+            code, out = self.plan("billing-specs")
+            self.assertEqual(code, 1, extra)
+            self.assertEqual(out["error"], "project.json at HEAD does not have the form of ORC-20", extra)
 
 
 if __name__ == "__main__":

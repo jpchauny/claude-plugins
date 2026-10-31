@@ -23,10 +23,10 @@ sys.dont_write_bytecode = True
 
 from derived_norms import (  # noqa: E402
     CODE, GRAMMAR_CITATION_RE, GRAMMAR_REL, INLINE_CITATION_RE, INSTALLED_PLUGINS, ISSUE_RE,
-    LIST_OF_DERIVED_NORMS_FILE_NAME, MODULE_SCRIPT, NO_FORM_REASON, PLUGIN_NAME, PLUGIN_ROOT, InputError, body_bytes,
+    LIST_OF_DERIVED_NORMS_FILE_NAME, MODULE_SCRIPT, NO_FORM_REASON, PLUGIN_NAME, PLUGIN_ROOT, TYPES_OF_HEADER_LINE_OF_STATUS_FILE, InputError, body_bytes,
     bracket_pairs, build_parser, case_text, check_citation, check_generator, check_list_of_derived_norms, check_model,
     check_script, check_unique_issues, derived_norm, import_lark, info_string, load_jsonl, load_tree,
-    marketplace_commit, output_file_lines, parse_grammar, parse_program, plugin_version, read_code_of_the_script,
+    tooling_commit, output_file_lines, parse_grammar, parse_program, plugin_version, read_code_of_the_script,
     read_status, seal_derived_norms, sha256, stale, stale_script_citations, version_of_generator_in_status,
 )
 
@@ -35,7 +35,7 @@ STATUS_REL = "specs-derived/grammar/clean-language-code-examples-status.jsonl"
 TYPE_OF_DERIVED_NORMS = "grammar"
 PATH_OF_LIST_OF_DERIVED_NORMS = "specs-derived/grammar/" + LIST_OF_DERIVED_NORMS_FILE_NAME
 
-META_KEYS = ["type", "specs_commit", "generator", "model", "grammar_sha256", "derived_norms_sha256", "status_sha256"]
+HEADER_LINE_KEYS = ["type", "specs_commit", "generator", "model", "grammar_sha256", "derived_norms_sha256", "status_sha256"]
 FRAGMENT_KEYS = ["type", "id", "hash", "cases", "state", "reason", "issue"]
 STATES = ("derived", "pending")
 CASES = ("accept", "reject")
@@ -227,7 +227,7 @@ def try_parse(parser, indenter, text):
 def previous_status(root):
     """The lines of the status file of the previous run, or None when it is taken as absent.
 
-    It is absent when the file does not exist, or when its meta line has no
+    It is absent when the file does not exist, or when its header line has no
     field "generator", as the local skill /derive-grammar wrote it.
 
     Spec: DGR-12.
@@ -236,8 +236,8 @@ def previous_status(root):
     if not path.is_file():
         return None
     rows = load_jsonl(path, "status")
-    meta = next((r for r in rows if r.get("type") == "meta"), None)
-    if meta is not None and "generator" not in meta:
+    header = next((r for r in rows if r.get("type") in TYPES_OF_HEADER_LINE_OF_STATUS_FILE), None)
+    if header is not None and "generator" not in header:
         return None
     return rows
 
@@ -245,7 +245,7 @@ def previous_status(root):
 def worklist(root, plugin_root=None):
     """The items that a change calls for, one JSON object each.
 
-    A new version of the plugin (the meta line of the status file names
+    A new version of the plugin (the header line of the status file names
     another version of the generator, or none) makes every fragment with a
     status line "changed" and every statement an item "version" (NRM-7).
 
@@ -301,7 +301,7 @@ def worklist(root, plugin_root=None):
 
 
 def seal(root, model, plugin_root=None, installed=None):
-    """Write the list of derived norms, order the fragment lines as data/tree.jsonl and write the meta line first.
+    """Write the list of derived norms, order the fragment lines as data/tree.jsonl and write the header line first.
 
     model is the exact model ID the deriver runs as; seal records it as
     given, and check judges it. A missing status file is taken as one with no
@@ -321,24 +321,24 @@ def seal(root, model, plugin_root=None, installed=None):
         for number, line, value, error in read_status(status_path):
             if value is None:
                 raise InputError(f"status {status_path}:{number}: {error}")
-            if value.get("type") != "meta":
+            if value.get("type") not in TYPES_OF_HEADER_LINE_OF_STATUS_FILE:
                 fragments.append((line, value))
     end = len(tree.order)
     fragments.sort(key=lambda f: tree.order.get(f[1].get("id"), end))
     body = "".join(line + "\n" for line, _ in fragments)
     grammar = grammar_path.read_bytes()
     text_of_the_list_of_derived_norms = seal_derived_norms(root, PATH_OF_LIST_OF_DERIVED_NORMS, TYPE_OF_DERIVED_NORMS, grammar_derived_norms(grammar))
-    meta = {
-        "type": "meta",
+    header = {
+        "type": "header",
         "specs_commit": tree.specs_commit,
         "generator": {"plugin": PLUGIN_NAME, "version": version,
-                      "marketplace_commit": marketplace_commit(plugin_root, installed)},
+                      "tooling_commit": tooling_commit(plugin_root, installed)},
         "model": model,
         "grammar_sha256": sha256(grammar),
         "derived_norms_sha256": sha256(text_of_the_list_of_derived_norms.encode("utf-8")),
         "status_sha256": sha256(body.encode("utf-8")),
     }
-    head = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
+    head = json.dumps(header, ensure_ascii=False, separators=(",", ":"))
     status_path.parent.mkdir(parents=True, exist_ok=True)
     (root / PATH_OF_LIST_OF_DERIVED_NORMS).write_bytes(text_of_the_list_of_derived_norms.encode("utf-8"))
     status_path.write_text(head + "\n" + body, encoding="utf-8")
@@ -365,9 +365,9 @@ def check_status(tree, status_path, rows):
         if value is None:
             problems.append(("status", where, error))
             continue
-        if value.get("type") == "meta":
+        if value.get("type") in TYPES_OF_HEADER_LINE_OF_STATUS_FILE:
             if index > 0:
-                problems.append(("meta", where, "a meta line that is not the first line"))
+                problems.append(("header", where, "a header line that is not the first line"))
             continue
         if list(value) != FRAGMENT_KEYS or value.get("type") != "fragment":
             missing = [k for k in FRAGMENT_KEYS if k not in value]
@@ -432,32 +432,32 @@ def check_status(tree, status_path, rows):
     return problems, by_id
 
 
-def check_meta(tree, root, status_path, rows, version):
-    """The meta line: first, its seven fields, the specs commit, the generator, the model and the hashes.
+def check_header_line(tree, root, status_path, rows, version):
+    """The header line: first, its seven fields, the specs commit, the generator, the model and the hashes.
 
     Spec: DGR-4, DGR-13, DGR-17.
     """
     where = str(status_path)
     if not rows:
-        return [("meta", where, "the status file has no meta line")]
-    number, _, meta, _ = rows[0]
-    if meta is None:
+        return [("header", where, "the status file has no header line")]
+    number, _, header, _ = rows[0]
+    if header is None:
         return []  # check_status reports a first line that is not JSON
-    if meta.get("type") != "meta":
-        return [("meta", f"{where}:{number}", "the first line is not the meta line")]
+    if header.get("type") != "header":
+        return [("header", f"{where}:{number}", "the first line is not the header line")]
     problems = []
-    if list(meta) != META_KEYS:
-        problems.append(("meta", f"{where}:{number}", f"the meta line does not have exactly the fields {', '.join(META_KEYS)}, in that order"))
-    if meta.get("specs_commit") != tree.specs_commit:
-        problems.append(("meta", "specs_commit", f"{meta.get('specs_commit')}; data/tree.jsonl has {tree.specs_commit}"))
-    problems += check_generator(meta, version)
-    problems += check_model(meta)
-    if meta.get("grammar_sha256") != sha256((root / GRAMMAR_REL).read_bytes()):
-        problems.append(("meta", "grammar_sha256", "the grammar does not match the hash of its meta line: changed after the last seal"))
-    if meta.get("derived_norms_sha256") != sha256((root / PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()):
-        problems.append(("meta", "derived_norms_sha256", "the list of derived norms does not match the hash of its meta line: changed after the last seal"))
-    if meta.get("status_sha256") != sha256(body_bytes(status_path.read_text(encoding="utf-8"))):
-        problems.append(("meta", "status_sha256", "the status file does not match the hash of its meta line: changed after the last seal"))
+    if list(header) != HEADER_LINE_KEYS:
+        problems.append(("header", f"{where}:{number}", f"the header line does not have exactly the fields {', '.join(HEADER_LINE_KEYS)}, in that order"))
+    if header.get("specs_commit") != tree.specs_commit:
+        problems.append(("header", "specs_commit", f"{header.get('specs_commit')}; data/tree.jsonl has {tree.specs_commit}"))
+    problems += check_generator(header, version)
+    problems += check_model(header)
+    if header.get("grammar_sha256") != sha256((root / GRAMMAR_REL).read_bytes()):
+        problems.append(("header", "grammar_sha256", "the grammar does not match the hash of its header line: changed after the last seal"))
+    if header.get("derived_norms_sha256") != sha256((root / PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()):
+        problems.append(("header", "derived_norms_sha256", "the list of derived norms does not match the hash of its header line: changed after the last seal"))
+    if header.get("status_sha256") != sha256(body_bytes(status_path.read_text(encoding="utf-8"))):
+        problems.append(("header", "status_sha256", "the status file does not match the hash of its header line: changed after the last seal"))
     return problems
 
 
@@ -489,7 +489,7 @@ def check(root, code_of_the_script, plugin_root=None):
 
     code_of_the_script: [(path of the file in the plugin, text)], as
     read_code_of_the_script gives it. With no fragment in data/tree.jsonl, it
-    does not build the grammar and checks only the meta line and the
+    does not build the grammar and checks only the header line and the
     citations of the code of the script.
 
     Spec: DGR-13.
@@ -509,11 +509,11 @@ def check(root, code_of_the_script, plugin_root=None):
     parsed = {"accept": [0, 0], "reject": [0, 0]}
     if not tree.fragments:
         problems = [("status", f"{status_path}:{n}", e) for n, _, v, e in rows[:1] if v is None]
-        problems += check_meta(tree, root, status_path, rows, version) + list_problems + script_problems
+        problems += check_header_line(tree, root, status_path, rows, version) + list_problems + script_problems
         return problems, {"states": counts, "parsed": parsed}
     grammar = grammar_path.read_text(encoding="utf-8")
     problems = check_layout(grammar_path.parent)
-    problems += check_meta(tree, root, status_path, rows, version)
+    problems += check_header_line(tree, root, status_path, rows, version)
     status_problems, by_id = check_status(tree, status_path, rows)
     problems += status_problems
     statements, grammar_problems = parse_grammar(grammar)

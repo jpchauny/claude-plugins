@@ -12,7 +12,7 @@ and the interface of a derived-norms generator, NRM-1 to NRM-15, of the plugin
 its `SKILL.md` is `${CLAUDE_PLUGIN_ROOT}/use-cases/derive-grammar/SKILL.md`.
 
 Two parts. The script does what is deterministic: the work list, the case of
-each fragment, its parse tree, the fixed files, the meta line and the checks,
+each fragment, its parse tree, the fixed files, the header line and the checks,
 which build the Lake project and run every fragment. You, the deriver, write
 the Lean code and the status lines. The script never writes a declaration,
 never decides a state, and knows nothing of Clean.
@@ -47,7 +47,7 @@ of derived norms and one status file in the semantics folder)):
   `Clean/Evaluation.lean`) and the status lines of
   `clean-language-code-examples-status.jsonl`; `seal` writes the fixed files
   (`lakefile.toml`, `lean-toolchain`, `Fragment.lean`, `Main.lean`), the
-  list of derived norms `derived-norms.jsonl` and the meta line. Never edit
+  list of derived norms `derived-norms.jsonl` and the header line. Never edit
   them. Never run `lake` in the semantics folder: its
   `.lake/` would break the layout; `check` builds in a temporary copy.
 - Outside the repository: your work files in the scratchpad, and the issues
@@ -85,7 +85,7 @@ Exit 2: show the message and stop; when it names the grammar,
   `declaration` (its key, `<path>:<name>`), `old_hash`, `new_hash` (null when
   retired or gone) and `citation`.
 - `version`: a declaration of the Lean code when this plugin is a new version
-  (the meta line of the status file names another `version` in `generator`,
+  (the header line of the status file names another `version` in `generator`,
   or none), with `kind`, `declaration` (its key), `old_version` and
   `new_version`. Then every declaration is a `version` item and every
   semantic fragment with a status line is `changed`: a new version derives
@@ -207,7 +207,7 @@ no decision that the norms do not make)):
 
 ### new or changed
 
-Decide the state (DSM-5 (After the meta line, the status file has one line
+Decide the state (DSM-5 (After the header line, the status file has one line
 for each semantic fragment, and no other)). Exactly one of:
 
 - `cases` is `[]`: `pending`, reason exactly
@@ -319,7 +319,7 @@ uv run --with "lark[interegular]" python3 -I -B "$S" check
 ```
 
 `seal` writes the fixed files and the list of derived norms, orders the
-status lines as `data/tree.jsonl` and writes the meta line (DSM-4 (The first
+status lines as `data/tree.jsonl` and writes the header line (DSM-4 (The first
 line of the status file records the specs commit, the generator, the model
 and the hashes of the output (NRM-5))), whose `derived_norms_sha256` comes
 after `evaluation_sha256` and before `status_sha256`. `--model` is required:
@@ -358,9 +358,9 @@ problem gives the first error of Lean: fix the code. A `run` problem names
 the fragment and what it gave: fix the semantics from the norms, or, when no
 norm says what it should give, mark the fragment a gap.
 
-- `fixed` or `meta ... _sha256`: a file changed after the last `seal`: seal
+- `fixed` or `header ... _sha256`: a file changed after the last `seal`: seal
   again once your change is done.
-- `meta` `generator` or `model`: seal again with your exact model ID.
+- `header` `generator` or `model`: seal again with your exact model ID.
 - `derived-norms`: the list of derived norms does not match the Lean code, or
   gives a derived norm ID again or to another declaration (DSM-18). Never
   edit the list: seal again. If it stays after a `seal`, report it in the end
@@ -482,8 +482,8 @@ the last line `Found while checking the Lean semantics of Clean
 End with (DSM-15 (The use case ends by showing what it did, the issues it
 opened, and the result of the check)):
 
-- The specs commit, the generator (plugin, version, marketplace commit) and
-  the model, from the meta line.
+- The specs commit, the generator (plugin, version, tooling commit) and
+  the model, from the header line.
 - The count of fragments by state; with none, that layer 2 holds no
   semantic fragment yet.
 - The items of the work list, by norm ID or key, and what was done with each.

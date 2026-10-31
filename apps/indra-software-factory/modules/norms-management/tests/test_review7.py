@@ -293,11 +293,11 @@ def test_a_node_of_a_renamed_file_has_not_moved_but_its_entry_shows_both_paths_r
     assert files["SPP"].moved  # a file node moves when its path changes
 
 
-# --- what the meta line holds -------------------------------------------------
+# --- what the header line holds -------------------------------------------------
 
 
 def test_the_meta_line_holds_the_full_sha_and_the_package_version_r61(tmp_path: Path) -> None:
-    """The meta line, the report's first-run line, and another name of the commit is a rebuild.
+    """The header line, the report's first-run line, and another name of the commit is a rebuild.
 
     Spec: R60, R61, R63
     """
@@ -317,7 +317,7 @@ def test_the_meta_line_holds_the_full_sha_and_the_package_version_r61(tmp_path: 
 
 
 def test_a_short_sha_in_the_meta_line_is_not_a_rebuild_r60(tmp_path: Path) -> None:
-    """A short SHA in the meta line is not a rebuild, though verify resolves it.
+    """A short SHA in the header line is not a rebuild, though verify resolves it.
 
     Spec: R60, R61, R64
     """

@@ -11,7 +11,7 @@ and the interface of a derived-norms generator, NRM-1 to NRM-15, of the plugin
 `norms-management`. Each step below names the rule it follows.
 
 Two parts. The script does what is deterministic: the work list, the case of
-each fragment, the list of derived norms, the meta line and the checks. You, the deriver, write the
+each fragment, the list of derived norms, the header line and the checks. You, the deriver, write the
 statements of the grammar and the status lines. The script never writes a
 statement and never decides a state.
 
@@ -52,7 +52,7 @@ specs-derived/grammar/)):
   `jpchauny/claude-plugins`, the same for each stale cited norm of the script
   (DGR-18). Nothing else goes in `specs-derived/grammar/`, besides the list
   of derived norms that `seal` writes.
-- Never write `data/` or `specs-repo-annotated/`. Never edit the meta line
+- Never write `data/` or `specs-repo-annotated/`. Never edit the header line
   of the status file, nor `specs-derived/grammar/derived-norms.jsonl` (the
   list of derived norms): `seal` writes both (DGR-20 (Each statement of the
   grammar is one derived norm, which the list of derived norms names by its
@@ -95,7 +95,7 @@ Exit 2: show the message and stop. Otherwise one JSON line per item
   `statement` (its key), `old_hash`, `new_hash` (null when the norm is
   retired or gone) and `citation` (`<norm ID>@<norm hash>`).
 - `version`: a statement of the grammar when this plugin is a new version
-  (the meta line of the status file names another `version` in `generator`,
+  (the header line of the status file names another `version` in `generator`,
   or none), with exactly `kind`, `statement` (its key), `old_version` and
   `new_version`. Then every statement is a `version` item and every fragment
   with a status line is `changed`: a new version derives the whole grammar
@@ -124,7 +124,7 @@ Then, before you change anything:
   ```
 
   With 0, layer 2 holds no Clean example yet (DGR-13, "No fragment yet"):
-  the grammar holds no statement and the status file only its meta line.
+  the grammar holds no statement and the status file only its header line.
   Work through the `gone` items (if any) until both are so, then go to
   step 3; the end report says that layer 2 holds no Clean example yet.
 
@@ -188,7 +188,7 @@ context small. For each file:
 
 ### new or changed
 
-Decide the state of the fragment (DGR-5 (After the meta line, the status
+Decide the state of the fragment (DGR-5 (After the header line, the status
 file has one line for each fragment, and no other), DGR-6). A fragment is
 `derived` or `pending`, nothing else:
 
@@ -331,7 +331,7 @@ uv run --with "lark[interegular]" python3 -I -B "$S" seal --model <your model ID
 uv run --with "lark[interegular]" python3 -I -B "$S" check
 ```
 
-`seal` orders the status lines as `data/tree.jsonl` and writes the meta
+`seal` orders the status lines as `data/tree.jsonl` and writes the header
 line (DGR-4 (The first line of the status file records the specs commit, the
 generator, the model and the hashes of the output (NRM-5)), DGR-17 (The
 grammar, the list of derived norms and the status file change only through a
@@ -339,10 +339,10 @@ run of the use case)),
 such as
 
 ```
-{"type":"meta","specs_commit":"3a4ba07351c7f3f0f5f7e9a86e583263191ba15e","generator":{"plugin":"clean-derived-norms","version":"0.1.0","marketplace_commit":"<sha>"},"model":"claude-opus-5-5","grammar_sha256":"<sha256>","derived_norms_sha256":"<sha256>","status_sha256":"<sha256>"}
+{"type":"header","specs_commit":"3a4ba07351c7f3f0f5f7e9a86e583263191ba15e","generator":{"plugin":"clean-derived-norms","version":"0.1.0","tooling_commit":"<sha>"},"model":"claude-opus-5-5","grammar_sha256":"<sha256>","derived_norms_sha256":"<sha256>","status_sha256":"<sha256>"}
 ```
 
-Before the meta line, `seal` writes the list of derived norms (DGR-20): one
+Before the header line, `seal` writes the list of derived norms (DGR-20): one
 derived norm per statement of the grammar, named by its key (a tab or other
 control character of the key becomes a space in the name, CDN-10 (The name of a derived norm in the list of derived norms is the key of
 its item, with each character that a name of NRM-12 may not hold replaced by
@@ -362,7 +362,7 @@ context, such as `--model claude-opus-5-5`; never a family name such as
 `Opus`, and never a guess. Without `--model`, `seal` exits with 2 and
 writes nothing. The script computes every other value itself: the specs
 commit from `data/tree.jsonl`, the version from the plugin's
-`.claude-plugin/plugin.json`, the marketplace commit from
+`.claude-plugin/plugin.json`, the tooling commit from
 `~/.claude/plugins/installed_plugins.json` or the checkout that holds the
 plugin, or `none`. Exit 2 (a missing or malformed input, a list before the
 run that it cannot read, or git that cannot give it (CDN-9), or a plugin with no version): show the message, it
@@ -378,7 +378,7 @@ the last line
 counts as a failure (NRM-6))). Exit 0: all passes; 1: problems; 2: an input
 is missing (the list of derived norms among them) or Lark cannot be loaded.
 With no fragment in the tree, it does not build the grammar and checks only
-the meta line, the list of derived norms and the citations of the script.
+the header line, the list of derived norms and the citations of the script.
 
 Fix the problems your statements caused (`build`, `citation`, `usage`,
 `source`, `brackets`, `names`, `accept`, `reject`, `cited`, `statement`,
@@ -387,11 +387,11 @@ and seal again.
 
 - `opening line`: a fragment whose opening line is none of the forms of
   CEX-4 is not `pending`: mark it pending, as "new or changed" says.
-- `meta` `generator`: the meta line was sealed by another plugin or
+- `header` `generator`: the header line was sealed by another plugin or
   version, or by the local skill (no `generator`): seal again.
-- `meta` `model`: no model, or one not of the form of a model ID: seal
+- `header` `model`: no model, or one not of the form of a model ID: seal
   again with your exact model ID. `check` judges only the form.
-- `meta` `grammar_sha256`, `derived_norms_sha256` or `status_sha256`: a file
+- `header` `grammar_sha256`, `derived_norms_sha256` or `status_sha256`: a file
   changed after the last `seal`: seal again once your change is done.
 - `derived-norms`: the list of derived norms does not match the grammar, or
   gives a derived norm ID again or to another statement (DGR-20). Never edit
@@ -474,7 +474,7 @@ PY
 | `<file>` | `file`: its path under `specs/` of the foundation, such as `language/syntax/expressions.md`. The template always writes `specs/<file>`. |
 | `<section>`, `<heading>` | `section`: the heading of the nearest section around it. |
 | `<line>` | `line`: the line of its opening fence in the foundation file at the foundation commit, from its `start` and the `insertions` of its file. |
-| `<sha>` of foundation | `foundation`: the first 8 hex digits of `specs_commit` (`foundation_commit` in an older tree) in the meta line of `data/tree.jsonl`. |
+| `<sha>` of foundation | `foundation`: the first 8 hex digits of `specs_commit` (`foundation_commit` in an older tree) in the header line of `data/tree.jsonl`. |
 | `<sha>` of norms | `norms`: `git rev-parse --short=8 HEAD` of the repository of layer 2. |
 | `<ID> (<title>) @<hash>, ...` in Norms involved | `norms_involved`: one entry per norm cited in the reason, `<norm ID> (<title of the norm>) @<norm hash>`; the title is its heading or, without one, its first words as the script cuts them (`first_words`). Add any other norm you read that leaves the gap open. |
 | `<the fragment, as it is>` | The lines printed after the JSON line, as they are: its opening line, its code and its closing fence. |
@@ -845,8 +845,8 @@ step 4, with `"kind":"script"` and the norm ID.
 End with (DGR-15 (The use case ends by showing what it did, the issues it
 opened, and the result of the check)):
 
-- The specs commit, the generator (plugin, version and marketplace commit)
-  and the model, from the meta line.
+- The specs commit, the generator (plugin, version and tooling commit)
+  and the model, from the header line.
 - The count of fragments by state; with none, that layer 2 holds no Clean
   example yet.
 - The items of the work list, by norm ID or key, and what was done with each.

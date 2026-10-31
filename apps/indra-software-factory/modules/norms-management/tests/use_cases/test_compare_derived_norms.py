@@ -34,7 +34,7 @@ def git(norms_repository: Path, *args: str) -> str:
 
 
 def derived_norm_list(derived_norm_type: str, last: int, derived_norm_fingerprints: dict[str, str]) -> str:
-    lines = [{"kind": "meta", "type": derived_norm_type, "last_derived_norm_number": last}]
+    lines = [{"kind": "header", "type": derived_norm_type, "last_derived_norm_number": last}]
     for line_number, (derived_norm_id, derived_norm_fingerprint) in enumerate(derived_norm_fingerprints.items(), start=1):
         lines.append({"kind": "derived_norm", "derived_norm_id": derived_norm_id, "derived_norm_fingerprint": derived_norm_fingerprint,
                       "name": f"rule{line_number}", "path": f"specs-derived/{derived_norm_type}/out.txt",
@@ -246,46 +246,46 @@ def valid_line(**fields) -> str:
     return json.dumps(line) + "\n"
 
 
-META = '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 3}\n'
+HEADER = '{"kind": "header", "type": "grammar", "last_derived_norm_number": 3}\n'
 
 
 @pytest.mark.parametrize("text, reason", [
-    ("", "no meta line"),
+    ("", "no header line"),
     ("not json\n", "line 1: not a JSON object"),
-    ("﻿" + META, "a byte order mark"),
-    (META.rstrip("\n"), "its last line is not followed by a line feed"),
-    (META.replace("\n", "\r\n"), "a carriage return"),
-    (META + "\n", "line 2: not a JSON object"),
+    ("﻿" + HEADER, "a byte order mark"),
+    (HEADER.rstrip("\n"), "its last line is not followed by a line feed"),
+    (HEADER.replace("\n", "\r\n"), "a carriage return"),
+    (HEADER + "\n", "line 2: not a JSON object"),
     ('{"kind": "derived_norm"}\n', "line 1: not the fields kind, type, last_derived_norm_number, in this order"),
-    ('{"type": "grammar", "kind": "meta", "last_derived_norm_number": 3}\n', "line 1: not the fields kind, type, last_derived_norm_number, in this order"),
-    (META.replace('"meta"', '"other"'), "line 1: not the meta line"),
-    (META.replace('"grammar"', '"semantics"'), "line 1: its type is not grammar"),
-    (META.replace("3}", "-1}"), "line 1: last_derived_norm_number is not an integer, 0 or greater"),
-    (META + '{"kind": "derived_norm", "derived_norm_id": "grammar:1"}\n', "line 2: not the fields kind"),
-    (META + valid_line(kind="meta"), "line 2: kind is not derived_norm"),
-    (META + valid_line(derived_norm_id="semantics:1"), "line 2: derived_norm_id is not a derived norm ID of grammar (NRM-13)"),
-    (META + valid_line(derived_norm_id="grammar:01"), "line 2: derived_norm_id is not a derived norm ID of grammar (NRM-13)"),
-    (META + valid_line() + valid_line(first_line=3, last_line=3), "line 3: grammar:1 is not after the derived norm ID before it"),
-    (META + valid_line(derived_norm_id="grammar:4"), "line 2: grammar:4 is after last_derived_norm_number"),
-    (META + valid_line(derived_norm_fingerprint="ABCDEF12"), "line 2: derived_norm_fingerprint is not 8 lower-case hex digits (NRM-14)"),
-    (META + valid_line(name=" \t"), "line 2: name is not a name of NRM-12"),
-    (META + valid_line(name="a b"), "line 2: name is not a name of NRM-12"),
-    (META + valid_line(path="specs-derived/grammar/derived-norms.jsonl"), "line 2: path is not a file of the output of grammar"),
-    (META + valid_line(path="specs-derived/grammar/../x"), "line 2: path is not a file of the output of grammar"),
-    (META + valid_line(path="specs-derived/other/x"), "line 2: path is not a file of the output of grammar"),
-    (META + valid_line(first_line=3, last_line=2), "line 2: first_line and last_line are not line numbers, the first not after the last"),
-    (META + valid_line(first_line=True), "line 2: first_line and last_line are not line numbers, the first not after the last"),
-    (META + valid_line(cited_norms=[]), "line 2: cited_norms is not a list of at least one norm"),
-    (META + valid_line(cited_norms={}), "line 2: cited_norms is not a list of at least one norm"),
-    (META + valid_line(cited_norms={"norm_id": "EXP-11", "norm_hash": "e105eaa8"}),
+    ('{"type": "grammar", "kind": "header", "last_derived_norm_number": 3}\n', "line 1: not the fields kind, type, last_derived_norm_number, in this order"),
+    (HEADER.replace('"header"', '"other"'), "line 1: not the header line"),
+    (HEADER.replace('"grammar"', '"semantics"'), "line 1: its type is not grammar"),
+    (HEADER.replace("3}", "-1}"), "line 1: last_derived_norm_number is not an integer, 0 or greater"),
+    (HEADER + '{"kind": "derived_norm", "derived_norm_id": "grammar:1"}\n', "line 2: not the fields kind"),
+    (HEADER + valid_line(kind="header"), "line 2: kind is not derived_norm"),
+    (HEADER + valid_line(derived_norm_id="semantics:1"), "line 2: derived_norm_id is not a derived norm ID of grammar (NRM-13)"),
+    (HEADER + valid_line(derived_norm_id="grammar:01"), "line 2: derived_norm_id is not a derived norm ID of grammar (NRM-13)"),
+    (HEADER + valid_line() + valid_line(first_line=3, last_line=3), "line 3: grammar:1 is not after the derived norm ID before it"),
+    (HEADER + valid_line(derived_norm_id="grammar:4"), "line 2: grammar:4 is after last_derived_norm_number"),
+    (HEADER + valid_line(derived_norm_fingerprint="ABCDEF12"), "line 2: derived_norm_fingerprint is not 8 lower-case hex digits (NRM-14)"),
+    (HEADER + valid_line(name=" \t"), "line 2: name is not a name of NRM-12"),
+    (HEADER + valid_line(name="a b"), "line 2: name is not a name of NRM-12"),
+    (HEADER + valid_line(path="specs-derived/grammar/derived-norms.jsonl"), "line 2: path is not a file of the output of grammar"),
+    (HEADER + valid_line(path="specs-derived/grammar/../x"), "line 2: path is not a file of the output of grammar"),
+    (HEADER + valid_line(path="specs-derived/other/x"), "line 2: path is not a file of the output of grammar"),
+    (HEADER + valid_line(first_line=3, last_line=2), "line 2: first_line and last_line are not line numbers, the first not after the last"),
+    (HEADER + valid_line(first_line=True), "line 2: first_line and last_line are not line numbers, the first not after the last"),
+    (HEADER + valid_line(cited_norms=[]), "line 2: cited_norms is not a list of at least one norm"),
+    (HEADER + valid_line(cited_norms={}), "line 2: cited_norms is not a list of at least one norm"),
+    (HEADER + valid_line(cited_norms={"norm_id": "EXP-11", "norm_hash": "e105eaa8"}),
      "line 2: cited_norms is not a list of at least one norm"),
-    (META + valid_line(cited_norms=[{"norm_id": "EX-1", "norm_hash": "e105eaa8"}]), "line 2: a cited norm is not a norm ID and its norm hash"),
-    (META + valid_line(cited_norms=[{"norm_hash": "e105eaa8", "norm_id": "EXP-1"}]), "line 2: not the fields norm_id, norm_hash, in this order"),
-    (META + valid_line(cited_norms=[{"norm_id": "EXP-8", "norm_hash": "a0b54578"}, {"norm_id": "EXP-11", "norm_hash": "e105eaa8"}]),
+    (HEADER + valid_line(cited_norms=[{"norm_id": "EX-1", "norm_hash": "e105eaa8"}]), "line 2: a cited norm is not a norm ID and its norm hash"),
+    (HEADER + valid_line(cited_norms=[{"norm_hash": "e105eaa8", "norm_id": "EXP-1"}]), "line 2: not the fields norm_id, norm_hash, in this order"),
+    (HEADER + valid_line(cited_norms=[{"norm_id": "EXP-8", "norm_hash": "a0b54578"}, {"norm_id": "EXP-11", "norm_hash": "e105eaa8"}]),
      "line 2: cited_norms is not in the order of the norm IDs, each once"),
-    (META + valid_line() + valid_line(derived_norm_id="grammar:2", first_line=2, last_line=4),
+    (HEADER + valid_line() + valid_line(derived_norm_id="grammar:2", first_line=2, last_line=4),
      "lines 2 and 3: two derived norms share a line"),
-    (META + valid_line(first_line=5, last_line=6) + valid_line(derived_norm_id="grammar:2", first_line=1, last_line=5),
+    (HEADER + valid_line(first_line=5, last_line=6) + valid_line(derived_norm_id="grammar:2", first_line=1, last_line=5),
      "lines 2 and 3: two derived norms share a line"),
 ])
 def test_a_list_at_the_commit_that_does_not_meet_nrm_12_cannot_be_read(both: Path, text: str, reason: str) -> None:
@@ -303,7 +303,7 @@ def test_a_list_at_the_commit_that_does_not_meet_nrm_12_cannot_be_read(both: Pat
 def test_a_list_at_the_commit_that_is_not_utf_8_cannot_be_read(both: Path) -> None:
     """NRM-11, NRM-12: a list whose bytes are not UTF-8 cannot be read at the commit of layer 2 of the run."""
     line = valid_line(name="caf\u00e9").replace("\\u00e9", "\u00e9")
-    (both / grammar_path()).write_bytes(META.encode("utf-8") + line.encode("latin-1"))
+    (both / grammar_path()).write_bytes(HEADER.encode("utf-8") + line.encode("latin-1"))
     after = commit(both)
     result = run(both, after)
     assert result.returncode == 0, result.stderr
@@ -318,7 +318,7 @@ def test_a_list_at_the_commit_with_a_lone_surrogate_cannot_be_read(both: Path, f
     value = "power\ud800" if field == "name" else "specs-derived/grammar/clean\ud800.lark"
     line = valid_line(**{field: value})
     assert "\\ud800" in line
-    write(both, grammar_path(), META + line)
+    write(both, grammar_path(), HEADER + line)
     after = commit(both)
     result = run(both, after)
     reason = "name is not a name of NRM-12" if field == "name" else "path is not a file of the output of grammar"
@@ -329,7 +329,7 @@ def test_a_list_at_the_commit_with_a_lone_surrogate_cannot_be_read(both: Path, f
 def test_the_binding_example_of_nrm_12_can_be_read(both: Path) -> None:
     """NRM-12: the list of its binding example meets it."""
     write(both, grammar_path(),
-          '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 41}\n'
+          '{"kind": "header", "type": "grammar", "last_derived_norm_number": 41}\n'
           '{"kind": "derived_norm", "derived_norm_id": "grammar:12", "derived_norm_fingerprint": "0ced57c3", "name": "power", '
           '"path": "specs-derived/grammar/clean.lark", "first_line": 40, "last_line": 42, "cited_norms": '
           '[{"norm_id": "EXP-11", "norm_hash": "e105eaa8"}, {"norm_id": "EXP-8", "norm_hash": "a0b54578"}]}\n')
@@ -337,12 +337,19 @@ def test_the_binding_example_of_nrm_12_can_be_read(both: Path) -> None:
     assert result.stdout.splitlines()[:2] == ["grammar: 1 new, 0 changed, 0 gone", "  new: grammar:12"]
 
 
+def test_a_list_written_before_the_header_line_was_named_so_can_be_read(both: Path) -> None:
+    """NRM-12: a header line of kind "meta", written before the header line was named so, is read as "header"."""
+    write(both, grammar_path(), derived_norm_list("grammar", 1, {"grammar:1": "0ced57c3"}).replace('"header"', '"meta"'))
+    result = run(both, commit(both))
+    assert result.stdout.splitlines()[:2] == ["grammar: 1 new, 0 changed, 0 gone", "  new: grammar:1"]
+
+
 def test_the_binding_example_of_a_derived_norm_behind_its_norms(both: Path) -> None:
     """NRM-11 rules 5 and 7, ORC-10: the derived norm grammar:12 of NRM-12 cites EXP-11@e105eaa8 while the norm hash of
     EXP-11 in data/tree.jsonl of the same commit is 5a627175: the list cannot be read and the run stops."""
     write_tree(both, {"EXP-11": "5a627175", "EXP-8": "a0b54578"})
     write(both, grammar_path(),
-          '{"kind": "meta", "type": "grammar", "last_derived_norm_number": 41}\n'
+          '{"kind": "header", "type": "grammar", "last_derived_norm_number": 41}\n'
           '{"kind": "derived_norm", "derived_norm_id": "grammar:12", "derived_norm_fingerprint": "0ced57c3", "name": "power", '
           '"path": "specs-derived/grammar/clean.lark", "first_line": 40, "last_line": 42, "cited_norms": '
           '[{"norm_id": "EXP-11", "norm_hash": "e105eaa8"}, {"norm_id": "EXP-8", "norm_hash": "a0b54578"}]}\n')
@@ -406,7 +413,7 @@ def test_a_norm_the_tree_does_not_hold_comes_before_an_old_norm_hash(both: Path)
     """NRM-11 rule 7: case 2 of the check against data/tree.jsonl, over the whole list, before case 3."""
     write_tree(both, {"EXP-11": "5a627175"})
     write(both, grammar_path(),
-          META + valid_line()
+          HEADER + valid_line()
           + valid_line(derived_norm_id="grammar:2", first_line=3, last_line=4,
                        cited_norms=[{"norm_id": "EXP-8", "norm_hash": "a0b54578"}]))
     after = commit(both)

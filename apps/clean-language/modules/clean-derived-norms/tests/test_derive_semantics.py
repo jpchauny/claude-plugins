@@ -198,7 +198,7 @@ def write_lean(root, code):
 def write_status(root, lines):
     path = root / ds.STATUS_REL
     path.parent.mkdir(parents=True, exist_ok=True)
-    head = json.dumps({"type": "meta"}) + "\n"
+    head = json.dumps({"type": "header"}) + "\n"
     path.write_text(head + "".join(json.dumps(l, ensure_ascii=False, separators=(",", ":")) + "\n" for l in lines))
 
 
@@ -426,7 +426,7 @@ def test_dsm3_a_fixed_file_changed_by_hand(repo, monkeypatch):
     (root / ds.FOLDER_REL / "Fragment.lean").write_text("changed\n")
     found = names(run_check(root)[0])
     assert ("fixed", "Fragment.lean") in found
-    assert ("meta", "fragment_sha256") in found
+    assert ("header", "fragment_sha256") in found
 
 
 # ------------------------------------------------------------------ DSM-4
@@ -435,17 +435,17 @@ def test_dsm3_a_fixed_file_changed_by_hand(repo, monkeypatch):
 def test_dsm4_the_meta_line(repo):
     root, _ = repo
     lines = (root / ds.STATUS_REL).read_text().split("\n")
-    meta = json.loads(lines[0])
-    assert list(meta) == ["type", "specs_commit", "generator", "model", "lakefile_sha256", "lean_toolchain_sha256",
+    header = json.loads(lines[0])
+    assert list(header) == ["type", "specs_commit", "generator", "model", "lakefile_sha256", "lean_toolchain_sha256",
                           "fragment_sha256", "main_sha256", "clean_sha256", "ast_sha256", "syntax_sha256",
                           "typing_sha256", "evaluation_sha256", "derived_norms_sha256", "status_sha256"]
-    assert meta["specs_commit"] == SPECS and meta["model"] == MODEL
-    assert meta["generator"] == {"plugin": "clean-derived-norms", "version": VERSION, "marketplace_commit": "none"}
+    assert header["specs_commit"] == SPECS and header["model"] == MODEL
+    assert header["generator"] == {"plugin": "clean-derived-norms", "version": VERSION, "tooling_commit": "none"}
     folder = root / ds.FOLDER_REL
-    assert meta["typing_sha256"] == hashlib.sha256((folder / "Clean/Typing.lean").read_bytes()).hexdigest()
-    assert meta["derived_norms_sha256"] == hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
-    assert meta["status_sha256"] == hashlib.sha256("\n".join(lines[1:]).encode()).hexdigest()
-    assert lines[0] == json.dumps(meta, separators=(",", ":"))
+    assert header["typing_sha256"] == hashlib.sha256((folder / "Clean/Typing.lean").read_bytes()).hexdigest()
+    assert header["derived_norms_sha256"] == hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
+    assert header["status_sha256"] == hashlib.sha256("\n".join(lines[1:]).encode()).hexdigest()
+    assert lines[0] == json.dumps(header, separators=(",", ":"))
 
 
 def test_dsm4_seal_without_model_exits_2_and_writes_nothing(repo, monkeypatch):
@@ -803,15 +803,15 @@ def test_dsm12_exit_status_2(tmp_path, monkeypatch):
 
 
 def set_version_in_status(root, version):
-    """Write another version of the generator in the meta line of the status file, or none when version is None."""
+    """Write another version of the generator in the header line of the status file, or none when version is None."""
     path = root / ds.STATUS_REL
     head, _, body = path.read_text().partition("\n")
-    meta = json.loads(head)
+    header = json.loads(head)
     if version is None:
-        meta["generator"].pop("version")
+        header["generator"].pop("version")
     else:
-        meta["generator"]["version"] = version
-    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+        header["generator"]["version"] = version
+    path.write_text(json.dumps(header, separators=(",", ":")) + "\n" + body)
 
 
 def declaration_keys(root):
@@ -970,7 +970,7 @@ def test_dsm16_a_change_by_hand_after_seal_fails(repo, monkeypatch):
     FakeLean(monkeypatch)
     path = root / ds.FOLDER_REL / "Clean/Typing.lean"
     path.write_text(path.read_text() + "\n")
-    assert ("meta", "typing_sha256") in names(run_check(root)[0])
+    assert ("header", "typing_sha256") in names(run_check(root)[0])
 
 
 # ------------------------------------------------------------------ DSM-17
@@ -1206,7 +1206,7 @@ def by_name(root):
 def test_dsm18_each_declaration_is_one_derived_norm(repo):
     root, nodes = repo
     rows = list_rows(root)
-    assert rows[0] == {"kind": "meta", "type": "semantics", "last_derived_norm_number": len(rows) - 1}
+    assert rows[0] == {"kind": "header", "type": "semantics", "last_derived_norm_number": len(rows) - 1}
     names_found = [r["name"] for r in rows[1:]]
     # In the order of NRM-13, by path, then by first_line: "." comes before "/".
     assert names_found == ["Clean.lean:Clean.outcome", "Clean/Ast.lean:Clean.Statement", "Clean/Evaluation.lean:Clean.evaluate",
@@ -1282,9 +1282,9 @@ def test_dsm18_a_list_that_does_not_check(repo, monkeypatch):
     (root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(json.dumps(r) + "\n" for r in rows))
     path = root / ds.STATUS_REL
     head, _, body = path.read_text().partition("\n")
-    meta = json.loads(head)
-    meta["derived_norms_sha256"] = hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
-    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+    header = json.loads(head)
+    header["derived_norms_sha256"] = hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest()
+    path.write_text(json.dumps(header, separators=(",", ":")) + "\n" + body)
     problems = run_check(root)[0]
     assert [n for n in names(problems) if n[0] != "pending"] == [("derived-norms", rows[1]["derived_norm_id"])]
     assert main_in(root, monkeypatch, "check") == 1
@@ -1295,7 +1295,7 @@ def test_dsm16_a_change_by_hand_of_the_list_fails(repo, monkeypatch):
     FakeLean(monkeypatch)
     path = root / ds.PATH_OF_LIST_OF_DERIVED_NORMS
     path.write_text(path.read_text() + "\n")
-    assert ("meta", "derived_norms_sha256") in names(run_check(root)[0])
+    assert ("header", "derived_norms_sha256") in names(run_check(root)[0])
 
 
 def test_dsm13_a_missing_list_exits_2(repo, monkeypatch):
@@ -1315,8 +1315,8 @@ def test_dsm13_no_semantic_fragment_yet_still_checks_the_list(repo, monkeypatch)
     (root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).write_text("".join(json.dumps(r) + "\n" for r in rows[:-1]))
     path = root / ds.STATUS_REL
     head, _, body = path.read_text().partition("\n")
-    meta = dict(json.loads(head), derived_norms_sha256=hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest())
-    path.write_text(json.dumps(meta, separators=(",", ":")) + "\n" + body)
+    header = dict(json.loads(head), derived_norms_sha256=hashlib.sha256((root / ds.PATH_OF_LIST_OF_DERIVED_NORMS).read_bytes()).hexdigest())
+    path.write_text(json.dumps(header, separators=(",", ":")) + "\n" + body)
     assert names(run_check(root)[0]) == [("derived-norms", rows[-1]["name"])]
 
 

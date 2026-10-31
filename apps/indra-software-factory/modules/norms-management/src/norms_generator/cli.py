@@ -146,7 +146,7 @@ EXIT_UNEXPECTED = 4  # R62: an error no requirement words, with its stack trace
 
 
 def generator_version() -> str:
-    """The version of the norms-generator package, stored in the JSONL meta line.
+    """The version of the norms-generator package, stored in the JSONL header line.
 
     Spec: R61
     """
@@ -203,7 +203,7 @@ def _git(repo: Path, *args: str) -> bytes:
 
 
 def resolve_commit(repo: Path, commit: str) -> str:
-    """The full SHA of `commit` (HEAD, a branch, a short SHA, ...), as the meta line stores it.
+    """The full SHA of `commit` (HEAD, a branch, a short SHA, ...), as the header line stores it.
 
     `--quiet` makes git silent when the commit is unknown, so that case
     gets its own message.

@@ -29,10 +29,10 @@ sys.dont_write_bytecode = True
 
 from derived_norms import (  # noqa: E402
     CODE, GRAMMAR_REL, INLINE_CITATION_RE, INSTALLED_PLUGINS, ISSUE_RE, LIST_OF_DERIVED_NORMS_FILE_NAME, NO_FORM_REASON,
-    NORM_ID, PLUGIN_NAME, PLUGIN_ROOT, InputError, body_bytes, build_parser, case_text, check_citation,
+    NORM_ID, PLUGIN_NAME, PLUGIN_ROOT, TYPES_OF_HEADER_LINE_OF_STATUS_FILE, InputError, body_bytes, build_parser, case_text, check_citation,
     check_generator, check_list_of_derived_norms, check_model, check_script, check_unique_issues, derived_norm,
     fence_indent, fragment_lines, info_string, is_fragment, load_jsonl, load_tree,
-    marketplace_commit, opening_match, output_file_lines, parse_grammar, parse_program, plugin_version,
+    tooling_commit, opening_match, output_file_lines, parse_grammar, parse_program, plugin_version,
     read_code_of_the_script, read_status, seal_derived_norms, sha256, stale, stale_script_citations, strip_columns,
     version_of_generator_in_status,
 )
@@ -159,7 +159,7 @@ HASHED = [("lakefile_sha256", "lakefile.toml"), ("lean_toolchain_sha256", "lean-
           ("ast_sha256", "Clean/Ast.lean"), ("syntax_sha256", "Clean/Syntax.lean"),
           ("typing_sha256", "Clean/Typing.lean"), ("evaluation_sha256", "Clean/Evaluation.lean"),
           ("derived_norms_sha256", LIST_OF_DERIVED_NORMS_FILE_NAME)]
-META_KEYS = ["type", "specs_commit", "generator", "model"] + [k for k, _ in HASHED] + ["status_sha256"]
+HEADER_LINE_KEYS = ["type", "specs_commit", "generator", "model"] + [k for k, _ in HASHED] + ["status_sha256"]
 FRAGMENT_KEYS = ["type", "id", "hash", "cases", "expected_output", "parse_tree_hash", "state", "reason", "issue"]
 LAYOUT = set(FIXED) | set(LEAN_CODE) | {LIST_OF_DERIVED_NORMS_FILE_NAME, STATUS_NAME}
 IMPORTS = {"Fragment"} | {p[:-len(".lean")].replace("/", ".") for p in LEAN_CODE if "/" in p}
@@ -726,7 +726,7 @@ def check_literals(tree, literals, outputs):
     return problems
 
 
-# ---------------------------------------------------------------- status and meta (DSM-4, DSM-5)
+# ---------------------------------------------------------------- status and header (DSM-4, DSM-5)
 
 
 def previous_status(root):
@@ -753,9 +753,9 @@ def check_status(tree, status_path, rows, current):
         if value is None:
             problems.append(("status", where, error))
             continue
-        if value.get("type") == "meta":
+        if value.get("type") in TYPES_OF_HEADER_LINE_OF_STATUS_FILE:
             if index > 0:
-                problems.append(("meta", where, "a meta line that is not the first line"))
+                problems.append(("header", where, "a header line that is not the first line"))
             continue
         if list(value) != FRAGMENT_KEYS or value.get("type") != "fragment":
             missing = [k for k in FRAGMENT_KEYS if k not in value]
@@ -823,32 +823,32 @@ def check_status(tree, status_path, rows, current):
     return problems, by_id
 
 
-def check_meta(tree, folder, status_path, rows, version):
-    """The meta line: first, its fields, the specs commit, the generator, the model and the hashes.
+def check_header_line(tree, folder, status_path, rows, version):
+    """The header line: first, its fields, the specs commit, the generator, the model and the hashes.
 
     Spec: DSM-4, DSM-13, DSM-16.
     """
     where = str(status_path)
     if not rows:
-        return [("meta", where, "the status file has no meta line")]
-    number, _, meta, _ = rows[0]
-    if meta is None:
+        return [("header", where, "the status file has no header line")]
+    number, _, header, _ = rows[0]
+    if header is None:
         return []  # check_status reports a first line that is not JSON
-    if meta.get("type") != "meta":
-        return [("meta", f"{where}:{number}", "the first line is not the meta line")]
+    if header.get("type") != "header":
+        return [("header", f"{where}:{number}", "the first line is not the header line")]
     problems = []
-    if list(meta) != META_KEYS:
-        problems.append(("meta", f"{where}:{number}", f"the meta line does not have exactly the fields {', '.join(META_KEYS)}, in that order"))
-    if meta.get("specs_commit") != tree.specs_commit:
-        problems.append(("meta", "specs_commit", f"{meta.get('specs_commit')}; data/tree.jsonl has {tree.specs_commit}"))
-    problems += check_generator(meta, version)
-    problems += check_model(meta)
+    if list(header) != HEADER_LINE_KEYS:
+        problems.append(("header", f"{where}:{number}", f"the header line does not have exactly the fields {', '.join(HEADER_LINE_KEYS)}, in that order"))
+    if header.get("specs_commit") != tree.specs_commit:
+        problems.append(("header", "specs_commit", f"{header.get('specs_commit')}; data/tree.jsonl has {tree.specs_commit}"))
+    problems += check_generator(header, version)
+    problems += check_model(header)
     for key, rel in HASHED:
         path = folder / rel
-        if not path.is_file() or meta.get(key) != sha256(path.read_bytes()):
-            problems.append(("meta", key, f"{rel} does not match the hash of its meta line: changed after the last seal"))
-    if meta.get("status_sha256") != sha256(body_bytes(status_path.read_text(encoding="utf-8"))):
-        problems.append(("meta", "status_sha256", "the status file does not match the hash of its meta line: changed after the last seal"))
+        if not path.is_file() or header.get(key) != sha256(path.read_bytes()):
+            problems.append(("header", key, f"{rel} does not match the hash of its header line: changed after the last seal"))
+    if header.get("status_sha256") != sha256(body_bytes(status_path.read_text(encoding="utf-8"))):
+        problems.append(("header", "status_sha256", "the status file does not match the hash of its header line: changed after the last seal"))
     return problems
 
 
@@ -952,7 +952,7 @@ def judge(case, expected_text, code, output):
 def worklist(root, plugin_root=None):
     """The items that a change calls for, one JSON object each.
 
-    A new version of the plugin (the meta line of the status file names
+    A new version of the plugin (the header line of the status file names
     another version of the generator, or none) makes every semantic fragment
     with a status line "changed" and every declaration an item "version"
     (NRM-7).
@@ -1044,7 +1044,7 @@ def tree_report(root, ids):
 
 
 def seal(root, model, plugin_root=None, installed=None):
-    """Write the fixed files and the list of derived norms, order the fragment lines as data/tree.jsonl and write the meta line first.
+    """Write the fixed files and the list of derived norms, order the fragment lines as data/tree.jsonl and write the header line first.
 
     Every input is read before anything is written.
 
@@ -1061,24 +1061,24 @@ def seal(root, model, plugin_root=None, installed=None):
         for number, line, value, error in read_status(status_path):
             if value is None:
                 raise InputError(f"status {status_path}:{number}: {error}")
-            if value.get("type") != "meta":
+            if value.get("type") not in TYPES_OF_HEADER_LINE_OF_STATUS_FILE:
                 fragments.append((line, value))
     end = len(tree.order)
     fragments.sort(key=lambda f: tree.order.get(f[1].get("id"), end))
     body = "".join(line + "\n" for line, _ in fragments)
-    commit = marketplace_commit(plugin_root if plugin_root is not None else PLUGIN_ROOT,
+    commit = tooling_commit(plugin_root if plugin_root is not None else PLUGIN_ROOT,
                                    installed if installed is not None else INSTALLED_PLUGINS)
     text_of_the_list_of_derived_norms = seal_derived_norms(root, PATH_OF_LIST_OF_DERIVED_NORMS, TYPE_OF_DERIVED_NORMS, semantics_derived_norms(folder))
     for rel, text in FIXED.items():
         (folder / rel).write_text(text, encoding="utf-8")
     (root / PATH_OF_LIST_OF_DERIVED_NORMS).write_bytes(text_of_the_list_of_derived_norms.encode("utf-8"))
-    meta = {"type": "meta", "specs_commit": tree.specs_commit,
-            "generator": {"plugin": PLUGIN_NAME, "version": version, "marketplace_commit": commit},
+    header = {"type": "header", "specs_commit": tree.specs_commit,
+            "generator": {"plugin": PLUGIN_NAME, "version": version, "tooling_commit": commit},
             "model": model}
     for key, rel in HASHED:
-        meta[key] = sha256((folder / rel).read_bytes())
-    meta["status_sha256"] = sha256(body.encode("utf-8"))
-    head = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
+        header[key] = sha256((folder / rel).read_bytes())
+    header["status_sha256"] = sha256(body.encode("utf-8"))
+    head = json.dumps(header, ensure_ascii=False, separators=(",", ":"))
     status_path.write_text(head + "\n" + body, encoding="utf-8")
     return head
 
@@ -1107,12 +1107,12 @@ def check(root, code_of_the_script, plugin_root=None):
     if not fragments:
         problems = [p for p in check_layout(folder) if p[0] == "fixed"]
         problems += [("status", f"{status_path}:{n}", e) for n, _, v, e in rows[:1] if v is None]
-        problems += check_meta(tree, folder, status_path, rows, version) + list_problems + script_problems
+        problems += check_header_line(tree, folder, status_path, rows, version) + list_problems + script_problems
         return problems, {"states": counts, "passed": passed}
     lake = lake_command()
     current = {n["id"]: facts(tree, grammar, n) for n in fragments}
     problems = check_layout(folder) + check_root_imports(folder)
-    problems += check_meta(tree, folder, status_path, rows, version)
+    problems += check_header_line(tree, folder, status_path, rows, version)
     status_problems, by_id = check_status(tree, status_path, rows, current)
     problems += status_problems
     declarations, lean_problems, literals = read_lean(folder)

@@ -1,7 +1,7 @@
 """Tests of use-cases/create-project/scripts/scaffold.py.
 
 Specs: specs/module.md (ORC-20) and use-cases/create-project/specs/create-project.md
-(ORC-2, ORC-5, CRP-1, CRP-2). Each test names the clause it checks. Run with:
+(ORC-2, ORC-5, CRP-1, CRP-2, CRP-4). Each test names the clause it checks. Run with:
 
     python3 -m unittest discover -s apps/indra-software-factory/modules/project-management/tests
 """
@@ -26,7 +26,9 @@ MODULE = {
     2: "norms-management",
     3: "acceptance-management",
     4: "code-implementation",
+    "orchestration": "workflow-orchestration",
 }
+ROLES = [("billing-orchestration", "orchestration"), ("billing-tooling", "tooling")]
 
 
 def scaffold(folder, *extra):
@@ -53,22 +55,25 @@ class Scaffold(unittest.TestCase):
         with open(os.path.join(self.folder, name, ".claude", "settings.json"), encoding="utf-8") as f:
             return json.load(f)
 
-    def test_orc5_no_component_gives_five_layers(self):
+    def test_orc5_crp4_no_component_gives_five_layers_the_orchestration_and_the_tooling_repository(self):
         r = scaffold(self.folder)
         self.assertEqual(r.returncode, 0, r.stderr)
         heads = [line for line in r.stdout.splitlines() if not line.startswith("/")]
         self.assertEqual(heads, ["0 billing-drafts", "1 billing-specs", "2 billing-norms",
-                                 "3 billing-acceptance", "4 billing-code"])
+                                 "3 billing-acceptance", "4 billing-code",
+                                 "orchestration billing-orchestration", "tooling billing-tooling"])
 
     def test_orc20_project_json_same_bytes_and_form(self):
         self.assertEqual(scaffold(self.folder).returncode, 0)
         names = ["billing-drafts", "billing-specs", "billing-norms", "billing-acceptance", "billing-code"]
-        texts = {self.project_json(n) for n in names}
+        texts = {self.project_json(n) for n in names + [name for name, _ in ROLES]}
         self.assertEqual(len(texts), 1)
         data = json.loads(texts.pop())
         self.assertEqual(data["project"], "billing")
-        self.assertEqual([(r["name"], r["layer"]) for r in data["repositories"]],
-                         list(zip(names, [0, 1, 2, 3, 4])))
+        self.assertEqual(list(data), ["project", "repositories"])  # no derived_norms (ORC-5)
+        self.assertEqual([(r["name"], r.get("layer"), r.get("role")) for r in data["repositories"]],
+                         [(n, l, None) for n, l in zip(names, [0, 1, 2, 3, 4])]
+                         + [(n, None, role) for n, role in ROLES])
         for r in data["repositories"]:
             self.assertEqual(r["owner"], "acme")
             self.assertEqual(r["path"], r["name"])
@@ -77,11 +82,12 @@ class Scaffold(unittest.TestCase):
     def test_orc20_orc5_components_are_of_layer_4_and_acceptance_is_one(self):
         self.assertEqual(scaffold(self.folder, "--components", "api, web").returncode, 0)
         data = json.loads(self.project_json("billing-acceptance"))
-        layers = [(r["name"], r["layer"], r.get("component")) for r in data["repositories"]]
+        layers = [(r["name"], r.get("layer"), r.get("component")) for r in data["repositories"]]
         self.assertEqual(layers, [
             ("billing-drafts", 0, None), ("billing-specs", 1, None), ("billing-norms", 2, None),
             ("billing-acceptance", 3, None),
             ("billing-code-api", 4, "api"), ("billing-code-web", 4, "web"),
+            ("billing-orchestration", None, None), ("billing-tooling", None, None),
         ])
         self.assertFalse(os.path.exists(os.path.join(self.folder, "billing-code")))
 
@@ -89,9 +95,11 @@ class Scaffold(unittest.TestCase):
         self.assertEqual(scaffold(self.folder).returncode, 0)
         data = json.loads(self.project_json("billing-code"))
         for r in data["repositories"]:
+            if r.get("role") == "tooling":
+                continue
             enabled = {k for k, v in self.settings(r["name"])["enabledPlugins"].items() if v}
             self.assertEqual(enabled, {"development-methodology@jpchauny-plugins", "utilities@jpchauny-plugins",
-                                       f"{MODULE[r['layer']]}@jpchauny-plugins"}, r["name"])
+                                       f"{MODULE[r.get('layer', r.get('role'))]}@jpchauny-plugins"}, r["name"])
 
     def test_orc5_ask_rules_where_a_person_approves_every_change(self):
         self.assertEqual(scaffold(self.folder).returncode, 0)
@@ -107,7 +115,7 @@ class Scaffold(unittest.TestCase):
         ])
         for name in ["billing-code-api", "billing-code-web"]:
             self.assertEqual(deny(name), ["Edit(//**/billing-acceptance/**)"], name)
-        for name in ["billing-drafts", "billing-specs", "billing-norms"]:
+        for name in ["billing-drafts", "billing-specs", "billing-norms", "billing-orchestration", "billing-tooling"]:
             self.assertIsNone(deny(name), name)
         self.assertEqual(self.settings("billing-acceptance")["permissions"]["ask"], ASK)
 
@@ -156,6 +164,42 @@ class Scaffold(unittest.TestCase):
         self.assertNotIn("regenerated only where layer 1 changed", text)
         self.assertIn("specs-derived/<type>/derived-norms.jsonl", text)
         self.assertIn("layers.md#rules", text)
+
+    def test_crp4_the_tooling_repository(self):
+        r = scaffold(self.folder, "--components", "api,web")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        tooling = os.path.join(self.folder, "billing-tooling")
+        lines = r.stdout.splitlines()
+        files = lines[lines.index("tooling billing-tooling") + 1:]
+        self.assertEqual(sorted(os.path.relpath(f, tooling) for f in files),
+                         [".claude-plugin/marketplace.json", ".claude/settings.json", "CLAUDE.md", "README.md",
+                          "project.json"])
+        settings = self.settings("billing-tooling")
+        self.assertEqual({k for k, v in settings["enabledPlugins"].items() if v}, {"utilities@jpchauny-plugins"})
+        self.assertNotIn("permissions", settings)
+        with open(os.path.join(tooling, ".claude-plugin", "marketplace.json"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), '{\n  "name": "billing-tooling",\n  "owner": {\n    "name": "acme"\n  },\n'
+                                       '  "plugins": []\n}\n')
+        with open(os.path.join(tooling, "CLAUDE.md"), encoding="utf-8") as f:
+            text = " ".join(f.read().split())
+        self.assertIn("The tooling repository of `billing`: no layer.", text)
+        self.assertIn("every change starts in a spec, the person approves it", text)
+        self.assertIn("/specs/development.md", text)
+        self.assertIn('"billing-tooling": {"source": {"source": "github", "repo": "acme/billing-tooling"}}', text)
+        self.assertIn('"<plugin>@billing-tooling": true', text)
+
+    def test_crp4_no_layer_installs_the_tooling_repository_when_the_project_is_created(self):
+        self.assertEqual(scaffold(self.folder).returncode, 0)
+        for name in os.listdir(self.folder):
+            with open(os.path.join(self.folder, name, ".claude", "settings.json"), encoding="utf-8") as f:
+                self.assertNotIn("billing-tooling", f.read(), name)
+
+    def test_lay13_claude_md_of_layer_2_says_that_nothing_is_written_by_hand(self):
+        self.assertEqual(scaffold(self.folder).returncode, 0)
+        with open(os.path.join(self.folder, "billing-norms", "CLAUDE.md"), encoding="utf-8") as f:
+            text = " ".join(f.read().split())
+        self.assertNotIn("generators/", text)
+        self.assertIn("plugins of `acme/billing-tooling`", text)
 
     def test_crp2_acceptance_json_with_the_profile_chosen(self):
         for profile in ("prototype", "product", "critical"):

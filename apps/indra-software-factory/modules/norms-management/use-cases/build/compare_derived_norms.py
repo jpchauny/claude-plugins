@@ -62,7 +62,9 @@ USE_CASE_OF_DERIVED_NORMS = re.compile(r"/[a-z0-9-]+:[a-z0-9-]+")  # ORC-20, NRM
 DERIVED_NORM_FINGERPRINT = re.compile(r"[0-9a-f]{8}")  # NRM-14
 NORM_HASH = re.compile(r"[0-9a-f]{8}")  # layers.md, Norm hash
 NORM_ID = re.compile(r"[A-Z]{3,}(?:-[1-9][0-9]*)?")  # R10, R61
-META_LINE_FIELDS = ["kind", "type", "last_derived_norm_number"]  # NRM-12
+HEADER_LINE_FIELDS = ["kind", "type", "last_derived_norm_number"]  # NRM-12
+# NRM-12: "header", or "meta", the kind of a list written before the header line was named so.
+KINDS_OF_HEADER_LINE = ("header", "meta")
 DERIVED_NORM_LINE_FIELDS = ["kind", "derived_norm_id", "derived_norm_fingerprint", "name", "path", "first_line",
                             "last_line", "cited_norms"]  # NRM-12
 CITED_NORM_FIELDS = ["norm_id", "norm_hash"]  # NRM-12
@@ -327,7 +329,7 @@ def derived_norm_fingerprints_of_list_of_derived_norms(data: bytes, type_of_deri
     if text.startswith("﻿"):
         raise ListOfDerivedNormsError("a byte order mark")
     if text == "":
-        raise ListOfDerivedNormsError("no meta line")
+        raise ListOfDerivedNormsError("no header line")
     if not text.endswith("\n"):
         raise ListOfDerivedNormsError("its last line is not followed by a line feed")
     if "\r" in text:
@@ -339,12 +341,12 @@ def derived_norm_fingerprints_of_list_of_derived_norms(data: bytes, type_of_deri
             objects.append(json.loads(line, object_pairs_hook=_Object, parse_constant=_reject_constant))
         except (ValueError, RecursionError):
             raise ListOfDerivedNormsError(f"line {number}: not a JSON object")
-    meta = _fields(objects[0], META_LINE_FIELDS, 1)
-    if meta["kind"] != "meta":
-        raise ListOfDerivedNormsError("line 1: not the meta line")
-    if meta["type"] != type_of_derived_norms:
+    header = _fields(objects[0], HEADER_LINE_FIELDS, 1)
+    if header["kind"] not in KINDS_OF_HEADER_LINE:
+        raise ListOfDerivedNormsError("line 1: not the header line")
+    if header["type"] != type_of_derived_norms:
         raise ListOfDerivedNormsError(f"line 1: its type is not {type_of_derived_norms}")
-    if not _an_integer(meta["last_derived_norm_number"], 0):
+    if not _an_integer(header["last_derived_norm_number"], 0):
         raise ListOfDerivedNormsError("line 1: last_derived_norm_number is not an integer, 0 or greater")
     derived_norm_id_form = re.compile(re.escape(type_of_derived_norms) + r":([1-9][0-9]*)")
     derived_norm_fingerprints: dict[str, str] = {}
@@ -362,7 +364,7 @@ def derived_norm_fingerprints_of_list_of_derived_norms(data: bytes, type_of_deri
         derived_norm_number = int(matched.group(1))
         if derived_norm_number <= last_derived_norm_number:
             raise ListOfDerivedNormsError(f"line {number}: {derived_norm_id} is not after the derived norm ID before it")
-        if derived_norm_number > meta["last_derived_norm_number"]:
+        if derived_norm_number > header["last_derived_norm_number"]:
             raise ListOfDerivedNormsError(f"line {number}: {derived_norm_id} is after last_derived_norm_number")
         last_derived_norm_number = derived_norm_number
         derived_norm_fingerprint = line["derived_norm_fingerprint"]

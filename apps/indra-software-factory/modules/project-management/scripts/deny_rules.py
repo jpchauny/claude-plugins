@@ -23,12 +23,13 @@ def deny_rules(repos: list[dict], this: dict) -> list[str]:
 
     The acceptance repository may not read or edit a code repository; a code
     repository may not edit the acceptance repository; the other layers deny
-    nothing.
+    nothing, and neither do the repositories with a "role", which are no layer
+    (SNC-2, SNC-3).
     """
-    if this["layer"] == 3:
-        return [f"{tool}({folder(r)})" for r in repos if r["layer"] == 4 for tool in ("Read", "Edit")]
-    if this["layer"] == 4:
-        return [f"Edit({folder(r)})" for r in repos if r["layer"] == 3]
+    if this.get("layer") == 3:
+        return [f"{tool}({folder(r)})" for r in repos if r.get("layer") == 4 for tool in ("Read", "Edit")]
+    if this.get("layer") == 4:
+        return [f"Edit({folder(r)})" for r in repos if r.get("layer") == 3]
     return []
 
 

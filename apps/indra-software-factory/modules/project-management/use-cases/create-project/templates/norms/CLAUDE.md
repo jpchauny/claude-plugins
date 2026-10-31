@@ -17,8 +17,8 @@ changed), and never edited by hand
 
 ## Working here
 
-- The output of the norms generator (plugin `norms-management`) and of this project's own generators is never edited by hand.
-- What is written by hand here is only this project's own generators, under `generators/`.
+- The output of the norms generator (plugin `norms-management`) and of this project's own derived-norms generators is never edited by hand.
+- Nothing here is written by hand: this repository holds the norms and the derived norms, never a generator, a plugin or a script ([LAY-13](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#rules)). This project's own derived-norms generators are plugins of `{{owner}}/{{project}}-tooling`, enabled in `.claude/settings.json` as [LAY-14](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md#the-tooling-repository) says.
 
 ## Issues
 

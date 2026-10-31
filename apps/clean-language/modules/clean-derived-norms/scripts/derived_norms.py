@@ -4,7 +4,7 @@
 The scripts of the use cases derive-grammar and derive-semantics import it
 (CDN-7); it is not run on its own. It holds the reading of data/tree.jsonl,
 the fragments, their case text and the files of their program, the
-citations in the code of a script, the plugin and the parts of a meta line
+citations in the code of a script, the plugin and the parts of a header line
 that every status file has, the parser of the grammar with its indenter, and
 the list of derived norms of a type, which knows no type.
 
@@ -29,11 +29,17 @@ PLUGIN_NAME = "clean-derived-norms"
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 # The module script itself, a file of the code of the script of derive-grammar (DGR, Terms: Code of the script).
 MODULE_SCRIPT = Path(__file__).resolve()
-# The record of the installed plugins of Claude Code (DGR-4, Terms: Marketplace commit).
+# The record of the installed plugins of Claude Code (DGR-4, Terms: Tooling commit).
 INSTALLED_PLUGINS = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
 
-GENERATOR_KEYS = ["plugin", "version", "marketplace_commit"]
-# The model of the meta line (DGR-4, Terms: Model ID).
+GENERATOR_KEYS = ["plugin", "version", "tooling_commit"]
+# NRM-5: the "type" of the header line of a status file; "meta" is that of a status file written before the
+# header line was named so, read as "header" and never written.
+TYPES_OF_HEADER_LINE_OF_STATUS_FILE = ("header", "meta")
+# NRM-12: the "kind" of the header line of a list of derived norms; "meta" is that of a list written before the
+# header line was named so, read as "header" and never written.
+KINDS_OF_HEADER_LINE_OF_LIST_OF_DERIVED_NORMS = ("header", "meta")
+# The model of the header line (DGR-4, Terms: Model ID).
 MODEL_RE = re.compile(r"[A-Za-z0-9._-]+")
 ISSUE_RE = re.compile(r"https://github\.com/Ivan-Pasco/clean-language-foundation/issues/[1-9][0-9]*")
 
@@ -79,9 +85,9 @@ class Tree:
 
         Spec: DGR-1, DGR-2.
         """
-        self.meta = next((r for r in rows if r.get("type") == "meta"), {})
+        self.header = next((r for r in rows if r.get("type") == "meta"), {})
         # The commit of layer 1: "specs_commit", or "foundation_commit" in an older tree (DGR-4).
-        self.specs_commit = self.meta.get("specs_commit") or self.meta.get("foundation_commit")
+        self.specs_commit = self.header.get("specs_commit") or self.header.get("foundation_commit")
         self.nodes = {}
         self.order = {}
         self.children = {}
@@ -845,14 +851,14 @@ def same_path(a, b):
     return os.path.realpath(os.path.expanduser(str(a))) == os.path.realpath(str(b))
 
 
-def marketplace_commit(plugin_root, installed_plugins):
-    """The commit of the marketplace that the plugin was installed from, or "none".
+def tooling_commit(plugin_root, installed_plugins):
+    """The commit of the tooling repository, the marketplace that the plugin was installed from, or "none" (NRM-5).
 
     In this order: the gitCommitSha of the entry of installed_plugins.json
     whose installPath is the plugin's root; else the full sha of HEAD of the
     git checkout that holds the plugin's root; else "none". Never "+dirty".
 
-    Spec: DGR-4 (Terms: Marketplace commit).
+    Spec: DGR-4 (Terms: Tooling commit).
     """
     try:
         data = json.loads(Path(installed_plugins).read_text(encoding="utf-8"))
@@ -921,7 +927,7 @@ def body_bytes(status_text):
     return rest.encode("utf-8")
 
 
-# ---------------------------------------------------------------- the status lines and the meta line
+# ---------------------------------------------------------------- the status lines and the header line
 
 
 def check_unique_issues(rows):
@@ -947,60 +953,61 @@ def check_unique_issues(rows):
 
 
 def version_of_generator_in_status(rows):
-    """The "version" of "generator" in the meta line of a status file, or None when there is none.
+    """The "version" of "generator" in the header line of a status file, or None when there is none.
 
-    rows: the JSON objects of the lines of the status file. The meta line is
-    the first object whose "type" is "meta".
+    rows: the JSON objects of the lines of the status file. The header line is
+    the first object whose "type" is "header", or "meta" in a status file
+    written before the header line was named so (NRM-5).
 
     Spec: CDN-7, DGR-12, DSM-12 (NRM-7).
     """
-    meta = next((r for r in rows if r.get("type") == "meta"), None)
-    generator = meta.get("generator") if meta is not None else None
+    header = next((r for r in rows if r.get("type") in TYPES_OF_HEADER_LINE_OF_STATUS_FILE), None)
+    generator = header.get("generator") if header is not None else None
     version = generator.get("version") if isinstance(generator, dict) else None
     return version if isinstance(version, str) else None
 
 
-def check_generator(meta, version):
-    """The generator of the meta line names this plugin and its version; its marketplace commit is not judged.
+def check_generator(header, version):
+    """The generator of the header line names this plugin and its version; its tooling commit is not judged.
 
     Spec: DGR-4, DGR-13.
     """
-    if "generator" not in meta:
-        return [("meta", "generator", "the meta line has no generator")]
-    generator = meta["generator"]
+    if "generator" not in header:
+        return [("header", "generator", "the header line has no generator")]
+    generator = header["generator"]
     if not isinstance(generator, dict):
-        return [("meta", "generator", f"{generator!r} is not an object")]
+        return [("header", "generator", f"{generator!r} is not an object")]
     problems = []
     if list(generator) != GENERATOR_KEYS:
-        problems.append(("meta", "generator", f"the generator does not have exactly the fields {', '.join(GENERATOR_KEYS)}, in that order"))
+        problems.append(("header", "generator", f"the generator does not have exactly the fields {', '.join(GENERATOR_KEYS)}, in that order"))
     if generator.get("plugin") != PLUGIN_NAME:
-        problems.append(("meta", "generator", f"the meta line names the plugin {generator.get('plugin')!r}; check runs from the plugin {PLUGIN_NAME!r}"))
+        problems.append(("header", "generator", f"the header line names the plugin {generator.get('plugin')!r}; check runs from the plugin {PLUGIN_NAME!r}"))
     if generator.get("version") != version:
-        problems.append(("meta", "generator", f"the meta line names the version {generator.get('version')!r}; check runs from the version {version!r}"))
+        problems.append(("header", "generator", f"the header line names the version {generator.get('version')!r}; check runs from the version {version!r}"))
     return problems
 
 
-def check_model(meta):
-    """The model of the meta line: present, a non-empty string of the form of a model ID.
+def check_model(header):
+    """The model of the header line: present, a non-empty string of the form of a model ID.
 
     check cannot know that the model is the one that derived; it checks only the form.
 
     Spec: DGR-4, DGR-13.
     """
-    if "model" not in meta:
-        return [("meta", "model", "the meta line records no model")]
-    model = meta["model"]
+    if "model" not in header:
+        return [("header", "model", "the header line records no model")]
+    model = header["model"]
     if not isinstance(model, str) or not model:
-        return [("meta", "model", f"{model!r} is not a non-empty string")]
+        return [("header", "model", f"{model!r} is not a non-empty string")]
     if not MODEL_RE.fullmatch(model):
-        return [("meta", "model", f"{model!r} holds a character that is not a letter, a digit, '.', '-' or '_'")]
+        return [("header", "model", f"{model!r} holds a character that is not a letter, a digit, '.', '-' or '_'")]
     return []
 
 
 # ---------------------------------------------------------------- the list of derived norms (NRM-12 to NRM-15)
 
 LIST_OF_DERIVED_NORMS_FILE_NAME = "derived-norms.jsonl"
-META_LINE_OF_LIST_OF_DERIVED_NORMS_KEYS = ["kind", "type", "last_derived_norm_number"]
+HEADER_LINE_OF_LIST_OF_DERIVED_NORMS_KEYS = ["kind", "type", "last_derived_norm_number"]
 DERIVED_NORM_KEYS = ["kind", "derived_norm_id", "derived_norm_fingerprint", "name", "path", "first_line", "last_line",
                      "cited_norms"]
 CITED_NORM_KEYS = ["norm_id", "norm_hash"]
@@ -1110,7 +1117,7 @@ def read_list_of_derived_norms(data, type_of_derived_norms, where):
 
     InputError, naming the list and the line, when a line is not UTF-8 or not
     a JSON object (an empty line or a line of only blanks is none), or the
-    first line is not a meta line of the type with a last_derived_norm_number
+    first line is not a header line of the type with a last_derived_norm_number
     that is an integer, 0 or greater. Only the empty text after the line feed
     that ends the list is no line.
 
@@ -1130,12 +1137,12 @@ def read_list_of_derived_norms(data, type_of_derived_norms, where):
             raise InputError(f"{where}:{number}: {error}")
         rows.append((number, value))
     if not rows:
-        raise InputError(f"{where}: no meta line")
-    number, meta = rows[0]
-    last_derived_norm_number = meta.get("last_derived_norm_number")
-    if (meta.get("kind") != "meta" or meta.get("type") != type_of_derived_norms
+        raise InputError(f"{where}: no header line")
+    number, header = rows[0]
+    last_derived_norm_number = header.get("last_derived_norm_number")
+    if (header.get("kind") not in KINDS_OF_HEADER_LINE_OF_LIST_OF_DERIVED_NORMS or header.get("type") != type_of_derived_norms
             or not isinstance(last_derived_norm_number, int) or isinstance(last_derived_norm_number, bool) or last_derived_norm_number < 0):
-        raise InputError(f"{where}:{number}: not a meta line with the type {type_of_derived_norms} and a last_derived_norm_number")
+        raise InputError(f"{where}:{number}: not a header line with the type {type_of_derived_norms} and a last_derived_norm_number")
     return last_derived_norm_number, [value for _, value in rows[1:]]
 
 
@@ -1263,12 +1270,12 @@ def give_derived_norm_ids(type_of_derived_norms, list_before_the_run, found):
 
 
 def text_of_list_of_derived_norms(type_of_derived_norms, last_derived_norm_number, entries):
-    """The text of the list of derived norms: the meta line, then one line per derived norm.
+    """The text of the list of derived norms: the header line, then one line per derived norm.
 
     Spec: DGR-20 (NRM-12).
     """
-    meta = {"kind": "meta", "type": type_of_derived_norms, "last_derived_norm_number": last_derived_norm_number}
-    return "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in [meta] + entries)
+    header = {"kind": "header", "type": type_of_derived_norms, "last_derived_norm_number": last_derived_norm_number}
+    return "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in [header] + entries)
 
 
 def seal_derived_norms(root, path_of_list_of_derived_norms, type_of_derived_norms, found):
@@ -1373,9 +1380,9 @@ class FieldGivenTwice(Exception):
 
 
 def read_list_for_check(data, type_of_derived_norms):
-    """The rows of the list of derived norms that check reads, and the problems of its bytes, its lines and its meta line.
+    """The rows of the list of derived norms that check reads, and the problems of its bytes, its lines and its header line.
 
-    The rows are None when a line is not a JSON object or the meta line does
+    The rows are None when a line is not a JSON object or the header line does
     not check: then no derived norm of the list is compared with the output.
 
     Spec: DGR-20 (The check of the list).
@@ -1409,11 +1416,11 @@ def read_list_for_check(data, type_of_derived_norms):
     if broken:
         return None, problems
     if not rows:
-        return None, problems + [(LIST_OF_DERIVED_NORMS_FILE_NAME, "the list has no meta line")]
-    number, meta = rows[0]
-    if (list(meta) != META_LINE_OF_LIST_OF_DERIVED_NORMS_KEYS or meta.get("kind") != "meta" or meta.get("type") != type_of_derived_norms
-            or not is_whole_number(meta.get("last_derived_norm_number"), 0)):
-        return None, problems + [(f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{number}", f"not the meta line of the type {type_of_derived_norms}: exactly kind meta, type {type_of_derived_norms} and last_derived_norm_number, an integer, 0 or greater, in that order")]
+        return None, problems + [(LIST_OF_DERIVED_NORMS_FILE_NAME, "the list has no header line")]
+    number, header = rows[0]
+    if (list(header) != HEADER_LINE_OF_LIST_OF_DERIVED_NORMS_KEYS or header.get("kind") not in KINDS_OF_HEADER_LINE_OF_LIST_OF_DERIVED_NORMS
+            or header.get("type") != type_of_derived_norms or not is_whole_number(header.get("last_derived_norm_number"), 0)):
+        return None, problems + [(f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{number}", f"not the header line of the type {type_of_derived_norms}: exactly kind header, type {type_of_derived_norms} and last_derived_norm_number, an integer, 0 or greater, in that order")]
     return rows, problems
 
 
@@ -1428,8 +1435,8 @@ def check_list_of_derived_norms(root, path_of_list_of_derived_norms, type_of_der
     rows, problems = read_list_for_check((root / path_of_list_of_derived_norms).read_bytes(), type_of_derived_norms)
     if rows is None:
         return [("derived-norms", s, m) for s, m in problems]
-    line_number_of_meta_line, meta = rows[0]
-    last_derived_norm_number = meta["last_derived_norm_number"]
+    line_number_of_header_line, header = rows[0]
+    last_derived_norm_number = header["last_derived_norm_number"]
     entries, previous_number, derived_norm_ids_seen, lines_taken = [], 0, set(), {}
     for number, entry in rows[1:]:
         fields, comparable = check_derived_norm_fields(type_of_derived_norms, last_derived_norm_number, number, entry)
@@ -1472,11 +1479,11 @@ def check_list_of_derived_norms(root, path_of_list_of_derived_norms, type_of_der
     for place, item in by_place.items():
         if place not in listed:
             problems.append((item.name, f"a derived norm of {item.path} lines {item.first_line} to {item.last_line} that the list does not hold"))
-    problems += check_against_the_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms, last_derived_norm_number, line_number_of_meta_line, entries)
+    problems += check_against_the_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms, last_derived_norm_number, line_number_of_header_line, entries)
     return [("derived-norms", s, m) for s, m in problems]
 
 
-def check_against_the_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms, last_derived_norm_number, line_number_of_meta_line, entries):
+def check_against_the_list_before_the_run(root, path_of_list_of_derived_norms, type_of_derived_norms, last_derived_norm_number, line_number_of_header_line, entries):
     """No derived norm ID given again or moved to another derived norm, compared with the list before the run.
 
     Nothing to check when there is no list before the run; a list before
@@ -1493,7 +1500,7 @@ def check_against_the_list_before_the_run(root, path_of_list_of_derived_norms, t
     last_derived_norm_number_before_the_run, derived_norms_before_the_run = list_before_the_run
     problems = []
     if last_derived_norm_number < last_derived_norm_number_before_the_run:
-        problems.append((f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{line_number_of_meta_line}", f"last_derived_norm_number {last_derived_norm_number} is lower than {last_derived_norm_number_before_the_run}, the one of the list before the run"))
+        problems.append((f"{LIST_OF_DERIVED_NORMS_FILE_NAME}:{line_number_of_header_line}", f"last_derived_norm_number {last_derived_norm_number} is lower than {last_derived_norm_number_before_the_run}, the one of the list before the run"))
     name_before_the_run = {}
     for entry in derived_norms_before_the_run:
         if derived_norm_number(type_of_derived_norms, entry.get("derived_norm_id")) is not None:

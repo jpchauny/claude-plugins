@@ -4,7 +4,7 @@
 
 **Audience:** The people who work in a repository of a project, and the Claude Code sessions there; whoever builds a module of the app
 
-**Scope:** The five layers of every project: what each holds, who writes it, how each depends on the others; the orchestration repository, which stands above them and is no layer; and where each module of the app is installed. How a run goes across them is in [flow.md](flow.md); how the orchestrator runs it, in [workflow-orchestration](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/workflow-orchestration/specs/module.md); what each module does is in [app.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/app.md#modules)
+**Scope:** The five layers of every project: what each holds, who writes it, how each depends on the others; the orchestration repository, which stands above them and is no layer; the tooling repository, which holds the project's own plugins and is no layer either; and where each module of the app and each plugin of the project is installed. How a run goes across them is in [flow.md](flow.md); how the orchestrator runs it, in [workflow-orchestration](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/workflow-orchestration/specs/module.md); what each module does is in [app.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/app.md#modules)
 
 A spec of the module `development-methodology` of the app Indra Software Factory, listed in [app.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/app.md); the module is specified in [module.md](module.md).
 
@@ -25,8 +25,10 @@ A spec of the module `development-methodology` of the app Indra Software Factory
 | Norms repository | The repository of layer 2 of a project: the entry of its `project.json` with `layer` 2 ([ORC-20 and ORC-21](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)). |
 | Acceptance repository | The repository of layer 3 of a project, one for the whole project (LAY-1): the entry of its `project.json` with `layer` 3 ([ORC-20 and ORC-21](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)). |
 | Code repository | A repository of layer 4 of a project, one or one per component (LAY-1): an entry of its `project.json` with `layer` 4 ([ORC-20 and ORC-21](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)). |
-| Repository of a layer | A repository of a project that holds one of its five layers: an entry of its `project.json` with `layer` ([ORC-20](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)). The orchestration repository is not one. |
-| Orchestration repository | The one repository of a project that is no layer, from which a person starts and controls a run across the layers (LAY-11): the entry of its `project.json` with `role` `orchestration` ([ORC-20](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)). |
+| Repository of a layer | A repository of a project that holds one of its five layers: an entry of its `project.json` with `layer` ([ORC-20](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)). The orchestration repository and the tooling repository are not one. |
+| Orchestration repository | The repository of a project, no layer, from which a person starts and controls a run across the layers (LAY-11): the entry of its `project.json` with `role` `orchestration` ([ORC-20](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)). |
+| Tooling repository | The repository of a project, no layer, that holds the project's own code, its plugins, and is the Claude Code marketplace from which the repositories of the layers install them (LAY-14): the entry of its `project.json` with `role` `tooling` ([ORC-20](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)). |
+| Persistence | What a repository of layers 0 to 3 holds: the aggregates of the domain of the project, which its layer writes and reads, and never a tool that works on them (LAY-13). |
 
 The terms acceptance area, acceptance unit, acceptance test, unit test, unit hash, norm citation, derived norm citation, scope of an acceptance unit, acceptance unit behind layer 2, acceptance architect, done profile and evidence run are those of [acceptance-management](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/acceptance-management/specs/module.md#terms); the terms norms generator, derived-norms generator, list of derived norms and derived norm behind its norms are those of [norms-management](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#terms); the term orchestrator is that of [workflow-orchestration](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/workflow-orchestration/specs/module.md#terms).
 
@@ -54,7 +56,9 @@ Factory installed in its repository, as
 
 Besides the repositories of its five layers, every project has one
 orchestration repository, which is no layer and is not in the table above
-([LAY-11](#the-orchestration-repository)).
+([LAY-11](#the-orchestration-repository)), and may have one tooling
+repository, which is no layer either and holds the project's own plugins
+([LAY-14](#the-tooling-repository)).
 
 ## Rules
 
@@ -99,6 +103,10 @@ orchestration repository, which is no layer and is not in the table above
      repository split later rewrites its commits, and breaks those that
      `records/` and the hand-offs cite.
 
+- **LAY-13.** The repositories of layers 0, 1, 2 and 3 are persistence. Each holds the aggregates of the domain of its layer (complete list): layer 0, the draft specs; layer 1, the specs; layer 2, the norms and the derived norms; layer 3, the acceptance areas, the acceptance units, their acceptance tests and the records of their evidence. None of them holds code written by hand that works on a layer: no plugin, no skill, no hook and no script, the project's own derived-norms generators and the helpers of layers 0 and 1 among them. Those are plugins of the tooling repository of the project ([LAY-14](#the-tooling-repository)). The acceptance tests are no such code: they are what layer 3 accepts with, and are part of what it holds. The files that every repository of a project holds, `project.json`, `CLAUDE.md`, `README.md` and `.claude/settings.json`, and those that a module of the app writes in the repository of its layer, such as `acceptance.json`, are no such code either.
+
+  Rationale: a tool kept in the repository of a layer would change under the rules of that layer, which are those of its data: in layer 2, which nobody edits by hand (LAY-3), a generator could not be written at all; in layers 0, 1 and 3, every change of a tool would wait for the approval of a change of the layer, and its history would mix with that of the specs or of the acceptance units. A tool has a life of its own, its versions and its tests, and a project may use it in more than one layer. Layer 4 is not persistence: it is the code of the product, built by agents (LAY-4).
+
 - **LAY-2.** People work in layers 0 and 1. Layers 0 and 1 are the only layers people write. Layer 1 is the only source of truth. Neither has a required structure: any folders, any files, at any depth.
 
   A person may ask an agent to write a change in layer 0 or 1. The agent never
@@ -124,7 +132,7 @@ orchestration repository, which is no layer and is not in the table above
   the help of AI. The authors of layers 0 and 1 get total freedom: there are
   recommendations on how to write a spec, but no required structure.
 
-- **LAY-3.** Layer 2 is derived from layer 1 only, and only what changed, in layer 1 or in a derived-norms generator, is regenerated. Nobody, person or agent, edits layer 2 by hand. It is derived from a commit of layer 1: the norms generator annotates the specs with norm IDs, which makes them norms, and the project's own generators derive the derived norms from the norms (the rules of a grammar or of a formal semantics, the examples of a corpus). A new commit of layer 1 regenerates, of the norms, only an annotated file whose source changed; what a change of the norms, or a new version of a derived-norms generator, makes it derive again of the derived norms is in [NRM-7](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms). Everything else stays as it is. Each regeneration records the commit of layer 1 it comes from and the generator that produced it: for the norms, the version of the norms generator; for each derived norm, the plugin of its generator and its version ([NRM-5](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)).
+- **LAY-3.** Layer 2 is derived from layer 1 only, and only what changed, in layer 1 or in a derived-norms generator, is regenerated. Nobody, person or agent, edits layer 2 by hand. It is derived from a commit of layer 1: the norms generator annotates the specs with norm IDs, which makes them norms, and the project's own derived-norms generators, plugins of its tooling repository ([LAY-14](#the-tooling-repository)), derive the derived norms from the norms (the rules of a grammar or of a formal semantics, the examples of a corpus). A new commit of layer 1 regenerates, of the norms, only an annotated file whose source changed; what a change of the norms, or a new version of a derived-norms generator, makes it derive again of the derived norms is in [NRM-7](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms). Everything else stays as it is. Each regeneration records the commit of layer 1 it comes from and the generator that produced it: for the norms, the version of the norms generator; for each derived norm, the plugin of its generator, its version and the commit of the tooling repository it was installed from ([NRM-5](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)).
 
   The copy of `project.json` that `/project-management:sync` writes in the
   repository of layer 2, once the user confirmed it, is not an edit of layer 2
@@ -218,7 +226,7 @@ orchestration repository, which is no layer and is not in the table above
   is built; changing layer 1 to work around it would make layer 1 say what the
   norms already say.
 
-- **LAY-6.** Every project uses the latest version of the plugins. There is no pinned version of a plugin per project: sessions and automation use the latest one. A change to a generator therefore changes layer 2 of every project at its next regeneration, which derives again what a new version of a derived-norms generator calls for ([NRM-7](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)).
+- **LAY-6.** Every project uses the latest version of the plugins: those of the app, and those of its own tooling repository ([LAY-14](#the-tooling-repository)). There is no pinned version of a plugin per project: sessions and automation use the latest one. A change to a generator therefore changes layer 2 of every project at its next regeneration, which derives again what a new version of a derived-norms generator calls for ([NRM-7](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)).
 
   Rationale: every project stays aligned with the latest version of the
   plugins. GitHub keeps the versions, so no project pins one.
@@ -255,6 +263,19 @@ orchestration repository, which is no layer and is not in the table above
   hook and credentials, and a folder that is no repository leaves each
   repository its own history and permissions.
 
+## The tooling repository
+
+- **LAY-14.** Every project may have one tooling repository, besides the repositories of its five layers and its orchestration repository. Its recommended name is `<project>-tooling`, such as `clean-language-tooling`; as for the layers, the name is recommended, not required (LAY-1).
+  - It is no layer, and one repository, not five layers. It holds the project's own code: its plugins, such as the derived-norms generators of its types of derived norms ([NRM-1](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)) and the helpers of layers 0 and 1, with their specs and their tests. It holds no draft spec, spec, norm, derived norm, acceptance area, acceptance unit, acceptance test or code of the product.
+  - It is developed with the meta methodology, the method of [development.md](https://github.com/jpchauny/claude-plugins/blob/main/specs/development.md), which it cites by that URL and never copies: each change starts in a spec of the tooling repository, which the person approves, and is implemented from it. It is never developed with the modules of the app: no use case and no hook of a module other than `utilities` runs in it, and its specs are no layer 1, have no norm and go through no run.
+  - It is a Claude Code marketplace of its own: its file `.claude-plugin/marketplace.json` has `name` the name of the repository, and lists each of its plugins.
+  - A repository of a layer whose work uses one of its plugins installs it from there, and only that repository: its `.claude/settings.json` declares the marketplace in `extraKnownMarketplaces`, as `"<name>": {"source": {"source": "github", "repo": "<owner>/<name>"}}`, with the `<owner>/<name>` of the entry of the tooling repository in `project.json`, and enables the plugin in `enabledPlugins`, as `"<plugin>@<name>": true`. A person writes both, in a commit that holds only `.claude/settings.json`; it sets up the repository and changes nothing that its layer holds (LAY-13), so in layer 2 it is no edit by hand (LAY-3). For example, the repository of layer 2 enables the plugin of each derived-norms generator that `derived_norms` of `project.json` names.
+  - Its entry in `project.json` has `role` `tooling` and no `layer` ([ORC-20](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#where-the-repositories-are)).
+  - It is in the project folder, beside the other repositories of the project ([PRJ-1](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/specs/module.md#the-project-folder)).
+  - Its files when the project is created are those that `/project-management:create-project` writes ([CRP-4](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md#create-a-project)); `/project-management:sync` keeps its `project.json` as that of every repository ([SNC-3](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/project-management/use-cases/sync/specs/sync.md#sync-projectjson)).
+
+  Rationale: the repositories of layers 0 to 3 are persistence and hold no tool (LAY-13), so a project's own tools need a repository of their own, with their history, their versions and their tests. One repository is enough: the tools are no stage of the way from intent to code, and the five layers would apply to them the method that they themselves carry out, without end; developing them with the meta methodology cuts that recursion. A marketplace of its own lets each repository of a layer install, with the means of Claude Code, only the plugins its layer uses (APP-7), in their latest version (LAY-6), and records the commit each was installed from ([NRM-5](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/modules/norms-management/specs/module.md#derive-the-derived-norms)).
+
 ## Where each module is installed
 
 APP-6 keeps the ID it had in [app.md](https://github.com/jpchauny/claude-plugins/blob/main/apps/indra-software-factory/specs/app.md), as a clause moved from it ([SST-11](https://github.com/jpchauny/claude-plugins/blob/main/specs/spec-structure.md#ids-of-clauses)).
@@ -269,11 +290,13 @@ APP-6 keeps the ID it had in [app.md](https://github.com/jpchauny/claude-plugins
   | `norms-management` | Enabled in the `.claude/settings.json` of the repository of layer 2 only. |
   | `acceptance-management` | Enabled in the `.claude/settings.json` of the repository of layer 3 only. |
   | `code-implementation` | Enabled in the `.claude/settings.json` of each repository of layer 4 only. |
-  | `utilities` | Enabled in the `.claude/settings.json` of each repository of the project: of the five layers, and the orchestration repository. |
+  | `utilities` | Enabled in the `.claude/settings.json` of each repository of the project: of the five layers, the orchestration repository and the tooling repository. |
   | `workflow-orchestration` | Enabled in the `.claude/settings.json` of the orchestration repository only (LAY-11). |
   | `drift-management` | Not yet decided: open question 1 of layers.md. |
 
-  Rationale: a module of a layer is enabled only in the repositories of that layer, so that its use cases are not run in the wrong repository. The module `workflow-orchestration` is enabled in no repository of a layer, so that its hook and its use cases never run in a session of a layer, and a session of the orchestration repository runs with none of the modules of a layer.
+  No other module is enabled in the tooling repository ([LAY-14](#the-tooling-repository)); the plugins of the tooling repository are installed where LAY-14 says.
+
+  Rationale: a module of a layer is enabled only in the repositories of that layer, so that its use cases are not run in the wrong repository. The module `workflow-orchestration` is enabled in no repository of a layer, so that its hook and its use cases never run in a session of a layer, and a session of the orchestration repository runs with none of the modules of a layer. The tooling repository runs with none of the methodology either, so that the app never develops the tools that a project uses to apply it.
 
 ## Open questions
 
