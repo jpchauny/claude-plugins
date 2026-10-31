@@ -49,16 +49,6 @@
       "name": "workflow-orchestration",
       "source": "./apps/indra-software-factory/modules/workflow-orchestration",
       "description": "Module workflow-orchestration: runs the flow across the modules - what triggers a run, and how each step runs in its repository"
-    },
-    {
-      "name": "clean-examples",
-      "source": "./apps/clean-language/modules/clean-examples",
-      "description": "Module clean-examples of the app Clean Language, layers 0 and 1: the rules of how a Clean example is written, the audit of the examples of a layer (/clean-examples:audit), and a hook that refuses a malformed example as it is written"
-    },
-    {
-      "name": "clean-derived-norms",
-      "source": "./apps/clean-language/modules/clean-derived-norms",
-      "description": "Module clean-derived-norms of the app Clean Language, layer 2: the derived norms of Clean, one generator per type - the Lark grammar of Clean (/clean-derived-norms:derive-grammar) and its semantics in Lean 4 (/clean-derived-norms:derive-semantics) - each writing its list of derived norms, every derived norm with its own ID and fingerprint - run by /norms-management:build"
     }
   ]
 }

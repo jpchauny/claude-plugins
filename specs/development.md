@@ -50,6 +50,8 @@ Rationale of the unqualified term: the common case is a project that uses ISF, s
   | Meta module | `apps/<app>/modules/<module>/` |
   | Meta use case | `apps/<app>/modules/<module>/use-cases/<use case>/` |
 
+  A `<project>-tooling` repository holds one meta app, at its root: there the folder of the meta app is the root, and its meta modules are in `modules/<module>/`.
+
 - **DEV-6.** Each meta level holds its meta specs in its own folder `specs/`. A meta spec states what is true for its meta level and for every meta level inside it, and cites the meta levels above it instead of repeating them (DEV-4). The meta specs of a meta use case are `specs/<use case>.md`; the meta spec that says what a meta module is, is `specs/module.md`; the one that says what a meta app is, is `specs/app.md`.
 - **DEV-7.** Each meta level is built as a part of Claude Code (complete list):
   - a meta app is no plugin: it is the folder `apps/<app>/` of its meta specs and its meta modules. No plugin installs the meta modules of a meta app together;

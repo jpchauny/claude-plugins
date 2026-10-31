@@ -616,7 +616,7 @@ Feature: Define the acceptance areas and acceptance units
 
       Examples:
         | installed | result |
-        | "plugins" of "~/.claude/plugins/installed_plugins.json" holds the key "clean-derived-norms@jpchauny-plugins", and "~/.claude/plugins/known_marketplaces.json" holds "jpchauny-plugins" with "source" {"source": "github", "repo": "jpchauny/claude-plugins"} | "jpchauny/claude-plugins" |
+        | "plugins" of "~/.claude/plugins/installed_plugins.json" holds the key "clean-derived-norms@clean-language-tooling", and "~/.claude/plugins/known_marketplaces.json" holds "clean-language-tooling" with "source" {"source": "github", "repo": "jpchauny/clean-language-tooling"} | "jpchauny/clean-language-tooling" |
         | "plugins" holds the keys "clean-derived-norms@a" and "clean-derived-norms@b", and only an entry of "clean-derived-norms@a" has "gitCommitSha" "<sha>" | the "repo" of "a" |
         | "plugins" holds the keys "clean-derived-norms@a" and "clean-derived-norms@b", and an entry of each, or of neither, has "gitCommitSha" "<sha>" | null |
         | "plugins" holds no key "clean-derived-norms@<marketplace>" | null |
@@ -646,8 +646,8 @@ Feature: Define the acceptance areas and acceptance units
 
     Scenario: The issue cannot be opened
       Given "gh issue create" fails for the issue of a defect of a derived-norms generator
-      Then the skill says "acceptance-management:define: cannot open the issue in jpchauny/claude-plugins", and goes on with the next defect
-      And the message binds byte for byte once filled, where "jpchauny/claude-plugins" stands for "marketplace_repository" of the defect
+      Then the skill says "acceptance-management:define: cannot open the issue in jpchauny/clean-language-tooling", and goes on with the next defect
+      And the message binds byte for byte once filled, where "jpchauny/clean-language-tooling" stands for "marketplace_repository" of the defect
       And the changes and their commits are not affected
 
     Scenario: No issue without a yes (must not)

@@ -2007,9 +2007,9 @@ class DefectOfDerivedNormsGenerator(DerivedNormsFixture):
         write(os.path.join(self.norms, "specs-derived", "grammar", "status.jsonl"), STATUS_LINE_OF_GRAMMAR)
         write(os.path.join(self.norms, "specs-derived", "grammar", "billing.lark"), "row: invoice\n")
         self.set_lists({})
-        self.set_plugins_of_claude_code({"clean-derived-norms@jpchauny-plugins": [{"gitCommitSha": "c" * 40}]},
-                                        {"jpchauny-plugins": {"source": {"source": "github",
-                                                                         "repo": "jpchauny/claude-plugins"}}})
+        self.set_plugins_of_claude_code({"clean-derived-norms@clean-language-tooling": [{"gitCommitSha": "c" * 40}]},
+                                        {"clean-language-tooling": {"source": {"source": "github",
+                                                                               "repo": "jpchauny/clean-language-tooling"}}})
 
     def set_plugins_of_claude_code(self, plugins, marketplaces):
         folder = os.path.join(self.home, ".claude", "plugins")
@@ -2038,7 +2038,7 @@ class DefectOfDerivedNormsGenerator(DerivedNormsFixture):
         self.assertEqual(found["status_file"], "specs-derived/grammar/status.jsonl")
         self.assertEqual(found["generator"], {"plugin": "clean-derived-norms", "version": "0.5.0",
                                               "tooling_commit": "b" * 40})
-        self.assertEqual(found["marketplace_repository"], "jpchauny/claude-plugins")
+        self.assertEqual(found["marketplace_repository"], "jpchauny/clean-language-tooling")
         self.assertIsNone(found["no_issue_message"])
         self.assertEqual(found["issue_body_start"],
                          "Derived norm: grammar:7@3a4b5c6d, of the type grammar, lines 4 to 6 of "
