@@ -40,17 +40,28 @@ def github_anchor(heading):
 def sections(text):
     """Map the anchor of each heading, as GitHub makes it, to the text of its
     section, the sections below it included. GitHub gives the second heading
-    with the same anchor `<anchor>-1`, the third `<anchor>-2`, and so on."""
+    with the same anchor `<anchor>-1`, the third `<anchor>-2`, and so on. An
+    HTML anchor `<a id="...">` just above a heading, the old anchor of a
+    renamed heading, is one more anchor of that section."""
     headings = []
+    aliases = {}
+    pending = []
     lines = text.splitlines()
     in_fence = False
     for number, line in enumerate(lines):
         if line.lstrip().startswith("```"):
             in_fence = not in_fence
             continue
+        kept = None if in_fence else re.match(r'^<a id="([^"]+)"></a>\s*$', line)
+        if kept:
+            pending.append(kept.group(1))
+            continue
         m = None if in_fence else re.match(r"^(#{1,6})\s+(.*)$", line)
         if m:
             headings.append((number, len(m.group(1)), github_anchor(m.group(2))))
+            for alias in pending:
+                aliases[alias] = len(headings) - 1
+            pending = []
     result = {}
     seen = {}
     for index, (number, level, anchor) in enumerate(headings):
@@ -62,6 +73,9 @@ def sections(text):
         count = seen.get(anchor, 0)
         seen[anchor] = count + 1
         result[anchor if count == 0 else f"{anchor}-{count}"] = "\n".join(lines[number + 1:end])
+        for alias, heading_index in aliases.items():
+            if heading_index == index:
+                result.setdefault(alias, result[anchor if count == 0 else f"{anchor}-{count}"])
     return result
 
 

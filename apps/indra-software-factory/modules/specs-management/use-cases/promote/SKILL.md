@@ -7,7 +7,7 @@ argument-hint: "<path>..."
 # promote
 
 Moves specs from layer 0 to layer 1. Implements
-[specs/promote.md](specs/promote.md) (ORC-49 to ORC-52) and the shared rules of
+[specs/promote.md](specs/promote.md) (ORC-49 to ORC-52) and the shared meta rules of
 [module.md](../../specs/module.md#move-specs-between-layers-0-and-1)
 (ORC-35 to ORC-48 and ORC-58). Never start it on your own (ORC-35).
 

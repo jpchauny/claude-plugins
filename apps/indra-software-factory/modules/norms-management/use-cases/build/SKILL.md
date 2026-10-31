@@ -35,7 +35,7 @@ uv run --frozen --project "${CLAUDE_PLUGIN_ROOT}" norms-gen verify --specs <laye
 `build` reads layer 1 through git at the commit (default `HEAD`), never from
 its working tree, so uncommitted changes there are not built. On a non-zero
 exit, show its message as it is and stop: the meaning of each status is in
-the generator's spec,
+the generator's meta spec,
 [R62](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/norms-management/specs/norms-versions.md).
 
 ## 3. Derive the derived norms
@@ -48,16 +48,16 @@ build changed no norm:
 python3 -I -c 'import json; [print(e["type"], e["use_case"]) for e in json.load(open("project.json")).get("derived_norms", [])]'
 ```
 
-Each line is `<type> /<module>:<use case>`. Invoke each use case, in that
+Each line is `<type> /<module>:<use case>`. Invoke each meta use case, in that
 order, with the Skill tool (`<module>:<use case>`), and follow it to its end
-before the next one. When a use case stops with an error, note it and go on
+before the next one. When a meta use case stops with an error, note it and go on
 with the next one; a check that fails is no error (NRM-2). No line: the
-project has no derived norms. Each `<module>` is a plugin of the tooling
+project has no derived norms. Each `<module>` is a meta module, a plugin of the tooling
 repository of the project, which `.claude/settings.json` of this repository
-enables (LAY-14); when its use case is not available in the session, that is
+enables (LAY-14); when its meta use case is not available in the session, that is
 an error of its generator: note it and go on.
 
-Then, also when the project has no derived norms and when a use case
+Then, also when the project has no derived norms and when a meta use case
 stopped with an error, write the record of the types of derived norms
 (`specs-derived/types-of-derived-norms.json`, NRM-16) with the script of
 this plugin:

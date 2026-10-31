@@ -1,14 +1,16 @@
 # Specs management
 
-**Audience:** The people who run a project's flow from specs to code; whoever builds the skills of the plugin `specs-management`
+**Audience:** The people who run a project's flow from specs to code; whoever builds the meta use cases of the meta module `specs-management`
 
 **Scope:** Layers 0 and 1: the AI recommends how to improve the draft specs and the specs that the authors write, checks one spec against the whole of the two layers when a person asks for it, writes draft specs from an interview of a person, and moves specs between the two layers when a person asks for it
 
-The module `specs-management` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md).
+The meta module `specs-management` of the meta app Indra Software Factory, listed in [app.md](../../../specs/app.md).
 
-## Use cases
+<a id="use-cases"></a>
 
-| Use case | Spec |
+## Meta use cases
+
+| Meta use case | Meta spec |
 |---|---|
 | `check-writing` | [check-writing.md](../use-cases/check-writing/specs/check-writing.md) |
 | `check-consistency` | [check-consistency.md](../use-cases/check-consistency/specs/check-consistency.md) |
@@ -18,7 +20,7 @@ The module `specs-management` of the app Indra Software Factory, listed in [app.
 
 ## Recommend improvements to the specs
 
-- **ORC-7.** The draft specs and the specs are free: nothing restricts what the authors write ([LAY-2](../../development-methodology/specs/layers.md#rules)). The check of writing, `/specs-management:check-writing`, recommends how to improve the draft specs of layer 0 and the specs of layer 1, and changes nothing; its specification is [check-writing.md](../use-cases/check-writing/specs/check-writing.md). The check of consistency, `/specs-management:check-consistency`, checks one spec of layer 0 or of layer 1 against the whole of the two layers, reports each inconsistency it confirms, and changes nothing; its specification is [check-consistency.md](../use-cases/check-consistency/specs/check-consistency.md). Both run only when the user asks for them, no other use case runs them, and their reports stop nothing. No use case of this module writes the content of a spec, except `/specs-management:write`, which writes a draft spec of layer 0 from the interview of the user, after the user's yes, and deletes the links to a spec that the user deletes, and rewrites the sentences they leave broken as the user accepts ([write.md](../use-cases/write/specs/write.md)). Promote and demote (ORC-35) only move the files that a person names, and rewrite the links that point at them.
+- **ORC-7.** The draft specs and the specs are free: nothing restricts what the authors write ([LAY-2](../../development-methodology/specs/layers.md#rules)). The check of writing, `/specs-management:check-writing`, recommends how to improve the draft specs of layer 0 and the specs of layer 1, and changes nothing; its specification is [check-writing.md](../use-cases/check-writing/specs/check-writing.md). The check of consistency, `/specs-management:check-consistency`, checks one spec of layer 0 or of layer 1 against the whole of the two layers, reports each inconsistency it confirms, and changes nothing; its specification is [check-consistency.md](../use-cases/check-consistency/specs/check-consistency.md). Both run only when the user asks for them, no other meta use case runs them, and their reports stop nothing. No meta use case of this meta module writes the content of a spec, except `/specs-management:write`, which writes a draft spec of layer 0 from the interview of the user, after the user's yes, and deletes the links to a spec that the user deletes, and rewrites the sentences they leave broken as the user accepts ([write.md](../use-cases/write/specs/write.md)). Promote and demote (ORC-35) only move the files that a person names, and rewrite the links that point at them.
 
 ## Move specs between layers 0 and 1
 
@@ -39,7 +41,9 @@ This section states what promote and demote share. Promoting a spec moves it fro
 | Plain link | A link whose destination does not start with `absent:`. |
 | Link target | The path that a link's destination resolves to from the folder of the file that holds it, without `absent:` at its start and without its `#<anchor>`. A destination that resolves outside the repository has no link target, and the move does not rewrite it. |
 
-### Rules
+<a id="rules"></a>
+
+### Meta rules
 
 - **ORC-35.** Promote and demote run only when the user asks for them (complete list): the user types `/specs-management:promote` or `/specs-management:demote`; the user asks in words to promote or to demote specs; the user says yes to the promote or the demote that `/specs-management:write` proposes (ORC-62, ORC-67). The model must never start a move on its own.
 - **ORC-36.** A plain link `[<text>](<destination>)` becomes the absent link `[<text> (not specified yet)](absent:<destination>)`, and nothing else in it changes. Its meaning, in every layer, is [LAY-7](../../development-methodology/specs/layers.md#rules). The mark names no repository.

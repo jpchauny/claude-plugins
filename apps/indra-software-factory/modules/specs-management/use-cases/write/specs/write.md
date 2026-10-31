@@ -2,22 +2,22 @@
 
 **Audience:** The people who write a project's draft specs and specs; whoever builds the skill `write` of the plugin `specs-management`
 
-**Scope:** The use case in which the AI interviews a person about what they want, and writes it as a draft spec of layer 0: a new draft spec, a change to a draft spec, or a change to or the deletion of a spec of layer 1 after its demote. It checks the draft cheaply against layers 0 and 1 after each change and, when the user says the draft is ready, proposes its promote
+**Scope:** The meta use case in which the AI interviews a person about what they want, and writes it as a draft spec of layer 0: a new draft spec, a change to a draft spec, or a change to or the deletion of a spec of layer 1 after its demote. It checks the draft cheaply against layers 0 and 1 after each change and, when the user says the draft is ready, proposes its promote
 
-A use case of the module `specs-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). The guideline that every draft spec follows is [writing-specs.md](../../../writing-specs.md). Out of scope: writing a new spec directly in layer 1; changing a spec of layer 1 in place; promoting or demoting without the user's yes; running the check of writing ([check-writing.md](../../check-writing/specs/check-writing.md)) or the check of consistency ([check-consistency.md](../../check-consistency/specs/check-consistency.md)), which run only when the user asks for them; layers 2, 3 and 4.
+A meta use case of the meta module `specs-management`, specified in [module.md](../../../specs/module.md); the meta modules of the meta app are listed in [app.md](../../../../../specs/app.md). The guideline that every draft spec follows is [writing-specs.md](../../../writing-specs.md). Out of scope: writing a new spec directly in layer 1; changing a spec of layer 1 in place; promoting or demoting without the user's yes; running the check of writing ([check-writing.md](../../check-writing/specs/check-writing.md)) or the check of consistency ([check-consistency.md](../../check-consistency/specs/check-consistency.md)), which run only when the user asks for them; layers 2, 3 and 4.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| Skill | The skill `write` of the plugin `specs-management`, invoked as `/specs-management:write [<path>]`; the actor of every rule that names no other. |
+| Skill | The skill `write` of the plugin `specs-management`, invoked as `/specs-management:write [<path>]`; the actor of every meta rule that names no other. |
 | Draft | The file of layer 0 that a run writes, changes or deletes. |
 | Intent | What the user wants the draft to say, in their own words. |
 | Paraphrase | The skill's restatement of the intent: the narrative `In order to <benefit>`, `As a <role>`, `I want <what>`, followed by the rules, the examples of each rule, and the open questions. |
 | Neighbour | A file of layer 0 or of layer 1 that the draft links to, that links to the draft, or that holds a term defined in the draft. |
 | Inconsistency | A statement of the draft that contradicts a statement of the draft or of another file of layers 0 and 1; a fact that the draft states and another file already states ([WSP-11](../../../writing-specs.md)); a term that the draft defines with a meaning other than its meaning in another file ([WSP-3](../../../writing-specs.md)); a link of the draft whose link target does not exist. |
 
-The terms path, link, link target, absent link and plain link are those of [module.md](../../../specs/module.md#terms). Promote and demote are the use cases [promote.md](../../promote/specs/promote.md) and [demote.md](../../demote/specs/demote.md).
+The terms path, link, link target, absent link and plain link are those of [module.md](../../../specs/module.md#terms). Promote and demote are the meta use cases [promote.md](../../promote/specs/promote.md) and [demote.md](../../demote/specs/demote.md).
 
 ## Write a draft spec
 

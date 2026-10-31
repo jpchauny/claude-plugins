@@ -2,11 +2,11 @@
 
 **Prefix:** APP
 
-**Audience:** The people who use the app; whoever builds one of its modules
+**Audience:** The people who use the meta app; whoever builds one of its meta modules
 
-**Scope:** What the app is, how it is used, and its modules. The app is one of the marketplace, listed in [marketplace.md](../../../specs/marketplace.md); each module specifies its own use cases; where each module is installed is in [layers.md](../modules/development-methodology/specs/layers.md#where-each-module-is-installed)
+**Scope:** What the meta app is, how it is used, and its meta modules. The meta app is one of the marketplace, listed in [marketplace.md](../../../specs/marketplace.md); each meta module specifies its own meta use cases; where each meta module is installed is in [layers.md](../modules/development-methodology/specs/layers.md#where-each-module-is-installed)
 
-Indra Software Factory is an app of Claude Code plugins for working in five
+Indra Software Factory is a meta app of Claude Code plugins for working in five
 layers: draft specs and specs written by people, norms and derived norms
 generated from them, acceptance areas and acceptance units that agents write
 from the norms and people approve, and code built from the norms and the
@@ -17,27 +17,29 @@ across the layers
 and may have one tooling repository, which is no layer either and holds the
 project's own plugins, such as its derived-norms generators
 ([LAY-14](../modules/development-methodology/specs/layers.md#the-tooling-repository)).
-A person installs each module where
+A person installs each meta module where
 [APP-6](../modules/development-methodology/specs/layers.md#where-each-module-is-installed)
-says, and then invokes its use cases, if it has any.
+says, and then invokes its meta use cases, if it has any.
 
-Every module obeys the rules of the five layers, the clauses LAY-n of
+Every meta module obeys the meta rules of the five layers, the clauses LAY-n of
 [layers.md](../modules/development-methodology/specs/layers.md), and the flow of a run,
 [ORC-15](../modules/development-methodology/specs/flow.md#start-a-run). Both are
-specs of the module `development-methodology`, which carries the methodology to
+meta specs of the meta module `development-methodology`, which carries the methodology to
 every repository of a project.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| App | Indra Software Factory: its modules, each one a plugin installed on its own. The app itself is no plugin. |
-| Module | A part of the app with one responsibility, its use cases, its hooks or both, built as one plugin of the same name. |
-| Use case | One thing the user invokes, as `/<module>:<use case>`. |
+| Meta app | Indra Software Factory: its meta modules, each one a plugin installed on its own. The meta app itself is no plugin. |
+| Meta module | A part of the meta app with one responsibility, its meta use cases, its hooks or both, built as one plugin of the same name. |
+| Meta use case | One thing the user invokes, as `/<module>:<use case>`. |
 
-## Modules
+<a id="modules"></a>
 
-| Module | Responsibility | Specs |
+## Meta modules
+
+| Meta module | Responsibility | Meta specs |
 |---|---|---|
 | `development-methodology` | The development methodology: the five layers, the flow of a run across them, and their terms; an index of it in every session of every repository of a project | [module.md](../modules/development-methodology/specs/module.md) |
 | `project-management` | The repositories of a project: their creation and their life cycle | [module.md](../modules/project-management/specs/module.md) |
@@ -46,17 +48,19 @@ every repository of a project.
 | `acceptance-management` | Layer 3: the acceptance areas and the acceptance units, the increments and the order in which the units are implemented, their acceptance tests, and when a unit, an area and an increment are done | [module.md](../modules/acceptance-management/specs/module.md) |
 | `code-implementation` | Layer 4: code built from the norms and the derived norms, and its traceability to the acceptance units it implements and to the derived norms it is built from, and through them to their norms | [module.md](../modules/code-implementation/specs/module.md) |
 | `drift-management` | A drift found while defining acceptance in layer 3 or implementing in layer 4, sent back to where it is fixed: layer 1, or the plugin of the derived-norms generator that made a defect of a derived-norms generator | [module.md](../modules/drift-management/specs/module.md) |
-| `workflow-orchestration` | Runs the flow across the modules from the orchestration repository: a person starts and controls a run there; each step runs as a headless session in the repository of its layer; the evidence run of the acceptance tests; the queue of the requester | [module.md](../modules/workflow-orchestration/specs/module.md) |
+| `workflow-orchestration` | Runs the flow across the meta modules from the orchestration repository: a person starts and controls a run there; each step runs as a headless session in the repository of its layer; the evidence run of the acceptance tests; the queue of the requester | [module.md](../modules/workflow-orchestration/specs/module.md) |
 | `utilities` | Tools usable in any project, and in any layer of a project of Indra Software Factory: exploring, the issue tree, explanations, a recap of the session | not yet specified |
 
-## Rules
+<a id="rules"></a>
 
-How the app is developed, a module as a plugin and a use case as a skill
+## Meta rules
+
+How the meta app is developed, a meta module as a plugin and a meta use case as a skill
 of it, is in [development.md](../../../specs/development.md). Where each
-module is installed is
+meta module is installed is
 [APP-6](../modules/development-methodology/specs/layers.md#where-each-module-is-installed),
 a clause of the methodology since it moved there
 ([SST-11](../../../specs/spec-structure.md#ids-of-clauses)).
 
-- **APP-5.** Each module is a plugin of its own. No module depends on another, and no plugin installs them together.
-- **APP-7.** A use case of one layer is not installed outside the repository of its layer ([APP-6](../modules/development-methodology/specs/layers.md#where-each-module-is-installed)), so it cannot be invoked there.
+- **APP-5.** Each meta module is a plugin of its own. No meta module depends on another, and no plugin installs them together.
+- **APP-7.** A meta use case of one layer is not installed outside the repository of its layer ([APP-6](../modules/development-methodology/specs/layers.md#where-each-module-is-installed)), so it cannot be invoked there.

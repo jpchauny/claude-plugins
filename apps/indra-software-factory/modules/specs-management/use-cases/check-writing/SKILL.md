@@ -7,7 +7,7 @@ argument-hint: "[path]"
 # check-writing
 
 Implements [specs/check-writing.md](specs/check-writing.md); the AUD-n IDs
-below are its requirements. The only output is the report, in the chat.
+below are its meta rules. The only output is the report, in the chat.
 
 ## Rules of every run
 

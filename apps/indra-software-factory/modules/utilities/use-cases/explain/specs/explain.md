@@ -4,9 +4,9 @@
 
 **Audience:** The developers who ask for a topic to be explained to them; whoever builds the skill `explain` of the plugin `utilities`
 
-**Scope:** The use case that explains a topic one short step at a time, waiting for the user's confirmation after each step, and that skips the terms the user has saved as known. Out of scope: teaching material written to a file. Out of scope: a list of known terms shared by several people. The skill must never save a term that the user did not ask to save. The skill must never use an analogy from everyday life. The skill must never share the known-terms list with another person.
+**Scope:** The meta use case that explains a topic one short step at a time, waiting for the user's confirmation after each step, and that skips the terms the user has saved as known. Out of scope: teaching material written to a file. Out of scope: a list of known terms shared by several people. The skill must never save a term that the user did not ask to save. The skill must never use an analogy from everyday life. The skill must never share the known-terms list with another person.
 
-A use case of the module `utilities`, which [app.md](../../../../../specs/app.md) lists and which has no `module.md` yet. The binding words follow [writing-specs.md](../../../../../../../specs/writing-specs.md#how-to-read-the-rules).
+A meta use case of the meta module `utilities`, which [app.md](../../../../../specs/app.md) lists and which has no `module.md` yet. The binding words follow [writing-specs.md](../../../../../../../specs/writing-specs.md#how-to-read-the-rules).
 
 System it works with: claude.ai Artifacts, through the Claude Code tools `Artifact` and `ArtifactData`, which hold the known-terms list.
 
@@ -14,7 +14,7 @@ System it works with: claude.ai Artifacts, through the Claude Code tools `Artifa
 
 | Term | Meaning |
 |---|---|
-| Skill | The skill `explain` of the plugin `utilities`; the actor of every requirement that names no other. |
+| Skill | The skill `explain` of the plugin `utilities`; the actor of every meta rule that names no other. |
 | Step | One message of the skill that explains one idea of the topic, in 3 to 6 sentences. |
 | Confirmation | A reply of the user that only lets the skill go on. Complete list: "got it", "entendido", "ok", "sigue", "dale", "next". |
 | Term | A concept, an acronym or a technical word that a step uses. |
@@ -253,7 +253,7 @@ Feature: Explain a topic
 
 ## Changes from the current skill
 
-The skill already exists, without a spec. This spec keeps its behaviour, with these changes (complete list):
+The skill already exists, without a meta spec. This meta spec keeps its behaviour, with these changes (complete list):
 
 - Added: the known-terms list, XPL-8, XPL-10, XPL-11, XPL-13.
 - Added: the report of explained terms, XPL-12.

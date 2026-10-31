@@ -4,15 +4,15 @@
 
 **Audience:** The people who start a project; whoever builds the skill `create-project` of the plugin `project-management`
 
-**Scope:** The use case that creates the repositories of the five layers of a new project, its orchestration repository and its tooling repository, and its `project.json`. Out of scope: the files of the acceptance repository that this use case does not write, such as its acceptance areas, acceptance units, acceptance tests and records ([ACU-6](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository))
+**Scope:** The meta use case that creates the repositories of the five layers of a new project, its orchestration repository and its tooling repository, and its `project.json`. Out of scope: the files of the acceptance repository that this meta use case does not write, such as its acceptance areas, acceptance units, acceptance tests and records ([ACU-6](../../../../acceptance-management/specs/module.md#the-files-of-the-acceptance-repository))
 
-A use case of the module `project-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md).
+A meta use case of the meta module `project-management`, specified in [module.md](../../../specs/module.md); the meta modules of the meta app are listed in [app.md](../../../../../specs/app.md).
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| Skill | The skill `create-project` of the plugin `project-management`; the actor of every requirement that names no other. |
+| Skill | The skill `create-project` of the plugin `project-management`; the actor of every meta rule that names no other. |
 | Project | The repositories of its five layers ([LAY-1](../../../../development-methodology/specs/layers.md#rules)), its orchestration repository ([LAY-11](../../../../development-methodology/specs/layers.md#the-orchestration-repository)) and its tooling repository ([LAY-14](../../../../development-methodology/specs/layers.md#the-tooling-repository)), as its `project.json` lists them ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
 | Project folder | The folder that holds the repositories of a project ([ORC-20](../../../specs/module.md#where-the-repositories-are)). |
 
@@ -20,7 +20,7 @@ A use case of the module `project-management`, specified in [module.md](../../..
 
 ```gherkin
 Feature: Create a project
-  In order to start each layer in its own repository, with the modules of its layer enabled
+  In order to start each layer in its own repository, with the meta modules of its layer enabled
   As a person who starts a project
   I want the repositories of its five layers, its orchestration repository and its tooling repository created in one go
 
@@ -124,7 +124,7 @@ Feature: Create a project
       And the user does not approve it
       Then the skill creates nothing
 
-  Rule: ORC-5 Each repository of a layer, and the orchestration repository, starts with the modules that APP-6 enables in it, with the rules "ask" and "deny" of its layer, and with the project's project.json
+  Rule: ORC-5 Each repository of a layer, and the orchestration repository, starts with the meta modules that APP-6 enables in it, with the rules "ask" and "deny" of its layer, and with the project's project.json
 
     Scenario Outline: One repository of the project
       Given the user approved the plan for the project "billing", with no component
@@ -190,8 +190,8 @@ Feature: Create a project
       And the entries are in this order: the repositories of layers 0 to 4, in the order of their layers and of their components, then "billing-orchestration", then "billing-tooling"
       And "project.json" has no "derived_norms": the project has no type of derived norms until a person adds one (NRM-1)
 
-  Rule: CRP-4 The tooling repository starts as an empty marketplace of Claude Code, developed with the meta methodology, and with the module "utilities" alone
-    Rationale: the tooling repository holds the project's own plugins (LAY-14), so it starts as a marketplace that lists none, ready for the first; it runs none of the methodology, which its plugins help to apply, so that the app never develops its own tools; "utilities" is for any project (APP-6).
+  Rule: CRP-4 The tooling repository starts as an empty marketplace of Claude Code, developed with the meta methodology, and with the meta module "utilities" alone
+    Rationale: the tooling repository holds the project's own plugins (LAY-14), so it starts as a marketplace that lists none, ready for the first; it runs none of the methodology, which its plugins help to apply, so that the meta app never develops its own tools; "utilities" is for any project (APP-6).
 
     Scenario: The tooling repository
       Given the user approved the plan for the project "billing", with the owner "acme"
@@ -220,7 +220,7 @@ Feature: Create a project
       Given the user approved the plan for the project "billing", with the owner "acme"
       When the project is created
       Then the "CLAUDE.md" of "billing-tooling" says that the repository is the tooling repository of "billing" and no layer (LAY-14)
-      And it says that every change starts in a spec that the person approves, and is implemented from it, by the meta methodology, citing "development.md" by its URL (LAY-14)
+      And it says that every change starts in a meta spec that the person approves, and is implemented from it, by the meta methodology, citing "development.md" by its URL (LAY-14)
       And it says that a repository of a layer installs a plugin of it with "extraKnownMarketplaces" and "enabledPlugins", as LAY-14 says
 
     Scenario: No layer installs the tooling repository when the project is created

@@ -4,15 +4,15 @@
 
 **Audience:** The people who change the repositories of a project; whoever builds the skill `sync` of the plugin `project-management`
 
-**Scope:** The use case that copies the `project.json` of the repository of layer 1 to every other repository of the project, and keeps the rules `deny` of the `.claude/settings.json` of the repositories of layers 3 and 4 in step with it (SNC-1). How `project.json` is written, and which copy is the one that is edited, is [ORC-20 and ORC-23](../../../specs/module.md#where-the-repositories-are)
+**Scope:** The meta use case that copies the `project.json` of the repository of layer 1 to every other repository of the project, and keeps the rules `deny` of the `.claude/settings.json` of the repositories of layers 3 and 4 in step with it (SNC-1). How `project.json` is written, and which copy is the one that is edited, is [ORC-20 and ORC-23](../../../specs/module.md#where-the-repositories-are)
 
-A use case of the module `project-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). The terms project and project folder are those of [module.md](../../../specs/module.md#terms).
+A meta use case of the meta module `project-management`, specified in [module.md](../../../specs/module.md); the meta modules of the meta app are listed in [app.md](../../../../../specs/app.md). The terms project and project folder are those of [module.md](../../../specs/module.md#terms).
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| Skill | The skill `sync` of the plugin `project-management`, invoked as `/project-management:sync`; the actor of every rule that names no other. |
+| Skill | The skill `sync` of the plugin `project-management`, invoked as `/project-management:sync`; the actor of every meta rule that names no other. |
 | Source | The `project.json` of the repository of layer 1, at its commit `HEAD` (ORC-23). |
 | Target | Every repository of the project other than the one of layer 1, as the source lists them, the orchestration repository and the tooling repository included (SNC-2, SNC-3). |
 | Managed rule | A rule `deny` of the exact form `Read(//**/<path>/**)` or `Edit(//**/<path>/**)`, where `<path>` is the `path` of a repository of layer 3 or 4 in the source, in the `project.json` of the target before the sync, or in any version of `project.json` committed in the target. Every other rule `deny` was written by a person. |

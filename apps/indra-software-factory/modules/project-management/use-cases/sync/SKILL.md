@@ -7,7 +7,7 @@ description: Copy the project.json of the repository of layer 1 to every other r
 
 Copies the `project.json` of the repository of layer 1 to every other
 repository of the project, and keeps the rules `deny` of the repositories of
-layers 3 and 4 in step with it (SNC-1). Its specification is
+layers 3 and 4 in step with it (SNC-1). Its meta spec is
 [specs/sync.md](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/project-management/use-cases/sync/specs/sync.md).
 
 ## 1. Plan

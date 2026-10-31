@@ -2,11 +2,11 @@
 
 **Prefix:** PRJ
 
-**Audience:** The people who use the app; whoever builds a use case of the plugin `project-management`
+**Audience:** The people who use the meta app; whoever builds a meta use case of the plugin `project-management`
 
-**Scope:** The module `project-management`: the repositories of a project, the repositories of its five layers, its orchestration repository and its tooling repository, the project folder that holds them, their creation and their life cycle. Their creation is in [create-project.md](../use-cases/create-project/specs/create-project.md); keeping `project.json` and the rules deny in step is in [sync.md](../use-cases/sync/specs/sync.md)
+**Scope:** The meta module `project-management`: the repositories of a project, the repositories of its five layers, its orchestration repository and its tooling repository, the project folder that holds them, their creation and their life cycle. Their creation is in [create-project.md](../use-cases/create-project/specs/create-project.md); keeping `project.json` and the rules deny in step is in [sync.md](../use-cases/sync/specs/sync.md)
 
-The module `project-management` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md).
+The meta module `project-management` of the meta app Indra Software Factory, listed in [app.md](../../../specs/app.md).
 
 ## Terms
 
@@ -17,9 +17,11 @@ The module `project-management` of the app Indra Software Factory, listed in [ap
 
 The terms repository of a layer, orchestration repository and tooling repository are those of [layers.md](../../development-methodology/specs/layers.md#terms).
 
-## Use cases
+<a id="use-cases"></a>
 
-| Use case | Spec |
+## Meta use cases
+
+| Meta use case | Meta spec |
 |---|---|
 | `create-project` | [create-project.md](../use-cases/create-project/specs/create-project.md) |
 | `sync` | [sync.md](../use-cases/sync/specs/sync.md) |
@@ -36,7 +38,7 @@ The terms repository of a layer, orchestration repository and tooling repository
     - `path`: where the repository is, relative to the project folder, its parts separated by `/`, none of them empty, `.` or `..`;
   - `derived_norms`: optional; the types of derived norms of the project, in the order they are generated, one entry per type, with
     - `type`: the name of the folder of its output under `specs-derived/`, one or more lower-case ASCII letters, digits and `-`, unique in the list;
-    - `use_case`: the use case that generates it, `/<module>:<use case>`, where `<module>` is a plugin of the tooling repository of the project ([LAY-14](../../development-methodology/specs/layers.md#the-tooling-repository), [NRM-1](../../norms-management/specs/module.md#derive-the-derived-norms)).
+    - `use_case`: the meta use case that generates it, `/<module>:<use case>`, where `<module>` is a plugin of the tooling repository of the project ([LAY-14](../../development-methodology/specs/layers.md#the-tooling-repository), [NRM-1](../../norms-management/specs/module.md#derive-the-derived-norms)).
 
   The list holds exactly one entry of each of the layers 0, 1, 2 and 3, none of them with `component`. Layer 4 is either one entry without `component`, or one or more entries each with a different `component` ([LAY-1](../../development-methodology/specs/layers.md#rules)). The list holds exactly one entry with `role` `orchestration`, except a `project.json` written before the orchestration repository existed, which holds none (PRJ-2), and at most one entry with `role` `tooling` (PRJ-3); an entry with `role` has no `layer` and no `component`. Every other entry has `layer` and no `role`. For example:
 
@@ -75,12 +77,12 @@ The terms repository of a layer, orchestration repository and tooling repository
 
 ## The entry of the orchestration repository
 
-- **PRJ-2.** Every use case and every hook of a module other than `workflow-orchestration` finds the repositories of the layers by the entries of `project.json` with `layer`, and neither requires nor refuses an entry with `role`, of the orchestration repository or of the tooling repository; `/project-management:sync` copies `project.json` to it as to every other repository ([SNC-2](../use-cases/sync/specs/sync.md#sync-projectjson)), and `/project-management:create-project` creates it ([ORC-5](../use-cases/create-project/specs/create-project.md#create-a-project)). A `project.json` without that entry, written before the orchestration repository existed, stays valid for all of them; only the use cases of `workflow-orchestration` need the entry, since they run only in the orchestration repository ([WFO-1](../../workflow-orchestration/specs/module.md#where-the-orchestrator-runs)). Migration of a project created before: a person creates the repository on GitHub, clones it into the project folder at its `path`, adds its entry to the copy of `project.json` of layer 1 as ORC-23 says, runs `/project-management:sync`, and enables the plugins of [APP-6](../../development-methodology/specs/layers.md#where-each-module-is-installed) in its `.claude/settings.json`. Rationale: the projects created before keep working with no change, and get their orchestration repository when a person decides it.
+- **PRJ-2.** Every meta use case and every hook of a meta module other than `workflow-orchestration` finds the repositories of the layers by the entries of `project.json` with `layer`, and neither requires nor refuses an entry with `role`, of the orchestration repository or of the tooling repository; `/project-management:sync` copies `project.json` to it as to every other repository ([SNC-2](../use-cases/sync/specs/sync.md#sync-projectjson)), and `/project-management:create-project` creates it ([ORC-5](../use-cases/create-project/specs/create-project.md#create-a-project)). A `project.json` without that entry, written before the orchestration repository existed, stays valid for all of them; only the meta use cases of `workflow-orchestration` need the entry, since they run only in the orchestration repository ([WFO-1](../../workflow-orchestration/specs/module.md#where-the-orchestrator-runs)). Migration of a project created before: a person creates the repository on GitHub, clones it into the project folder at its `path`, adds its entry to the copy of `project.json` of layer 1 as ORC-23 says, runs `/project-management:sync`, and enables the plugins of [APP-6](../../development-methodology/specs/layers.md#where-each-module-is-installed) in its `.claude/settings.json`. Rationale: the projects created before keep working with no change, and get their orchestration repository when a person decides it.
 
 ## The entry of the tooling repository
 
-- **PRJ-3.** The entry of the tooling repository is optional in every `project.json`: no use case and no hook of the app requires it, and none refuses it (PRJ-2). `/project-management:create-project` creates the tooling repository of every new project ([CRP-4](../use-cases/create-project/specs/create-project.md#create-a-project)), and `/project-management:sync` copies `project.json` to it as to every other repository, and keeps no rule `deny` there ([SNC-3](../use-cases/sync/specs/sync.md#sync-projectjson)). Migration of a project created before: a person creates the repository on GitHub, clones it into the project folder at its `path`, writes in it the files of CRP-4, adds its entry to the copy of `project.json` of layer 1 as ORC-23 says, runs `/project-management:sync`, and then moves into it, as plugins, the project's own tools that the repositories of layers 0 to 3 held ([LAY-13](../../development-methodology/specs/layers.md#rules)). Rationale: a project whose derived-norms generators are plugins of another marketplace keeps working, and a project with no tool of its own needs no tooling repository; a new project gets one, so that its first tool has a place that is no layer.
+- **PRJ-3.** The entry of the tooling repository is optional in every `project.json`: no meta use case and no hook of the meta app requires it, and none refuses it (PRJ-2). `/project-management:create-project` creates the tooling repository of every new project ([CRP-4](../use-cases/create-project/specs/create-project.md#create-a-project)), and `/project-management:sync` copies `project.json` to it as to every other repository, and keeps no rule `deny` there ([SNC-3](../use-cases/sync/specs/sync.md#sync-projectjson)). Migration of a project created before: a person creates the repository on GitHub, clones it into the project folder at its `path`, writes in it the files of CRP-4, adds its entry to the copy of `project.json` of layer 1 as ORC-23 says, runs `/project-management:sync`, and then moves into it, as plugins, the project's own tools that the repositories of layers 0 to 3 held ([LAY-13](../../development-methodology/specs/layers.md#rules)). Rationale: a project whose derived-norms generators are plugins of another marketplace keeps working, and a project with no tool of its own needs no tooling repository; a new project gets one, so that its first tool has a place that is no layer.
 
 ## Open questions
 
-1. Should a use case add the orchestration repository to a project created before it existed, instead of the steps of the migration of PRJ-2?
+1. Should a meta use case add the orchestration repository to a project created before it existed, instead of the steps of the migration of PRJ-2?

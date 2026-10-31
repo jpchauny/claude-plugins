@@ -4,7 +4,7 @@
 
 **Scope:** A drift found while defining acceptance in layer 3 or implementing in layer 4, sent back to where it is fixed: layer 1, or the plugin of the derived-norms generator that made a defect of a derived-norms generator. What each layer holds is in [layers.md](../../development-methodology/specs/layers.md)
 
-The module `drift-management` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md).
+The meta module `drift-management` of the meta app Indra Software Factory, listed in [app.md](../../../specs/app.md).
 
 ## Terms
 
@@ -17,12 +17,12 @@ The term run is that of [flow.md](../../development-methodology/specs/flow.md#te
 
 ## Report a drift
 
-- **ORC-14.** When the step of [acceptance-management](../../acceptance-management/specs/module.md) or the step of [code-implementation](../../code-implementation/specs/module.md) finds a drift, it does not work around it, and opens one issue for it, once the person who runs its use case confirms the text of the issue ([LAY-5](../../development-methodology/specs/layers.md#rules)). The issue goes to (complete list):
+- **ORC-14.** When the step of [acceptance-management](../../acceptance-management/specs/module.md) or the step of [code-implementation](../../code-implementation/specs/module.md) finds a drift, it does not work around it, and opens one issue for it, once the person who runs its meta use case confirms the text of the issue ([LAY-5](../../development-methodology/specs/layers.md#rules)). The issue goes to (complete list):
   - for a defect of a derived-norms generator: the marketplace repository: that of the plugin that `generator` of the status file of the type of the derived norm names, which is the tooling repository of the project for a plugin of it ([LAY-14](../../development-methodology/specs/layers.md#the-tooling-repository)), at the commit of layer 2 that the step read ([NRM-5](../../norms-management/specs/module.md#derive-the-derived-norms)), found as [ACU-79](../../acceptance-management/use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units) says. The issue names the derived norm by its derived norm ID and derived norm fingerprint, its type, the norms it cites, each with its norm hash, and the `plugin`, `version` and `tooling_commit` of `generator` of that status file;
   - for every other drift: the repository of layer 1.
 
   Exceptions, in which the step opens no issue for the drift (complete list):
-  - the person who runs its use case does not say yes to the text of the issue;
+  - the person who runs its meta use case does not say yes to the text of the issue;
   - the step cannot find where the issue goes, and so asks no question of it: for a drift sent to layer 1, when `project.json` has not exactly one entry of layer 1 ([ACU-68](../../acceptance-management/use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units) for the step of acceptance-management, this rule for the step of code-implementation); for a defect of a derived-norms generator, when the derived norm cannot be looked up in the list of derived norms of its type at the commit of layer 2 that the step read, when that commit holds no status file of the type with a `generator`, or when no installed marketplace on GitHub holds the plugin that `generator` names ([ACU-79](../../acceptance-management/use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units), [IMP-10](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task));
   - `gh issue create` fails for the issue ([ACU-68](../../acceptance-management/use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units), [ACU-79](../../acceptance-management/use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units), [IMP-10](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task), and this rule for a drift sent to layer 1 by the step of code-implementation).
 
@@ -31,7 +31,7 @@ The term run is that of [flow.md](../../development-methodology/specs/flow.md#te
   - for the step of code-implementation, for a defect of a derived-norms generator: the one that [IMP-10](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task) gives;
   - for the step of code-implementation, for a drift sent to layer 1: the one that [ACU-68](../../acceptance-management/use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units) gives, with `code-implementation:implement:` where ACU-68 says `acceptance-management:define:`, and otherwise byte for byte once filled. So it is `code-implementation:implement: project.json has not exactly one entry of layer 1, the specs repository; no issue is opened` when `project.json` has not exactly one entry of layer 1, and `code-implementation:implement: cannot open the issue in <owner>/<name>` when `gh issue create` fails, where `<owner>/<name>` is that of the repository of layer 1 in `project.json`. ORC-14 gives these two messages because IMP-10 gives none for a drift sent to layer 1.
 
-  In each of the three the step still does not work around the drift, and the run still ends for the norms and the derived norms it touches, as below; the drift then reaches whoever fixes it only through the person who runs the use case.
+  In each of the three the step still does not work around the drift, and the run still ends for the norms and the derived norms it touches, as below; the drift then reaches whoever fixes it only through the person who runs the meta use case.
 
   The run ends there for the norms and the derived norms the drift touches. How the fix reaches layer 2 (complete list):
   - for a drift sent to layer 1: a new run starts from the commit of layer 1 that fixes it, and its derived-norms generators derive again what that change of the norms calls for ([NRM-7](../../norms-management/specs/module.md#derive-the-derived-norms));

@@ -2,15 +2,15 @@
 
 **Audience:** The requesters of a project, who approve its acceptance areas and acceptance units; whoever builds the skill `define` of the plugin `acceptance-management`
 
-**Scope:** The use case in which the acceptance architect analyses every norm of layer 2 against every acceptance area and every acceptance unit of the acceptance repository, and creates, changes and deletes acceptance areas and acceptance units, with their scenarios, and fills `test_command` and `product` of `acceptance.json` while they are empty, in changes that the requester approves. A script, with no model, computes the inventory that the analysis starts from and checks every file before it is committed. Systems it works with (complete list): git and the remote `origin` of the acceptance repository, which it reads and pushes to, and of the norms repository, which it only fetches and reads; the records of the installed plugins of Claude Code, `~/.claude/plugins/installed_plugins.json` and `~/.claude/plugins/known_marketplaces.json`, which it only reads, to find the marketplace repository (ACU-79); GitHub, through `gh`, only to open the issues of a gap of layer 1 in the specs repository (ACU-68) and of a defect of a derived-norms generator in the marketplace repository (ACU-79)
+**Scope:** The meta use case in which the acceptance architect analyses every norm of layer 2 against every acceptance area and every acceptance unit of the acceptance repository, and creates, changes and deletes acceptance areas and acceptance units, with their scenarios, and fills `test_command` and `product` of `acceptance.json` while they are empty, in changes that the requester approves. A script, with no model, computes the inventory that the analysis starts from and checks every file before it is committed. Systems it works with (complete list): git and the remote `origin` of the acceptance repository, which it reads and pushes to, and of the norms repository, which it only fetches and reads; the records of the installed plugins of Claude Code, `~/.claude/plugins/installed_plugins.json` and `~/.claude/plugins/known_marketplaces.json`, which it only reads, to find the marketplace repository (ACU-79); GitHub, through `gh`, only to open the issues of a gap of layer 1 in the specs repository (ACU-68) and of a defect of a derived-norms generator in the marketplace repository (ACU-79)
 
-A use case of the module `acceptance-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). Out of scope: the increments and `plan.json`, which the implementation planner decides ([ACU-44](../../../specs/module.md#the-plan-of-implementation)); the acceptance tests, which the test agent writes ([ACU-11](../../../specs/module.md#acceptance-tests-and-independent-evidence)); the record of the evidence ([ACU-35](../../../specs/module.md#done-is-a-state-not-an-event)); the field `default_done_profile` of `acceptance.json`, and a `test_command` or a `product` that is not empty ([ACU-43](../../../specs/module.md#the-files-of-the-acceptance-repository)); the review of the norms of [ACU-15](../../../specs/module.md#the-review-of-the-norms-selected), which is open question 1; what a derived norm is, its derived norm ID, its derived norm fingerprint and its list of derived norms, which layer 2 writes ([NRM-12 to NRM-15](../../../../norms-management/specs/module.md#the-list-of-derived-norms)), and the types of derived norms of a commit ([NRM-16](../../../../norms-management/specs/module.md#derive-the-derived-norms)); the files of the specs repository and of the marketplace repository, of which define reads none and only opens issues; the plugins installed, which define does not change; layers 0, 1, 2 and 4.
+A meta use case of the meta module `acceptance-management`, specified in its meta spec [module.md](../../../specs/module.md); the meta modules of the meta app are listed in [app.md](../../../../../specs/app.md). Out of scope: the increments and `plan.json`, which the implementation planner decides ([ACU-44](../../../specs/module.md#the-plan-of-implementation)); the acceptance tests, which the test agent writes ([ACU-11](../../../specs/module.md#acceptance-tests-and-independent-evidence)); the record of the evidence ([ACU-35](../../../specs/module.md#done-is-a-state-not-an-event)); the field `default_done_profile` of `acceptance.json`, and a `test_command` or a `product` that is not empty ([ACU-43](../../../specs/module.md#the-files-of-the-acceptance-repository)); the review of the norms of [ACU-15](../../../specs/module.md#the-review-of-the-norms-selected), which is open question 1; what a derived norm is, its derived norm ID, its derived norm fingerprint and its list of derived norms, which layer 2 writes ([NRM-12 to NRM-15](../../../../norms-management/specs/module.md#the-list-of-derived-norms)), and the types of derived norms of a commit ([NRM-16](../../../../norms-management/specs/module.md#derive-the-derived-norms)); the files of the specs repository and of the marketplace repository, of which define reads none and only opens issues; the plugins installed, which define does not change; layers 0, 1, 2 and 4.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| Skill | The skill `define` of the plugin `acceptance-management`, invoked as `/acceptance-management:define`; it acts as the acceptance architect, and is the actor of every rule that names no other. |
+| Skill | The skill `define` of the plugin `acceptance-management`, invoked as `/acceptance-management:define`; it acts as the acceptance architect, and is the actor of every meta rule that names no other. |
 | Default branch | Of a repository: the branch that `git ls-remote --symref origin HEAD`, run in that repository, names. |
 | Norms commit | The head of the default branch of the remote `origin` of the norms repository, after the fetch of [ACU-74](../../../specs/module.md#the-files-of-the-acceptance-repository). |
 | Inventory | The JSON object that the script of ACU-60 prints. |
@@ -33,7 +33,7 @@ Feature: Define the acceptance areas and acceptance units
   I want the AI to analyse every norm against every acceptance area and acceptance unit, and to propose the acceptance areas, the acceptance units and their scenarios that I approve
 
   Rule: ACU-57 The skill runs when the user asks for it or as the step of layer 3 of a run, only from the acceptance repository, and takes no argument
-    Rationale: the acceptance areas and the acceptance units decide what layer 4 builds and what the requester accepts, so they change only when a person or a run asks for it; run from another repository, or with an argument it does not read, the skill would analyse or write the wrong files, and the checks that refuse both are shared by every use case of the module (ACU-74).
+    Rationale: the acceptance areas and the acceptance units decide what layer 4 builds and what the requester accepts, so they change only when a person or a run asks for it; run from another repository, or with an argument it does not read, the skill would analyse or write the wrong files, and the checks that refuse both are shared by every meta use case of the meta module (ACU-74).
 
     Scenario: Invoked by the user
       When the user types "/acceptance-management:define", or asks in words to define, change or delete acceptance areas or acceptance units
@@ -51,11 +51,11 @@ Feature: Define the acceptance areas and acceptance units
       Then an argument, and a repository other than the acceptance repository, end the skill as ACU-74 says
 
   Rule: ACU-58 Before it reads anything else, the skill makes the checks of ACU-74, and then a script with no model makes these checks, in this order, and the first that fails ends the skill with its message (complete list)
-    Rationale: the files that define writes must start from what "HEAD" holds, so an uncommitted or untracked file of an acceptance area or an acceptance unit, which the skill would overwrite or commit by mistake, stops it; an "acceptance.json" it cannot read gives no next IDs (ACU-55); and a list of derived norms that is missing or that does not meet NRM-12 gives no scope of an acceptance unit, so the skill could write no "## Derived norms" that layer 4 can trust (ACU-78). The checks that every use case of the module shares are written once, in ACU-74.
+    Rationale: the files that define writes must start from what "HEAD" holds, so an uncommitted or untracked file of an acceptance area or an acceptance unit, which the skill would overwrite or commit by mistake, stops it; an "acceptance.json" it cannot read gives no next IDs (ACU-55); and a list of derived norms that is missing or that does not meet NRM-12 gives no scope of an acceptance unit, so the skill could write no "## Derived norms" that layer 4 can trust (ACU-78). The checks that every meta use case of the meta module shares are written once, in ACU-74.
 
-    Scenario: The checks of the module
+    Scenario: The checks of the meta module
       When the skill starts
-      Then it makes the checks of ACU-74 first, with "define" as the use case, and the first that fails ends the skill as ACU-74 says
+      Then it makes the checks of ACU-74 first, with "define" as the meta use case, and the first that fails ends the skill as ACU-74 says
 
     Scenario Outline: A check of define fails
       Given every check of ACU-74 passed
@@ -180,7 +180,7 @@ Feature: Define the acceptance areas and acceptance units
       And it adds the errors of ACU-61 that compare the working tree with "HEAD"
 
   Rule: ACU-61 The script reports each format error of ACU-6, ACU-7, ACU-8, ACU-50, ACU-54, ACU-55, ACU-56 and ACU-78 (complete list)
-    Rationale: a file that breaks the format of the module gives the scripts that read it, and layer 4, no single reading; reported by a script, with its path and line, every format error is found on every run, and the proposal can fix it (ACU-63). A derived norm citation that cites the derived norm fingerprint of the norms commit for a derived norm outside the scope is no change of layer 2 but a citation that ACU-78 never allows; a derived norm citation whose derived norm fingerprint changed gets the citation status "changed" instead (ACU-62), since layer 2, not the file, moved.
+    Rationale: a file that breaks the format of the meta module gives the scripts that read it, and layer 4, no single reading; reported by a script, with its path and line, every format error is found on every run, and the proposal can fix it (ACU-63). A derived norm citation that cites the derived norm fingerprint of the norms commit for a derived norm outside the scope is no change of layer 2 but a citation that ACU-78 never allows; a derived norm citation whose derived norm fingerprint changed gets the citation status "changed" instead (ACU-62), since layer 2, not the file, moved.
 
     Scenario Outline: A format error
       Given <file> where <condition>
@@ -384,7 +384,7 @@ Feature: Define the acceptance areas and acceptance units
       And it says "acceptance-management:define: no change to propose"
 
   Rule: ACU-77 While "test_command" or "product" of "acceptance.json" is empty at "HEAD", the proposal holds a change that fills it with the values that the requester states (ACU-43)
-    Rationale: the test agent writes no acceptance test until both fields hold a value (WAT-2), and only the requester knows how the product of each code repository is built, since the skill reads no code repository (ACU-12, LAY-8); asking for them in the proposal that the requester already reviews fills them as early as they are known, through the same approval and the same checks as every other change (LAY-9, ACU-69). A field that holds a value is out of the scope of define: the acceptance architect changes it by hand, in a commit that the requester approves (ACU-43), since a change of it changes how the evidence is produced from then on and is rare enough not to need a use case.
+    Rationale: the test agent writes no acceptance test until both fields hold a value (WAT-2), and only the requester knows how the product of each code repository is built, since the skill reads no code repository (ACU-12, LAY-8); asking for them in the proposal that the requester already reviews fills them as early as they are known, through the same approval and the same checks as every other change (LAY-9, ACU-69). A field that holds a value is out of the scope of define: the acceptance architect changes it by hand, in a commit that the requester approves (ACU-43), since a change of it changes how the evidence is produced from then on and is rare enough not to need a meta use case.
 
     Scenario: The questions
       Given "test_command" of "acceptance.json" at "HEAD" is the empty string, or "product" is the empty object
@@ -655,7 +655,7 @@ Feature: Define the acceptance areas and acceptance units
       Then the skill opens no issue
 
   Rule: ACU-69 Every file that a commit writes passes the checks of the script before the commit
-    Rationale: every reader of the acceptance repository, the scripts of the module and layer 4 among them, must be able to read every committed file; checked by the script before the commit, no commit of define adds a format error, a norm citation or a derived norm citation that is not current, or a derived norm not cited, while an error already at HEAD that the commit does not touch does not block it.
+    Rationale: every reader of the acceptance repository, the scripts of the meta module and layer 4 among them, must be able to read every committed file; checked by the script before the commit, no commit of define adds a format error, a norm citation or a derived norm citation that is not current, or a derived norm not cited, while an error already at HEAD that the commit does not touch does not block it.
 
     Scenario: The files written
       When the skill has written the files of a commit
@@ -821,7 +821,7 @@ Feature: Define the acceptance areas and acceptance units
 
 ## Open questions
 
-1. Until the use case of the review of the norms of [ACU-15](../../../specs/module.md#the-review-of-the-norms-selected) exists, the skill does not run that review, which the done profiles `product` and `critical` require ([ACU-19](../../../specs/module.md#done-profiles)). Is a change of an acceptance unit with one of those done profiles committed without it, or held back?
+1. Until the meta use case of the review of the norms of [ACU-15](../../../specs/module.md#the-review-of-the-norms-selected) exists, the skill does not run that review, which the done profiles `product` and `critical` require ([ACU-19](../../../specs/module.md#done-profiles)). Is a change of an acceptance unit with one of those done profiles committed without it, or held back?
 2. Should the skill take an argument that narrows the analysis of ACU-63, such as one acceptance area or the norms that changed? Issue [jpchauny/indra-software-factory#10](https://github.com/jpchauny/indra-software-factory/issues/10) decides it from the measured cost of a whole analysis.
 3. When an acceptance area is deleted, is its folder `tests/<area ID>/` deleted in the same change, as ACU-10 says for an acceptance unit? Until decided, the skill does not delete it (ACU-73).
 4. In a run, is the head of the default branch of the norms repository always the hand-off of the step of layer 2 ([ORC-9](../../../../norms-management/specs/module.md#regenerate-the-norms))? Until decided, the skill reads that head (ACU-59).

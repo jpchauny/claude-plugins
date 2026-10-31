@@ -1,20 +1,22 @@
 # development-methodology
 
-The module `development-methodology` of Indra Software Factory: the
+The meta module `development-methodology` of Indra Software Factory: the
 development methodology of every project, carried to every repository of the
 project, of the five layers
 ([APP-6](specs/layers.md#where-each-module-is-installed)).
-It is specified in [specs/module.md](specs/module.md).
+It is specified in its meta spec [specs/module.md](specs/module.md).
 
 ## The methodology
 
-- [specs/layers.md](specs/layers.md): the five layers, their rules and their terms, and where each module is installed.
+- [specs/layers.md](specs/layers.md): the five layers, their meta rules and their terms, and where each meta module is installed.
 - [specs/flow.md](specs/flow.md): the flow across the layers, a run, its steps and their hand-offs.
 
-## Use cases
+<a id="use-cases"></a>
 
-None: the module has no skill. Its hook, at every start of a session, adds to
-the session an index of the methodology, with the paths of the specs above
+## Meta use cases
+
+None: the meta module has no skill. Its hook, at every start of a session, adds to
+the session an index of the methodology, with the paths of the meta specs above
 ([MTH-4 to MTH-6](specs/module.md#the-index-of-every-session)). The hook is
 [hooks/hooks.json](hooks/hooks.json); its script is
 [scripts/index.py](scripts/index.py), tested by

@@ -1,11 +1,11 @@
 # acceptance-management
 
-The module `acceptance-management` of Indra Software Factory, layer 3,
+The meta module `acceptance-management` of Indra Software Factory, layer 3,
 enabled in the repository of layer 3 only
 ([APP-6](../development-methodology/specs/layers.md#where-each-module-is-installed)):
 the acceptance areas and the acceptance units of a project, their acceptance
 tests, the plan of implementation, and when an acceptance unit, an acceptance
-area and an increment are done. It is specified in [specs/](specs/module.md).
+area and an increment are done. It is specified in its meta spec, [specs/](specs/module.md).
 
 Four agents of layer 3 work from the norms of layer 2, without reading the
 code ([LAY-8](../development-methodology/specs/layers.md#rules)), and a person
@@ -51,7 +51,9 @@ takes the read-only token of the code repositories in `--token-file`,
 which it deletes at once, and refuses it in its environment, where a build
 could read it. Its tests run with the command above.
 
-## Use cases
+<a id="use-cases"></a>
+
+## Meta use cases
 
 - `/acceptance-management:define`
   ([define.md](use-cases/define/specs/define.md)): the acceptance architect
@@ -75,7 +77,7 @@ could read it. Its tests run with the command above.
   ([ACU-79](use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units)),
   the checks and the proposal of the values of `acceptance.json`
   that the requester states, and the checks, the ID fields and the commit
-  command of each change, with the code of `scripts/` that the use cases share (below). Its
+  command of each change, with the code of `scripts/` that the meta use cases share (below). Its
   tests are `tests/test_define.py`, and run with the command above.
 - `/acceptance-management:plan`
   ([plan.md](use-cases/plan/specs/plan.md)): the implementation planner
@@ -111,16 +113,16 @@ could read it. Its tests run with the command above.
   tests are `tests/test_write_acceptance_tests.py`, and run with the command
   above.
 
-The code that the three use cases share is in `scripts/`, and no script of a
-use case imports the script of another:
+The code that the three meta use cases share is in `scripts/`, and no script of a
+meta use case imports the script of another:
 
-- `scripts/acceptance_repository_checks.py`: the checks that the three use
+- `scripts/acceptance_repository_checks.py`: the checks that the three meta use
   cases make before they read anything else
   ([ACU-74](specs/module.md#the-files-of-the-acceptance-repository)), the
   checks before a commit of
   [ACU-75](specs/module.md#the-files-of-the-acceptance-repository), the
   command that makes them again, stages, commits and pushes, the diff of
-  each file of a commit that the three use cases show, and the checks of the
+  each file of a commit that the three meta use cases show, and the checks of the
   values of `test_command` and `product` of `acceptance.json`
   ([ACU-77](use-cases/define/specs/define.md#define-the-acceptance-areas-and-acceptance-units)),
   which define makes on the values that the requester states and
@@ -139,11 +141,11 @@ use case imports the script of another:
   `areas/` and `units/`, which plan reads too.
 - `scripts/acceptance_hashes.py`: the fingerprints of ACU-51 to ACU-54, and
   the norm citations and derived norm citations of a unit (ACU-8, ACU-56),
-  which every script of the module reads.
+  which every script of the meta module reads.
 
 ## Not built yet
 
-No script of this module computes yet which evidence is stale and the state
+No script of this meta module computes yet which evidence is stale and the state
 of each unit ([ACU-26 and ACU-27](specs/module.md#done-is-a-state-not-an-event),
 [ACU-23](specs/module.md#the-ladder-of-states)), when an increment is done, or
 the norms that no unit groups

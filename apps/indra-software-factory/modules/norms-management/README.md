@@ -17,10 +17,10 @@ their derived norm IDs and derived norm fingerprints in
 
 | Path | What it is |
 |---|---|
-| [specs/](specs/) | The generator's specification: the source of truth for its output |
+| [specs/](specs/) | The generator's meta specs: the source of truth for its output |
 | [use-cases/](use-cases/) | The skills, and the scripts of `build` that write the record of the types of derived norms and compare the lists of derived norms of the commit of layer 2 of the run with those of the commit before the last step |
 | [src/norms_generator/](src/norms_generator/) | The generator, a Python package with the command `norms-gen` |
-| [tests/](tests/) | Its tests, one or more per requirement and example of the specs |
+| [tests/](tests/) | Its tests, one or more per meta rule and example of the meta specs |
 | [docs/](docs/) | How to develop the generator, its implementation decisions, and the generated traceability from requirements to code and tests |
 
 ## Without Claude Code

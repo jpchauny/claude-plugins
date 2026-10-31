@@ -6,10 +6,10 @@ description: Act as the test agent of layer 3 - write one acceptance test per sc
 # write-acceptance-tests
 
 The test agent: writes the acceptance tests of the acceptance repository.
-Implements [specs/write-acceptance-tests.md](specs/write-acceptance-tests.md)
+Implements its meta spec [specs/write-acceptance-tests.md](specs/write-acceptance-tests.md)
 (WAT-1 to WAT-14), with the acceptance tests of ACU-11, the checks of ACU-74
 and ACU-75 and the hashes of ACU-51 to ACU-56 of
-[module.md](../../specs/module.md). Never start it on your own (WAT-1).
+the meta spec [module.md](../../specs/module.md). Never start it on your own (WAT-1).
 
 `WAT` below is
 `python3 -I "${CLAUDE_PLUGIN_ROOT}/use-cases/write-acceptance-tests/write_acceptance_tests.py"`,

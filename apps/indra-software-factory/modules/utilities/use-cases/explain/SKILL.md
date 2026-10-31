@@ -9,7 +9,7 @@ argument-hint: "[topic to explain]"
 Teaching mode: one step at a time, with confirmation. The topic comes from the
 skill's argument or from the conversation; if no topic is clear, ask which one
 in a single line and explain nothing yet. Explain in the language the user is
-writing in. The spec is [specs/explain.md](specs/explain.md).
+writing in. The meta spec is [specs/explain.md](specs/explain.md).
 
 ## Rules (all mandatory)
 

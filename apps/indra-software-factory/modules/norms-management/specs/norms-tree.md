@@ -8,7 +8,7 @@ Layer 2 represents the specs as one tree. Each node that holds information has a
 
 The terms norm, norm ID, norm hash, derived norm and derived norm fingerprint are those of [layers.md](../../development-methodology/specs/layers.md#terms), the terms acceptance unit, unit hash, norm citation and derived norm citation are those of [acceptance-management](../../acceptance-management/specs/module.md#terms), and the term derived norm behind its norms is that of [module.md](module.md#terms).
 
-This document holds the requirements R1–R34 and the examples E1–E24: one example for each element (E1–E20), and four for rules that the elements do not show (E21–E24). The examples are requirements too, and serve as test cases for the generator.
+This document holds the requirements R1–R34 and the examples E1–E24: one example for each element (E1–E20), and four for meta rules that the elements do not show (E21–E24). The examples are requirements too, and serve as test cases for the generator.
 
 Two companion documents complete it, with requirement and example numbers that follow on from these:
 
@@ -185,7 +185,7 @@ A requirement's number is its name. It never changes, since code, tests and the 
   - The insertions are: markers; the blank before an inline ID; blank lines where R30 needs one; `>` prefixes and item indentation on marker lines (R30); the ` |` of a row's ID: after the ID of a row with a closing pipe (` ⟬ID⟭ |`), before the ID of a row without one (` | ⟬ID⟭`), and for each empty cell added to a short row (R45); a leading `|` (R46); the line break and indentation that move the rest of an item's marker line (R35, R37); and the blanks and blank line of an empty item's ID (R39).
   - The JSONL records the insertions as one record per offset, in ascending order of offset. A record holds everything inserted at its offset, joined in the order it appears in the annotated file: at offset 0, the file marker and a begin marker are one record (R61).
   - Removing exactly those gives back the spec file byte for byte, which `verify` checks (R64).
-- **R32. A viewer.** A viewer of the specs with their layer 2 references will be an app in this repository.
+- **R32. A viewer.** A viewer of the specs with their layer 2 references will be a meta app in this repository.
 - **R34. Refused input.** `build` writes nothing and exits with status 2 (R62 lists every exit status) in each of these cases:
   - a spec file is not UTF-8. It names the file, the first bad byte and its offset: `norms-gen: specs/a.md: not UTF-8 (byte 0xff at offset 3); spec files must be UTF-8 (R34)`;
   - a file holds `⟬` or `⟭`. It names the file, the first delimiter it holds and its offset: `norms-gen: specs/a.md: holds the delimiter ⟭ at offset 4; the specs never hold ⟬ or ⟭ (R19, R34)`;
@@ -224,12 +224,12 @@ The user took these decisions where the generator had to choose between two read
 - **U6. `specs-repo-annotated/` belongs to the generator.** After every build, `specs-repo-annotated/` holds exactly this build's copies, annotated and plain, and the folders that hold them, and nothing else. Everything else under it is removed: a file that is no copy, a folder that holds no copy (with everything in it), a symbolic link wherever it stands, a folder at the path of a copy, a file at the path of a folder of copies, and the copies left by a build whose JSONL was lost. A symbolic link is removed itself and never followed, so nothing outside the output folder is touched. `verify` reports each such path as a problem.
   - Why: `specs-repo-annotated/` is derived from the specs, and only the generator writes there. The specs are the single source of truth: anything else written there skips the process, and is not kept.
   - Details: R62, R64.
-- **U7. Everything of the generator is in the plugin `norms-management`.** Everything developed for the generator lives in the folder `apps/indra-software-factory/modules/norms-management/` of the repository `jpchauny/indra-software-factory`, and nowhere else: these specs (`specs/`), the code (`src/`), the tests and their fixtures (`tests/`), the documents of its development (`docs/`), the use cases that run it (`use-cases/`), and the files of its package (`pyproject.toml`, `uv.lock`). A project's norms repository holds only the output of a build (R62), never a part of the generator, and no other folder of `jpchauny/indra-software-factory` holds one either.
+- **U7. Everything of the generator is in the plugin `norms-management`.** Everything developed for the generator lives in the folder `apps/indra-software-factory/modules/norms-management/` of the repository `jpchauny/indra-software-factory`, and nowhere else: these meta specs (`specs/`), the code (`src/`), the tests and their fixtures (`tests/`), the documents of its development (`docs/`), the meta use cases that run it (`use-cases/`), and the files of its package (`pyproject.toml`, `uv.lock`). A project's norms repository holds only the output of a build (R62), never a part of the generator, and no other folder of `jpchauny/indra-software-factory` holds one either.
   - Why: one generator serves every project, so it has one place, and every project uses the same version of it. A plugin is installed as its own folder and nothing else of the repository, so a part of the generator outside `apps/indra-software-factory/modules/norms-management/` would be missing wherever the plugin is installed.
 
 ## Elements
 
-The elements follow the GFM Spec 0.29 in its order, with its extensions, then the three levels that are not GFM, then four examples of rules (E21–E24). Each example shows the spec text and its annotated copy.
+The elements follow the GFM Spec 0.29 in its order, with its extensions, then the three levels that are not GFM, then four examples of meta rules (E21–E24). Each example shows the spec text and its annotated copy.
 
 Some examples hold bytes that do not show, such as a tab. The prose under each example says where they are.
 

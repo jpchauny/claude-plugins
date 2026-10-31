@@ -7,8 +7,8 @@ help ([LAY-2](../development-methodology/specs/layers.md#rules)).
 ## Guideline
 
 [writing-specs.md](writing-specs.md) (prefix WSP): how the draft specs and the specs of a project are
-worded. The tools of this module apply it. It is this module's own guide, not a copy of the guide of the
-marketplace (`specs/writing-specs.md`, prefix SPC), which applies only to the specs of the marketplace:
+worded. The tools of this meta module apply it. It is this meta module's own guide, not a copy of the guide of the
+marketplace (`specs/writing-specs.md`, prefix SPC), which applies only to the meta specs of the marketplace:
 the two evolve apart, and an improvement that fits both is copied on purpose.
 
 ## Tools
@@ -33,7 +33,7 @@ the two evolve apart, and an improvement that fits both is copied on purpose.
   changes or deletes a spec of layer 1, after its demote
   ([specs/write.md](use-cases/write/specs/write.md)).
 
-Promote and demote share [scripts/move.py](scripts/move.py) and the rules of
+Promote and demote share [scripts/move.py](scripts/move.py) and the meta rules of
 [specs/module.md](specs/module.md#move-specs-between-layers-0-and-1).
 
 Planned:

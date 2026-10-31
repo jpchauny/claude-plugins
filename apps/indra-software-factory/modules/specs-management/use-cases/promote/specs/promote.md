@@ -2,15 +2,15 @@
 
 **Audience:** The people who write a project's draft specs and specs, and decide when a draft spec becomes a spec; whoever builds the skill `promote` of the plugin `specs-management`
 
-**Scope:** The use case that moves draft specs from layer 0 to layer 1, and rewrites the links of layer 1 that point at them. What a move shares with demote, its terms included, is [module.md](../../../specs/module.md#move-specs-between-layers-0-and-1), ORC-35 to ORC-48 and ORC-58
+**Scope:** The meta use case that moves draft specs from layer 0 to layer 1, and rewrites the links of layer 1 that point at them. What a move shares with demote, its terms included, is [module.md](../../../specs/module.md#move-specs-between-layers-0-and-1), ORC-35 to ORC-48 and ORC-58
 
-A use case of the module `specs-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). Out of scope: reviewing whether a draft spec is ready; changing its content.
+A meta use case of the meta module `specs-management`, specified in [module.md](../../../specs/module.md); the meta modules of the meta app are listed in [app.md](../../../../../specs/app.md). Out of scope: reviewing whether a draft spec is ready; changing its content.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| Skill | The skill `promote` of the plugin `specs-management`, invoked as `/specs-management:promote <path>...`; the actor of every rule that names no other. |
+| Skill | The skill `promote` of the plugin `specs-management`, invoked as `/specs-management:promote <path>...`; the actor of every meta rule that names no other. |
 
 The terms move, source, target, moved file, path, link, link target, absent link and plain link are those of [module.md](../../../specs/module.md#terms). For promote, the source is layer 0 and the target is layer 1.
 

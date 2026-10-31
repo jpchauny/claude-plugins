@@ -7,7 +7,7 @@ This guideline says how to word a good spec. Its goal is that the implementing a
 ## Purpose and scope
 
 - This guideline is for the people who write specs and for the approver.
-- It applies to the draft specs and the specs of a project that uses Indra Software Factory, in its repositories of layers 0 and 1. It only recommends: the tools of the module `specs-management` use it to suggest improvements, and the authors decide. It does not apply to the specs of the marketplace that holds Indra Software Factory, which follow their own guide.
+- It applies to the draft specs and the specs of a project that uses Indra Software Factory, in its repositories of layers 0 and 1. It only recommends: the tools of the meta module `specs-management` use it to suggest improvements, and the authors decide. It does not apply to the meta specs of the marketplace that holds Indra Software Factory, which follow their own guide.
 - Where specs live and how they change is outside this guideline.
 - This guideline covers what a spec must say and how the spec words it. This includes results that a test can check.
 - No rule in this guideline requires a particular tool, template or folder structure.

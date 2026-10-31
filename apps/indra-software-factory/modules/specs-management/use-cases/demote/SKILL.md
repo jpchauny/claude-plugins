@@ -7,7 +7,7 @@ argument-hint: "<path>..."
 # demote
 
 Moves specs from layer 1 to layer 0. Implements
-[specs/demote.md](specs/demote.md) (ORC-53 to ORC-57) and the shared rules of
+[specs/demote.md](specs/demote.md) (ORC-53 to ORC-57) and the shared meta rules of
 [module.md](../../specs/module.md#move-specs-between-layers-0-and-1)
 (ORC-35 to ORC-48 and ORC-58). Never start it on your own (ORC-35).
 

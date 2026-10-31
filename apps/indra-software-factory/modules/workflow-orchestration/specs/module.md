@@ -4,15 +4,15 @@
 
 **Audience:** The people who start and control a run of a project from its orchestration repository, the requester among them; whoever builds the skills, the scripts and the hook of the plugin `workflow-orchestration`
 
-**Scope:** Running the flow across the modules from the orchestration repository: where the orchestrator runs, how a person starts and controls a run, how each step runs as a headless session in the repository of its layer, the loop that implements the acceptance units one by one, the queue of the requester, the evidence runs that the orchestrator makes, and what the orchestrator never does. The run itself, the order of its steps and their hand-offs, is methodology, in [flow.md](../../development-methodology/specs/flow.md); what the orchestration repository is, in [LAY-11](../../development-methodology/specs/layers.md#the-orchestration-repository); the steps of an evidence run, in [ACU-34](../../acceptance-management/specs/module.md#acceptance-tests-and-independent-evidence); when an acceptance unit is done, in [acceptance-management](../../acceptance-management/specs/module.md). Systems it works with: Claude Code, which runs the headless sessions; git and GitHub, which hold the repositories of the project. Out of scope: the work of each step, which the module of its layer does. The orchestrator must never do the work of a layer.
+**Scope:** Running the flow across the meta modules from the orchestration repository: where the orchestrator runs, how a person starts and controls a run, how each step runs as a headless session in the repository of its layer, the loop that implements the acceptance units one by one, the queue of the requester, the evidence runs that the orchestrator makes, and what the orchestrator never does. The run itself, the order of its steps and their hand-offs, is methodology, in [flow.md](../../development-methodology/specs/flow.md); what the orchestration repository is, in [LAY-11](../../development-methodology/specs/layers.md#the-orchestration-repository); the steps of an evidence run, in [ACU-34](../../acceptance-management/specs/module.md#acceptance-tests-and-independent-evidence); when an acceptance unit is done, in [acceptance-management](../../acceptance-management/specs/module.md). Systems it works with: Claude Code, which runs the headless sessions; git and GitHub, which hold the repositories of the project. Out of scope: the work of each step, which the meta module of its layer does. The orchestrator must never do the work of a layer.
 
-The module `workflow-orchestration` of the app Indra Software Factory, listed in [app.md](../../../specs/app.md). The orchestrator runs the steps of a run as [ORC-15](../../development-methodology/specs/flow.md#start-a-run) says, and does not restate them.
+The meta module `workflow-orchestration` of the meta app Indra Software Factory, listed in [app.md](../../../specs/app.md). The orchestrator runs the steps of a run as [ORC-15](../../development-methodology/specs/flow.md#start-a-run) says, and does not restate them.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| Orchestrator | The skills, the scripts and the hook of the plugin `workflow-orchestration`, in a session of the orchestration repository; the actor of every requirement that names no other. |
+| Orchestrator | The skills, the scripts and the hook of the plugin `workflow-orchestration`, in a session of the orchestration repository; the actor of every meta rule that names no other. |
 | Headless session | A session of Claude Code that the orchestrator starts with `claude -p` and one prompt, in the repository of one layer; it asks no person anything, and ends when it has answered. |
 | Increments of the run | The increments of `plan.json` ([ACU-39](../../acceptance-management/specs/module.md#the-plan-of-implementation)) that a run implements (WFO-2). |
 | Queue of the requester | The acceptance units of the increments of the run that wait only for the requester (WFO-6). |
@@ -23,29 +23,31 @@ The module `workflow-orchestration` of the app Indra Software Factory, listed in
 
 The terms run, step and hand-off are those of [flow.md](../../development-methodology/specs/flow.md#terms); the terms orchestration repository, repository of a layer, specs repository, norms repository, acceptance repository, code repository, norm, norm hash, derived norm, derived norm ID and derived norm fingerprint are those of [layers.md](../../development-methodology/specs/layers.md#terms); the terms acceptance unit, increment, requester, evidence run, done profile, state, reference commit, product build, derived norm citation and acceptance unit behind layer 2 are those of [acceptance-management](../../acceptance-management/specs/module.md#terms); the terms list of derived norms, derived norm behind its norms, types of derived norms of a commit, commit of layer 2 of the run and commit before the last step are those of [norms-management](../../norms-management/specs/module.md#terms).
 
-## Use cases
+<a id="use-cases"></a>
 
-| Use case | Spec |
+## Meta use cases
+
+| Meta use case | Meta spec |
 |---|---|
 | `run` | Not yet specified: starts a run, or resumes one that stopped (WFO-2). |
 | `evidence-run` | Not yet specified: makes one evidence run (WFO-8). |
 | `queue` | Not yet specified: shows the queue of the requester (WFO-6). |
 
-The messages of each use case, word for word, are in its spec.
+The messages of each meta use case, word for word, are in its meta spec.
 
 ## Where the orchestrator runs
 
-- **WFO-1.** The orchestrator runs only in the orchestration repository, the one repository where [APP-6](../../development-methodology/specs/layers.md#where-each-module-is-installed) enables the plugin. Before it does anything else, each use case of the module finds the entry of its repository in `project.json` as [ORC-21](../../project-management/specs/module.md#where-the-repositories-are) says. When that entry has no `role` `orchestration`, the use case writes nothing, starts nothing, and says `workflow-orchestration: runs only from the orchestration repository`. Then it compares its `project.json` as [ORC-24](../../project-management/specs/module.md#where-the-repositories-are) says.
+- **WFO-1.** The orchestrator runs only in the orchestration repository, the one repository where [APP-6](../../development-methodology/specs/layers.md#where-each-module-is-installed) enables the plugin. Before it does anything else, each meta use case of the meta module finds the entry of its repository in `project.json` as [ORC-21](../../project-management/specs/module.md#where-the-repositories-are) says. When that entry has no `role` `orchestration`, the meta use case writes nothing, starts nothing, and says `workflow-orchestration: runs only from the orchestration repository`. Then it compares its `project.json` as [ORC-24](../../project-management/specs/module.md#where-the-repositories-are) says.
 
   Rationale: from the repository of a layer, the session of the orchestrator
-  would run with the modules and the hooks of that layer, and its own hook
+  would run with the meta modules and the hooks of that layer, and its own hook
   would not guard the repositories of the other layers.
 
 ## Start and control a run
 
 - **WFO-2.** A person starts a run with `/workflow-orchestration:run`, in a session of the orchestration repository.
   - Its argument is the names of the increments of the run, each the `name` of an increment of `plan.json`. Without an argument, the increments of the run are every increment of `plan.json`.
-  - The run starts from the head of the default branch of the specs repository on GitHub when the use case starts ([ORC-15](../../development-methodology/specs/flow.md#start-a-run)).
+  - The run starts from the head of the default branch of the specs repository on GitHub when the meta use case starts ([ORC-15](../../development-methodology/specs/flow.md#start-a-run)).
   - When an increment that the argument names is not in `plan.json` at the hand-off of the step of layer 3 ([ACU-41](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)), the run stops before the step of layer 4, and says which increment is missing.
   - A run keeps nothing between two invocations of `run`, in no repository and in no file. A person resumes a run that stopped by invoking `run` again, which starts a new run. Each step of the new run does only what is left: layer 2 regenerates only what changed ([LAY-3](../../development-methodology/specs/layers.md#rules)), the step of layer 3 proposes no change where none is needed ([ACU-37](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)), and the loop of WFO-5 passes over the acceptance units that need no more work.
 
@@ -54,19 +56,19 @@ The messages of each use case, word for word, are in its spec.
   [ACU-27](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event));
   a run that stored where it was could disagree with them.
 
-- **WFO-3.** The orchestrator runs each step of a run as one or more headless sessions, each with the clone of the repository of its layer as its working directory, found as [ORC-21 and ORC-22](../../project-management/specs/module.md#where-the-repositories-are) say. Each headless session runs with the modules, the hooks and the `.claude/settings.json` of that repository ([APP-6](../../development-methodology/specs/layers.md#where-each-module-is-installed)). The orchestrator does no work of a step: it starts the headless session, gives it its prompt (WFO-4), waits until it ends, and reads its exit status and its last message. The steps, and what their headless sessions run (complete list):
+- **WFO-3.** The orchestrator runs each step of a run as one or more headless sessions, each with the clone of the repository of its layer as its working directory, found as [ORC-21 and ORC-22](../../project-management/specs/module.md#where-the-repositories-are) say. Each headless session runs with the meta modules, the hooks and the `.claude/settings.json` of that repository ([APP-6](../../development-methodology/specs/layers.md#where-each-module-is-installed)). The orchestrator does no work of a step: it starts the headless session, gives it its prompt (WFO-4), waits until it ends, and reads its exit status and its last message. The steps, and what their headless sessions run (complete list):
 
-  | Step | Repository | Use cases, in this order |
+  | Step | Repository | Meta use cases, in this order |
   |---|---|---|
   | Layer 2 | The norms repository | `/norms-management:build`, `/norms-management:verify` and the derived-norms generators ([ORC-8](../../norms-management/specs/module.md#regenerate-the-norms), [NRM-2](../../norms-management/specs/module.md#derive-the-derived-norms)) |
   | Layer 3 | The acceptance repository | `/acceptance-management:define`, then `/acceptance-management:plan` ([ACU-37](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)) |
   | Layer 4 | Each code repository | `/code-implementation:implement`, one headless session per acceptance unit and code repository (WFO-5) |
 
-  When a headless session ends with an exit status other than 0, the run stops, and the orchestrator says which use case ended so, in which repository, with its last message.
+  When a headless session ends with an exit status other than 0, the run stops, and the orchestrator says which meta use case ended so, in which repository, with its last message.
 
   After the step of layer 2, the run stops, ends or goes on with the step of layer 3 as WFO-13 says.
 
-  Rationale: each module is enabled only in the repository of its layer, and
+  Rationale: each meta module is enabled only in the repository of its layer, and
   the hooks of that layer guard what its session does; a step that ran in the
   session of the orchestrator would see every repository of the project, with
   none of those hooks.
@@ -141,13 +143,13 @@ The messages of each use case, word for word, are in its spec.
   branch; comparing a commit that is not the one of the step could end the run
   while layers 3 and 4 have work to do, so the run stops instead.
 
-- **WFO-4.** The orchestrator is the user of the use case that a headless session runs. The prompt of the headless session names the use case, and holds (complete list):
+- **WFO-4.** The orchestrator is the user of the meta use case that a headless session runs. The prompt of the headless session names the meta use case, and holds (complete list):
   - the commits that the step reads in the run: the commit of layer 2 of the run (WFO-13) for the step of layer 3 ([ACU-37](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)); that commit and the hand-off of the step of layer 3 for the step of layer 4 ([ORC-25](../../code-implementation/specs/module.md#implement-the-changed-norms));
   - for implement, the unit ID of the acceptance unit, as the requested acceptance unit ([IMP-14](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)), and, for each group of its components before the group of the code repository, that its part is implemented (WFO-5).
 
   The prompt holds no file and no path of a repository that the step must not receive (ORC-18). How a step that needs the decision of a person runs headless is open question 1.
 
-  Rationale: a headless session cannot ask; what the use case would ask its
+  Rationale: a headless session cannot ask; what the meta use case would ask its
   user must be in its prompt.
 
 - **WFO-5.** Once the step of layer 3 has its hand-off ([ACU-41](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)), the orchestrator implements the acceptance units of the increments of the run one by one, in the order of `plan.json` ([ACU-39 and ACU-42](../../acceptance-management/specs/module.md#the-plan-of-implementation)). It passes over each acceptance unit that is at least `validated` ([ACU-23](../../acceptance-management/specs/module.md#the-ladder-of-states)) or in the queue of the requester (WFO-6). For each other acceptance unit, it takes these steps, in this order:
@@ -273,7 +275,7 @@ The messages of each use case, word for word, are in its spec.
 
 ## Open questions
 
-1. How does a step that needs the decision of a person run headless? The cases known (not a complete list): the commits of layer 3, which the requester approves one by one through a rule `ask` ([LAY-9](../../development-methodology/specs/layers.md#rules)), which a headless session cannot answer; the confirmations of implement, the issue of a drift ([IMP-10](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)) and the commit ([IMP-12](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)); the acceptance tests, whose test agent has no use case yet ([ACU-37](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)). Candidate: the step of layer 3 runs in a session of the acceptance repository that the requester opens, and the run resumes from its hand-off when a person invokes `run` again (WFO-2).
+1. How does a step that needs the decision of a person run headless? The cases known (not a complete list): the commits of layer 3, which the requester approves one by one through a rule `ask` ([LAY-9](../../development-methodology/specs/layers.md#rules)), which a headless session cannot answer; the confirmations of implement, the issue of a drift ([IMP-10](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)) and the commit ([IMP-12](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)); the acceptance tests, whose test agent has no meta use case yet ([ACU-37](../../acceptance-management/specs/module.md#done-is-a-state-not-an-event)). Candidate: the step of layer 3 runs in a session of the acceptance repository that the requester opens, and the run resumes from its hand-off when a person invokes `run` again (WFO-2).
 2. How does the code of a headless session of layer 4 reach the default branch of its code repository on GitHub, where the evidence run reads its reference commit? Implement commits only when its user asks ([IMP-12](../../code-implementation/use-cases/implement/specs/implement.md#implement-a-task)), and no rule of implement pushes.
 3. How is the code of layer 4 that an evidence run of the orchestrator builds and tests kept from the credentials of the person who runs the orchestrator (WFO-11)? Candidate: a container that holds no credential, as level 2 of [ACU-13](../../acceptance-management/specs/module.md#acceptance-tests-and-independent-evidence) says.
 4. What happens when two people run the orchestrator of the same project at the same time? Their runs may start headless sessions in the same repository, and their evidence runs may overlap ([ACU-34](../../acceptance-management/specs/module.md#acceptance-tests-and-independent-evidence)).

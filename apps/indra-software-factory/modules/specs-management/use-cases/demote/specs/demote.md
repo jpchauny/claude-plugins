@@ -2,15 +2,15 @@
 
 **Audience:** The people who write a project's specs and decide that a spec goes back to being a draft; whoever builds the skill `demote` of the plugin `specs-management`
 
-**Scope:** The use case that moves specs from layer 1 to layer 0, and marks the links of layer 1 that point at them as absent. What a move shares with promote, its terms included, is [module.md](../../../specs/module.md#move-specs-between-layers-0-and-1), ORC-35 to ORC-48 and ORC-58
+**Scope:** The meta use case that moves specs from layer 1 to layer 0, and marks the links of layer 1 that point at them as absent. What a move shares with promote, its terms included, is [module.md](../../../specs/module.md#move-specs-between-layers-0-and-1), ORC-35 to ORC-48 and ORC-58
 
-A use case of the module `specs-management`, specified in [module.md](../../../specs/module.md); the modules of the app are listed in [app.md](../../../../../specs/app.md). Out of scope: choosing which specs to demote; changing their content; rewriting the text around an absent link.
+A meta use case of the meta module `specs-management`, specified in [module.md](../../../specs/module.md); the meta modules of the meta app are listed in [app.md](../../../../../specs/app.md). Out of scope: choosing which specs to demote; changing their content; rewriting the text around an absent link.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| Skill | The skill `demote` of the plugin `specs-management`, invoked as `/specs-management:demote <path>...`; the actor of every rule that names no other. |
+| Skill | The skill `demote` of the plugin `specs-management`, invoked as `/specs-management:demote <path>...`; the actor of every meta rule that names no other. |
 
 The terms move, source, target, moved file, path, link, link target, absent link and plain link are those of [module.md](../../../specs/module.md#terms). For demote, the source is layer 1 and the target is layer 0.
 

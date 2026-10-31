@@ -1,18 +1,18 @@
 ---
 name: create-project
-description: Start a new project from scratch in five layers - ask for its name and components, create on GitHub the repositories <project>-drafts, <project>-specs, <project>-norms, <project>-acceptance and <project>-code (or one <project>-code-<component> per component), and the orchestration repository <project>-orchestration and the tooling repository <project>-tooling, enable in each the modules of its layer, write the same project.json in all of them, and push the initial documents. Use when the user types /project-management:create-project, or says in words that they want to start a new project ("nuevo proyecto", "crear proyecto", "start a new project").
+description: Start a new project from scratch in five layers - ask for its name and components, create on GitHub the repositories <project>-drafts, <project>-specs, <project>-norms, <project>-acceptance and <project>-code (or one <project>-code-<component> per component), and the orchestration repository <project>-orchestration and the tooling repository <project>-tooling, enable in each the meta modules of its layer, write the same project.json in all of them, and push the initial documents. Use when the user types /project-management:create-project, or says in words that they want to start a new project ("nuevo proyecto", "crear proyecto", "start a new project").
 argument-hint: "[project name]"
 ---
 
 # create-project
 
 Creates the repositories of the five layers of a new project, as
-[specs/layers.md](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md) requires (LAY-1), each with `development-methodology`, `utilities` and the module of its layer enabled (APP-6);
+[specs/layers.md](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/development-methodology/specs/layers.md) requires (LAY-1), each with `development-methodology`, `utilities` and the meta module of its layer enabled (APP-6);
 its orchestration repository, with `development-methodology`, `utilities` and
 `workflow-orchestration` (LAY-11, ORC-5); and its tooling repository, an empty
 Claude Code marketplace with `utilities` alone, developed with the meta
-methodology, not with this app (LAY-14, CRP-4). The
-`project.json` of the project is in every one (ORC-20). Its specification is
+methodology, not with this meta app (LAY-14, CRP-4). The
+`project.json` of the project is in every one (ORC-20). Its meta spec is
 [specs/create-project.md](https://github.com/jpchauny/indra-software-factory/blob/main/apps/indra-software-factory/modules/project-management/use-cases/create-project/specs/create-project.md).
 
 ## 1. Ask

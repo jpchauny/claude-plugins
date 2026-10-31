@@ -183,7 +183,7 @@ class Scaffold(unittest.TestCase):
         with open(os.path.join(tooling, "CLAUDE.md"), encoding="utf-8") as f:
             text = " ".join(f.read().split())
         self.assertIn("The tooling repository of `billing`: no layer.", text)
-        self.assertIn("every change starts in a spec, the person approves it", text)
+        self.assertIn("every change starts in a meta spec, the person approves it", text)
         self.assertIn("/specs/development.md", text)
         self.assertIn('"billing-tooling": {"source": {"source": "github", "repo": "acme/billing-tooling"}}', text)
         self.assertIn('"<plugin>@billing-tooling": true', text)

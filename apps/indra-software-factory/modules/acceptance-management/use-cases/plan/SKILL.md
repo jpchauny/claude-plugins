@@ -7,9 +7,9 @@ description: Act as the implementation planner of layer 3 - review the whole pla
 
 The implementation planner: writes `plan.json`, the increments, their
 acceptance units, their order, their dependencies and their components.
-Implements [specs/plan.md](specs/plan.md) (PLN-1 to PLN-14), with the plan of
+Implements its meta spec [specs/plan.md](specs/plan.md) (PLN-1 to PLN-14), with the plan of
 implementation of ACU-39, ACU-42 and ACU-44 and the checks of ACU-74 of
-[module.md](../../specs/module.md). Never start it on your own (PLN-1).
+the meta spec [module.md](../../specs/module.md). Never start it on your own (PLN-1).
 
 `PLAN` below is `python3 -I "${CLAUDE_PLUGIN_ROOT}/use-cases/plan/plan.py"`,
 and `REPO` is `"$(git rev-parse --show-toplevel)"` of the working directory.
